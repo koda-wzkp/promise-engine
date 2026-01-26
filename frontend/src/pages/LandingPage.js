@@ -46,10 +46,14 @@ function LandingPage() {
       title: 'AI/ML AUDITING',
       icon: '🤖',
       description: 'Wrap any model in verifiable promises',
-      points: [
+      problem: [
+        '47% of enterprises made major decisions on hallucinated content (Deloitte 2024)',
+        'Legal AI tools hallucinate 17-34% of the time (2025 peer review)',
+        'Workers spend 4.3 hours/week fact-checking AI (Microsoft 2025)',
+      ],
+      solution: [
         'Track hallucinations, policy violations, drift',
         'Compliance for EU AI Act, SOC2, ISO 42001',
-        'Prove your AI does what you claim',
         'Generate training signal from failures',
       ],
     },
@@ -57,7 +61,12 @@ function LandingPage() {
       title: 'IoT & SMART HOME',
       icon: '🏠',
       description: 'Monitor every device\'s promises',
-      points: [
+      problem: [
+        'Smart devices promise security they can\'t guarantee',
+        'Firmware updates silently change behavior',
+        'No independent verification of device claims',
+      ],
+      solution: [
         '"Did my lock actually lock at 11pm?"',
         'Home Assistant integration',
         'Building management at scale',
@@ -68,33 +77,47 @@ function LandingPage() {
       title: 'INFRASTRUCTURE & SLAs',
       icon: '☁️',
       description: 'Verify uptime, latency, performance claims',
-      points: [
-        'Audit SLAs automatically',
-        'Alert before breaches become incidents',
-        '99.9% uptime, proven',
-        'Track vendor accountability',
+      problem: [
+        '99.9% uptime still means 8.7 hours down per year',
+        'SLA credits compensate <1% of actual business losses',
+        'October 2025 AWS outage: 7+ hours, healthcare systems offline',
+        'Downtime costs $9,000/minute for large enterprises',
+      ],
+      solution: [
+        'Independent SLA verification (not vendor-calculated)',
+        'Real-time breach detection, not monthly reports',
+        'Track the gap between promised and delivered',
       ],
     },
     supply: {
       title: 'SUPPLY CHAIN & COMMERCE',
       icon: '📦',
       description: 'Track fulfillment promises',
-      points: [
-        'Verify delivery timelines',
+      problem: [
+        'Expected OTD: 93.5%. Actual same-day: 80%. 1-2 day: 76%.',
+        'Only 6% of companies have full supply chain visibility',
+        '8% of annual revenue lost to supply chain disruptions (2024)',
+      ],
+      solution: [
+        'Verify delivery timelines against commitments',
         'Audit sustainability claims',
-        'CODEC: Coffee subscriptions (our first vertical)',
         'End-to-end shipment tracking',
+        'CODEC: Coffee subscriptions (our first vertical)',
       ],
     },
     land: {
       title: 'LAND STEWARDSHIP',
       icon: '🌱',
       description: 'Promises TO the land (coming soon)',
-      points: [
+      problem: [
         'promise.land: Track restoration commitments',
         'Verify regeneration claims',
         'Route reparations directly',
+      ],
+      solution: [
         'Indigenous data sovereignty',
+        'Carbon credit verification',
+        'Land back accountability',
       ],
     },
   };
@@ -119,12 +142,15 @@ function LandingPage() {
 
         <div className="hero-actions">
           <Link to="/integrity" className="cta-button primary">
-            View Demo
+            View Live Demo
           </Link>
           <a href="#beta-signup" className="cta-button secondary">
-            Start Auditing
+            Start Free Trial
           </a>
         </div>
+        <p className="hero-demo-note">
+          Live demo showing CODEC coffee subscription validation. Espresso roast + French press grind = broken promise caught automatically.
+        </p>
       </div>
 
       {/* Problem Section */}
@@ -213,37 +239,124 @@ function LandingPage() {
               <p>{useCases[activeUseCase].description}</p>
             </div>
           </div>
-          <ul className="use-case-points">
-            {useCases[activeUseCase].points.map((point, i) => (
-              <li key={i}>{point}</li>
-            ))}
-          </ul>
+
+          <div className="use-case-section">
+            <h4>The Problem:</h4>
+            <ul className="use-case-points problem">
+              {useCases[activeUseCase].problem.map((point, i) => (
+                <li key={i}>{point}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="use-case-section">
+            <h4>Promise Engine:</h4>
+            <ul className="use-case-points solution">
+              {useCases[activeUseCase].solution.map((point, i) => (
+                <li key={i}>{point}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 
-      {/* Stats Section */}
+      {/* Industry Stats Section - The Accountability Gap */}
       <div className="stats-section">
-        <div className="stat-card">
-          <div className="stat-value">1M+</div>
-          <div className="stat-label">Promises Monitored</div>
+        <h2 className="stats-title">The Accountability Gap</h2>
+        <p className="stats-subtitle">Nobody verifies these promises. Until now.</p>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-value">17-34%</div>
+            <div className="stat-label">AI hallucination rate (legal domain)</div>
+            <div className="stat-source">Peer-reviewed study, 2025</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">47%</div>
+            <div className="stat-label">Enterprise users who made decisions on hallucinated content</div>
+            <div className="stat-source">Deloitte, 2024</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">4.3 hrs</div>
+            <div className="stat-label">Hours/week workers spend fact-checking AI</div>
+            <div className="stat-source">Microsoft, 2025</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">$9,000</div>
+            <div className="stat-label">Cost per minute of enterprise downtime</div>
+            <div className="stat-source">Forbes, 2025</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">&lt;1%</div>
+            <div className="stat-label">Cloud SLA credits that cover actual losses</div>
+            <div className="stat-source">Uptime Institute, 2022</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">6%</div>
+            <div className="stat-label">Supply chains with full end-to-end visibility</div>
+            <div className="stat-source">GEODIS Survey</div>
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value">10k+</div>
-          <div className="stat-label">Verification Events</div>
+      </div>
+
+      {/* Why Promise Theory Section */}
+      <div className="promise-theory-section">
+        <h2>Why Promise Theory in 2026?</h2>
+        <div className="theory-intro">
+          <p className="theory-lead">
+            Promise Theory was proposed by physicist Mark Burgess in 2004 while building CFEngine,
+            configuration management software now running in the largest datacenters globally.
+          </p>
         </div>
-        <div className="stat-card">
-          <div className="stat-value">98.5%</div>
-          <div className="stat-label">Avg Integrity Score</div>
+
+        <div className="theory-grid">
+          <div className="theory-card">
+            <h3>🧠 AI Systems Can't Be Commanded</h3>
+            <p>
+              LLMs generate probabilistic outputs, not guaranteed truth. You can't force them not to hallucinate.
+              But you <em>can</em> verify whether they kept their implicit promises (accuracy, consistency, policy compliance).
+            </p>
+          </div>
+
+          <div className="theory-card">
+            <h3>🌐 Distributed Systems Are Autonomous</h3>
+            <p>
+              Your cloud provider, your IoT devices, your supply chain partners are all autonomous agents.
+              SLAs are promises, not guarantees. The question isn't "did they promise?" but "did they keep it?"
+            </p>
+          </div>
+
+          <div className="theory-card">
+            <h3>⚖️ Regulatory Shift</h3>
+            <p>
+              The EU AI Act (enforcement begins August 2026) requires post-market monitoring, audit trails,
+              and continuous compliance verification. Penalties up to €35M or 7% global revenue.
+            </p>
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value">5</div>
-          <div className="stat-label">Domains Supported</div>
+
+        <div className="theory-adoption">
+          <h3>Industry Adoption</h3>
+          <ul>
+            <li><strong>CFEngine:</strong> 2,700+ companies using promise-based configuration</li>
+            <li><strong>Cisco ACI:</strong> Network infrastructure built on promise semantics</li>
+            <li><strong>Kubernetes:</strong> Promise-compatible desired-state architecture</li>
+            <li><strong>Microservices/SOA:</strong> Promise-oriented service design (Amazon, Netflix)</li>
+          </ul>
         </div>
+
+        <blockquote className="theory-quote">
+          "Promises are more mathematically primitive than obligations. An agent cannot be forced to keep a promise—it can only declare its intent. This makes promises a more honest model of how distributed systems actually behave."
+          <cite>— Mark Burgess, Promise Theory originator</cite>
+        </blockquote>
       </div>
 
       {/* Pricing Section */}
       <div className="pricing-section" id="pricing">
         <h2>Pricing</h2>
+        <p className="pricing-context">
+          <strong>Enterprise AI compliance audits cost $200K-$800K annually.</strong><br />
+          Promise Engine brings automated verification to every organization.
+        </p>
         <p className="pricing-intro">14-Day Free Trial. No credit card required.</p>
 
         <div className="pricing-grid">
@@ -370,7 +483,25 @@ function LandingPage() {
         <p className="footer-tagline">
           "The world runs on promises. We make them auditable."
         </p>
+
+        <div className="footer-theory">
+          <h3>Built on Promise Theory</h3>
+          <p>
+            Promise Theory (Burgess, 2004) models systems as autonomous agents that declare intentions
+            rather than accepting commands. This framework—proven in CFEngine, adopted by Cisco and
+            Kubernetes—provides the foundation for Promise Engine's verification architecture.
+          </p>
+          <p>
+            Unlike monitoring tools that check if things are "up," Promise Engine checks if things
+            are <em>keeping their promises</em>.
+          </p>
+          <a href="https://en.wikipedia.org/wiki/Promise_theory" target="_blank" rel="noopener noreferrer" className="footer-learn-more">
+            Learn more about Promise Theory →
+          </a>
+        </div>
+
         <div className="footer-links">
+          <Link to="/integrity">Demo Dashboard</Link>
           <a href="#docs">Docs</a>
           <a href="https://github.com/koda-wzkp/promise-engine" target="_blank" rel="noopener noreferrer">
             GitHub
@@ -384,7 +515,7 @@ function LandingPage() {
           <a href="mailto:hello@pleco.dev">Contact</a>
         </div>
         <p className="footer-credit">
-          Built by <a href="https://pleco.dev" target="_blank" rel="noopener noreferrer">Pleco</a> · Powered by <a href="https://en.wikipedia.org/wiki/Promise_theory" target="_blank" rel="noopener noreferrer">Promise Theory</a>
+          Built by <a href="https://pleco.dev" target="_blank" rel="noopener noreferrer">Pleco</a>
         </p>
         <p className="footer-location">Portland, OR 🌲</p>
       </footer>

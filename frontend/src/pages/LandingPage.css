@@ -64,6 +64,13 @@
   font-weight: bold;
 }
 
+.hero-demo-note {
+  font-size: 0.95rem;
+  color: #999;
+  font-style: italic;
+  margin-top: 20px;
+}
+
 .hero-actions {
   display: flex;
   gap: 20px;
@@ -321,6 +328,19 @@
   margin: 0;
 }
 
+.use-case-section {
+  margin-top: 30px;
+}
+
+.use-case-section h4 {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 15px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
 .use-case-points {
   list-style: none;
   padding: 0;
@@ -345,9 +365,26 @@
   max-width: 1200px;
   margin: 100px auto;
   padding: 0 20px;
+  text-align: center;
+}
+
+.stats-title {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  color: #000;
+}
+
+.stats-subtitle {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 50px;
+}
+
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 30px;
+  text-align: center;
 }
 
 .stat-card {
@@ -373,8 +410,138 @@
 .stat-label {
   font-size: 1rem;
   color: #666;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.stat-source {
+  font-size: 0.85rem;
+  color: #999;
+  font-style: italic;
+}
+
+/* Promise Theory Section */
+.promise-theory-section {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 100px auto;
+  padding: 60px 40px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.promise-theory-section h2 {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 30px;
+  color: #000;
+}
+
+.theory-intro {
+  max-width: 800px;
+  margin: 0 auto 50px;
+  text-align: center;
+}
+
+.theory-lead {
+  font-size: 1.15rem;
+  color: #666;
+  line-height: 1.8;
+}
+
+.theory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-bottom: 50px;
+}
+
+.theory-card {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 30px;
+  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+  transition: border-color 0.3s;
+}
+
+.theory-card:hover {
+  border-color: #87CEEB;
+}
+
+.theory-card h3 {
+  font-size: 1.3rem;
+  margin: 0 0 15px 0;
+  color: #000;
+}
+
+.theory-card p {
+  font-size: 1rem;
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.theory-card em {
+  font-style: italic;
+  color: #333;
+}
+
+.theory-adoption {
+  background: rgba(135, 206, 235, 0.1);
+  padding: 30px;
+  border-radius: 8px;
+  margin-bottom: 40px;
+}
+
+.theory-adoption h3 {
+  font-size: 1.4rem;
+  margin: 0 0 20px 0;
+  color: #000;
+}
+
+.theory-adoption ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.theory-adoption li {
+  padding: 10px 0;
+  font-size: 1.05rem;
+  color: #333;
+  border-bottom: 1px solid rgba(135, 206, 235, 0.3);
+}
+
+.theory-adoption li:last-child {
+  border-bottom: none;
+}
+
+.theory-adoption strong {
+  color: #000;
+  font-weight: bold;
+}
+
+.theory-quote {
+  background: #f9f9f9;
+  padding: 30px 40px;
+  border-left: 4px solid #87CEEB;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #333;
+  font-style: italic;
+  margin: 0;
+}
+
+.theory-quote cite {
+  display: block;
+  margin-top: 15px;
+  font-size: 0.95rem;
+  color: #666;
+  font-style: normal;
+  font-weight: bold;
 }
 
 /* Pricing Section */
@@ -393,8 +560,20 @@
   color: #000;
 }
 
-.pricing-intro {
+.pricing-context {
   font-size: 1.15rem;
+  color: #333;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.pricing-context strong {
+  color: #000;
+  font-weight: bold;
+}
+
+.pricing-intro {
+  font-size: 1.1rem;
   color: #666;
   margin-bottom: 60px;
 }
@@ -677,7 +856,47 @@
   font-size: 1.3rem;
   font-weight: bold;
   color: #000;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
+}
+
+.footer-theory {
+  max-width: 800px;
+  margin: 0 auto 40px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 30px;
+  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+}
+
+.footer-theory h3 {
+  font-size: 1.3rem;
+  margin: 0 0 15px 0;
+  color: #000;
+}
+
+.footer-theory p {
+  font-size: 1rem;
+  color: #666;
+  line-height: 1.6;
+  margin: 0 0 15px 0;
+}
+
+.footer-theory em {
+  font-style: italic;
+  color: #333;
+}
+
+.footer-learn-more {
+  display: inline-block;
+  font-weight: bold;
+  color: #87CEEB;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.footer-learn-more:hover {
+  color: #5FA8D3;
 }
 
 .footer-links {
@@ -761,6 +980,19 @@
 
   .use-case-tab {
     width: 100%;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .theory-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .theory-quote {
+    padding: 20px;
+    font-size: 1rem;
   }
 
   .pricing-grid {

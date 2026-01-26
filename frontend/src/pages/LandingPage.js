@@ -244,58 +244,94 @@ function LandingPage() {
       {/* Pricing Section */}
       <div className="pricing-section" id="pricing">
         <h2>Pricing</h2>
-        <p className="pricing-intro">Start free. Scale as you grow. Enterprise when you're serious.</p>
+        <p className="pricing-intro">14-Day Free Trial. No credit card required.</p>
 
         <div className="pricing-grid">
           <div className="pricing-card">
-            <div className="pricing-tier">STARTER</div>
-            <div className="pricing-price">Free</div>
+            <div className="pricing-tier">SOLO</div>
+            <div className="pricing-price">
+              $49<span>/month</span>
+            </div>
+            <p className="pricing-description">For indie hackers and small projects</p>
             <ul className="pricing-features">
-              <li>✓ 10k events/month</li>
+              <li>✓ 100k events/month</li>
               <li>✓ 5 promise schemas</li>
               <li>✓ Basic dashboard</li>
-              <li>✓ Community support</li>
-              <li>✓ API access</li>
+              <li>✓ Email alerts</li>
             </ul>
             <a href="#beta-signup" className="pricing-cta secondary">
-              Start Here
+              Start Free Trial
             </a>
           </div>
 
           <div className="pricing-card featured">
             <div className="pricing-badge">MOST POPULAR</div>
-            <div className="pricing-tier">SCALE</div>
+            <div className="pricing-tier">TEAM</div>
             <div className="pricing-price">
-              $500<span>/month</span>
+              $149<span>/month</span>
             </div>
+            <p className="pricing-description">For startups and growing teams</p>
             <ul className="pricing-features">
-              <li>✓ 500k events/month</li>
-              <li>✓ Unlimited schemas</li>
+              <li>✓ 1M events/month</li>
+              <li>✓ 25 promise schemas</li>
               <li>✓ Custom verification logic</li>
               <li>✓ Slack/webhook alerts</li>
-              <li>✓ Email support</li>
-              <li>✓ Training data access</li>
+              <li>✓ API access</li>
+              <li>✓ Priority email support</li>
             </ul>
             <a href="#beta-signup" className="pricing-cta primary">
-              For Growing Teams
+              Start Free Trial
+            </a>
+          </div>
+
+          <div className="pricing-card">
+            <div className="pricing-tier">SCALE</div>
+            <div className="pricing-price">
+              $499<span>/month</span>
+            </div>
+            <p className="pricing-description">For serious infrastructure</p>
+            <ul className="pricing-features">
+              <li>✓ 5M events/month</li>
+              <li>✓ Unlimited schemas</li>
+              <li>✓ Training data export</li>
+              <li>✓ Advanced analytics</li>
+              <li>✓ Multiple environments</li>
+              <li>✓ Dedicated support</li>
+            </ul>
+            <a href="#beta-signup" className="pricing-cta secondary">
+              Start Free Trial
             </a>
           </div>
 
           <div className="pricing-card">
             <div className="pricing-tier">ENTERPRISE</div>
             <div className="pricing-price">Custom</div>
+            <p className="pricing-description">Let's talk</p>
             <ul className="pricing-features">
               <li>✓ Unlimited events</li>
-              <li>✓ On-prem deployment</li>
-              <li>✓ Compliance reports</li>
-              <li>✓ Dedicated support</li>
-              <li>✓ SLA guarantees</li>
-              <li>✓ White-glove onboarding</li>
+              <li>✓ On-prem deployment option</li>
+              <li>✓ Compliance reports (SOC2, EU AI Act)</li>
+              <li>✓ SLA guarantee</li>
+              <li>✓ Custom integrations</li>
             </ul>
             <a href="mailto:sales@pleco.dev" className="pricing-cta secondary">
               Contact Sales
             </a>
           </div>
+        </div>
+
+        <div className="pricing-cta-section">
+          <a href="#beta-signup" className="pricing-main-cta">
+            Start your 14-day free trial →
+          </a>
+        </div>
+      </div>
+
+      {/* Testimonial Section */}
+      <div className="testimonial-section">
+        <p className="testimonial-tagline">Trusted by teams shipping AI responsibly</p>
+        <div className="testimonial-placeholder">
+          <p className="testimonial-note">(Customer logos and testimonials coming soon)</p>
         </div>
       </div>
 
@@ -335,7 +371,7 @@ function LandingPage() {
           "The world runs on promises. We make them auditable."
         </p>
         <div className="footer-links">
-          <Link to="/integrity">Demo Dashboard</Link>
+          <a href="#docs">Docs</a>
           <a href="https://github.com/koda-wzkp/promise-engine" target="_blank" rel="noopener noreferrer">
             GitHub
           </a>
@@ -345,11 +381,12 @@ function LandingPage() {
           <a href="https://twitter.com/pleco_dev" target="_blank" rel="noopener noreferrer">
             Twitter
           </a>
+          <a href="mailto:hello@pleco.dev">Contact</a>
         </div>
         <p className="footer-credit">
-          Built by <a href="https://pleco.dev" target="_blank" rel="noopener noreferrer">Pleco</a>.
-          Powered by <a href="https://en.wikipedia.org/wiki/Promise_theory" target="_blank" rel="noopener noreferrer">Promise Theory</a>.
+          Built by <a href="https://pleco.dev" target="_blank" rel="noopener noreferrer">Pleco</a> · Powered by <a href="https://en.wikipedia.org/wiki/Promise_theory" target="_blank" rel="noopener noreferrer">Promise Theory</a>
         </p>
+        <p className="footer-location">Portland, OR 🌲</p>
       </footer>
     </div>
   );

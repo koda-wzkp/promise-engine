@@ -12,11 +12,19 @@
   position: relative;
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
 .page-header h1 {
   font-size: 2.5rem;
   font-weight: bold;
-  margin: 0 0 10px 0;
+  margin: 0;
   color: #000;
+  text-align: left;
 }
 
 .agent-info {
@@ -37,9 +45,6 @@
 }
 
 .refresh-button {
-  position: absolute;
-  top: 0;
-  right: 0;
   padding: 10px 20px;
   background: #333;
   color: #fff;
@@ -58,6 +63,50 @@
 .refresh-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Domain Filter */
+.domain-filter {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.domain-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+  color: #333;
+}
+
+.domain-filter-btn:hover {
+  border-color: #87CEEB;
+  background: rgba(255, 255, 255, 1);
+}
+
+.domain-filter-btn.active {
+  border-color: #87CEEB;
+  background: #87CEEB;
+  color: #fff;
+  font-weight: bold;
+}
+
+.domain-icon {
+  font-size: 1.2rem;
+}
+
+.domain-label {
+  font-size: 0.85rem;
 }
 
 /* Score Card */

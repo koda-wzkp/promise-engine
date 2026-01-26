@@ -7,12 +7,21 @@ function IntegrityPage() {
   const [integrity, setIntegrity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [domainFilter, setDomainFilter] = useState('all');
   // const [agentType, setAgentType] = useState('platform');
   // const [agentId, setAgentId] = useState('codec');
   // const [vertical, setVertical] = useState('codec');
   const agentType = 'platform';
   const agentId = 'codec';
   const vertical = 'codec';
+
+  const domains = [
+    { id: 'all', label: 'All', icon: '🌐' },
+    { id: 'ai', label: 'AI/ML', icon: '🤖' },
+    { id: 'iot', label: 'IoT', icon: '🏠' },
+    { id: 'infra', label: 'Infrastructure', icon: '☁️' },
+    { id: 'commerce', label: 'Commerce', icon: '📦' },
+  ];
 
   useEffect(() => {
     fetchIntegrity();
@@ -110,18 +119,34 @@ function IntegrityPage() {
     <div className="integrity-page">
       {/* Header */}
       <div className="page-header">
-        <h1>Integrity Score</h1>
+        <div className="header-top">
+          <h1>Integrity Score</h1>
+          <button
+            className="refresh-button"
+            onClick={() => fetchIntegrity(true)}
+            disabled={loading}
+          >
+            ↻ Refresh
+          </button>
+        </div>
         <p className="agent-info">
           {integrity.agent.type}:{integrity.agent.id}
           {integrity.vertical && <span className="vertical-badge">{integrity.vertical}</span>}
         </p>
-        <button
-          className="refresh-button"
-          onClick={() => fetchIntegrity(true)}
-          disabled={loading}
-        >
-          ↻ Refresh
-        </button>
+
+        {/* Domain Filter */}
+        <div className="domain-filter">
+          {domains.map((domain) => (
+            <button
+              key={domain.id}
+              className={`domain-filter-btn ${domainFilter === domain.id ? 'active' : ''}`}
+              onClick={() => setDomainFilter(domain.id)}
+            >
+              <span className="domain-icon">{domain.icon}</span>
+              <span className="domain-label">{domain.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Main Score Card */}

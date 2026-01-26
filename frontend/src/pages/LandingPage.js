@@ -337,16 +337,25 @@ function LandingPage() {
         <div className="theory-adoption">
           <h3>Industry Adoption</h3>
           <ul>
-            <li><strong>CFEngine:</strong> 2,700+ companies using promise-based configuration</li>
-            <li><strong>Cisco ACI:</strong> Network infrastructure built on promise semantics</li>
+            <li><strong>CFEngine:</strong> 2,700+ companies using promise-based configuration (2023)</li>
+            <li><strong>Cisco ACI:</strong> Network infrastructure built on promise semantics (2012)</li>
             <li><strong>Kubernetes:</strong> Promise-compatible desired-state architecture</li>
             <li><strong>Microservices/SOA:</strong> Promise-oriented service design (Amazon, Netflix)</li>
           </ul>
+          <p className="theory-source">
+            Promise Theory has proven applications in finance, supply chain, safety-critical systems
+            (Boeing 737 Max analysis), and organizational design.
+          </p>
         </div>
 
         <blockquote className="theory-quote">
+          "Existing theories based on obligations were unsuitable as they amounted to wishful thinking."
+          <cite>— Mark Burgess (2005), on why Promise Theory was created for distributed systems</cite>
+        </blockquote>
+
+        <blockquote className="theory-quote">
           "Promises are more mathematically primitive than obligations. An agent cannot be forced to keep a promise—it can only declare its intent. This makes promises a more honest model of how distributed systems actually behave."
-          <cite>— Mark Burgess, Promise Theory originator</cite>
+          <cite>— Bergstra & Burgess, Promise Theory: Principles and Applications (2019)</cite>
         </blockquote>
       </div>
 

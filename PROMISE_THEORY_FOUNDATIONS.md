@@ -82,13 +82,20 @@ From Wikipedia:
 - In 2012, Cisco adopted Promise Theory for their SDN (Software-Defined Networking) initiatives
 - Promises model network policy as voluntary cooperation between switches, not centralized control
 
+**Harvard Business Review (2007):**
+- Sull & Spinosa published "Promise-Based Management: The Essence of Execution"
+- Applied Promise Theory to organizational management and execution
+- Key insight: "Impositions don't guarantee the outcome, so there is no real advantage in using impositions instead of promises."
+- Introduced promise negotiation protocol and reformulation workflow
+- Emphasized culture where "it is OK to say 'no' and 'I can't do that'"
+
 **Tim O'Reilly, WTF: What's the Future (2017):**
 - O'Reilly discusses Promise Theory in his bestseller about technology and society
 
 **Other Domains:**
 - Finance and monetary systems (Bergstra & Burgess, 2019)
 - Supply chain management
-- Organizational design and agile transformation
+- Organizational design and agile transformation (Sheffield & Mezick, 2018)
 - Biology and swarm intelligence
 
 ---
@@ -378,7 +385,8 @@ https://en.wikipedia.org/wiki/Promise_theory
 **Industry Sources:**
 1. CFEngine market share: enlyft.com (2,700+ companies, 2023)
 2. Cisco ACI Architecture (2014)
-3. O'Reilly (2017). *WTF: What's the Future*, p. 118
+3. Sull, D. & Spinosa, C. (2007). "Promise-Based Management: The Essence of Execution." *Harvard Business Review*. https://hbr.org/2007/04/promise-based-management-the-essence-of-execution
+4. O'Reilly (2017). *WTF: What's the Future*, p. 118
 
 ---
 

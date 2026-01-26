@@ -306,6 +306,14 @@ function LandingPage() {
             Promise Theory was proposed by physicist Mark Burgess in 2004 while building CFEngine,
             configuration management software now running in the largest datacenters globally.
           </p>
+          <p className="theory-lead">
+            Harvard Business Review published "Promise-Based Management" in 2007, applying these ideas to
+            organizational execution. Key insight: <strong>"Impositions don't guarantee outcomes"</strong> —
+            commands don't ensure compliance, but voluntary promises tracked over time do.
+          </p>
+          <p className="theory-lead">
+            We're operationalizing these proven concepts for the age of AI.
+          </p>
         </div>
 
         <div className="theory-grid">

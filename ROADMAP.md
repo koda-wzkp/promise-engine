@@ -104,6 +104,25 @@
 - Schedule adherence (did automation run on time?)
 - Building management at scale
 
+**PromiseCRM** (Future)
+- Sales rep promises to customers
+- Super-agent model: rep aggregates fulfillment team promises
+- Integrity scores for individual reps
+- Dependency visibility: rep promise valid only if team can promise support
+- Renegotiation workflow built-in
+
+**PB-OKR: Promise-Based OKRs** (Future)
+- Apply Promise Engine to organizational goal-setting
+- OKRs as promise chains
+- Proposal → negotiation → commitment workflow
+- Traffic light status (green/yellow/red) per objective
+- Renegotiation tracking ("It's OK to say 'I can't do that'")
+- Team/org integrity scores
+- Integration with Linear, Asana, Notion
+
+**Status:** Conceptual verticals
+**Priority:** After CODEC, Living Room Wines, and Enterprise AI validated
+
 ### Schema Library (Open Source?)
 
 **Consideration:** Open-source promise schema definitions
@@ -385,7 +404,8 @@
 
 ## Related Documents
 
-- [PROMISE_THEORY_FOUNDATIONS.md](PROMISE_THEORY_FOUNDATIONS.md) - Theoretical grounding
+- [docs/THEORY.md](docs/THEORY.md) - Comprehensive theoretical foundation (Burgess + Sull/Spinosa)
+- [PROMISE_THEORY_FOUNDATIONS.md](PROMISE_THEORY_FOUNDATIONS.md) - Promise Theory from Wikipedia
 - [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md) - Production deployment info
 - [README.md](README.md) - Technical documentation
 - Landing page: [promise.pleco.dev](https://promise.pleco.dev)

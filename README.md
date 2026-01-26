@@ -213,6 +213,52 @@ Built on Promise Theory (Burgess, 2004), we believe:
 - Failed promises are learning opportunities
 - Accountability scales trust
 
+## Theoretical Foundation
+
+Promise Engine builds on established research in Promise Theory and Promise-Based Management:
+
+### Promise Theory (Burgess, 2004+)
+
+Mark Burgess formalized Promise Theory for distributed systems while developing CFEngine. Key principles:
+
+- **Agents are autonomous** and cannot be coerced into compliance
+- **Cooperation emerges** from voluntary, explicit commitments
+- **"Obligations amounted to wishful thinking"** (Burgess, 2005) - you can't command autonomous systems
+- **Trust is built** through demonstrated promise-keeping over time
+
+**Industry Adoption:**
+- **CFEngine**: 2,700+ companies using promise-based configuration management (2023)
+- **Cisco ACI**: Software-Defined Networking built on promise semantics (2012)
+- **Kubernetes**: Promise-compatible desired-state architecture
+
+### Promise-Based Management (Sull & Spinosa, HBR 2007)
+
+Donald Sull and Charles Spinosa applied promise thinking to organizational execution:
+
+- **"Impositions don't guarantee the outcome"** - commands don't ensure compliance
+- **Promises must be voluntary** and renegotiable
+- **Culture must allow** "I can't do that" - realistic commitments over aspirational ones
+- **Renegotiation is honored**, not penalized
+
+**Citation:** Sull, D. & Spinosa, C. (2007). "Promise-Based Management: The Essence of Execution." *Harvard Business Review*, April 2007.
+
+### Promise Economics (Promise Engine, 2026)
+
+We extend this foundation with:
+
+- **Integrity scores** as verifiable trust metrics
+- **Promise schemas** for machine-readable commitments
+- **POD (Promise-Oriented Development)** for AI training
+- **Multi-vertical application** (AI, IoT, Commerce, Land, Infrastructure)
+- **Automated verification** at scale with continuous monitoring
+
+### References
+
+- Burgess, M. (2015). *Promise Theory: Principles and Applications*. O'Reilly Media.
+- Bergstra, J. A. & Burgess, M. (2019). *Promise Theory: Principles and Applications (Second Edition)*. XtAxis Press.
+- Sull, D. & Spinosa, C. (2007). "Promise-Based Management." *Harvard Business Review*.
+- See `/docs/THEORY.md` for comprehensive theoretical foundation
+
 ## License
 
 Proprietary. © 2026 Pleco

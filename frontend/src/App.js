@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import './App.css';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import IntegrityPage from './pages/IntegrityPage';
+import PromisesPage from './pages/PromisesPage';
 
 function App() {
   // Auth state
@@ -28,13 +30,49 @@ function App() {
 
   return (
     <div className="App">
+      {/* Navigation - Show on dashboard pages */}
+      {(window.location.pathname.startsWith('/integrity') ||
+        window.location.pathname.startsWith('/promises')) && (
+        <nav className="app-nav">
+          <div className="nav-container">
+            <Link to="/" className="nav-logo">
+              Promise Engine
+            </Link>
+            <div className="nav-links">
+              <Link
+                to="/integrity"
+                className={
+                  window.location.pathname === '/integrity'
+                    ? 'nav-link active'
+                    : 'nav-link'
+                }
+              >
+                Integrity
+              </Link>
+              <Link
+                to="/promises"
+                className={
+                  window.location.pathname === '/promises'
+                    ? 'nav-link active'
+                    : 'nav-link'
+                }
+              >
+                Promises
+              </Link>
+            </div>
+          </div>
+        </nav>
+      )}
+
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/register" element={<Register onLogin={handleLogin} />} />
 
-        {/* Protected routes will go here */}
+        {/* Dashboard routes (accessible without auth for demo) */}
+        <Route path="/integrity" element={<IntegrityPage />} />
+        <Route path="/promises" element={<PromisesPage />} />
 
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />

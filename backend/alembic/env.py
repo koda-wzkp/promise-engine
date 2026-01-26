@@ -13,6 +13,15 @@ load_dotenv()
 # Import Base and all models for autogenerate
 from app.database import Base
 from app.models import User, BetaSignup
+from app.promise_engine.storage.models import (
+    PromiseSchemaDB,
+    PromiseEventDB,
+    IntegrityScoreDB,
+    AgentDB,
+    TouchpointDB,
+    JourneyDB,
+    VouchingDB,
+)
 
 # this is the Alembic Config object
 config = context.config

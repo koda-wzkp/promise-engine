@@ -10,7 +10,7 @@ load_dotenv()
 
 # Run migrations
 print("Running database migrations...")
-subprocess.run(["python", "-m", "alembic", "upgrade", "head"], check=True)
+subprocess.run(["python3", "-m", "alembic", "upgrade", "head"], check=True)
 
 # Create Flask app
 app = create_app()

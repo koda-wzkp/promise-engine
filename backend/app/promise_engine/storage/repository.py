@@ -132,27 +132,50 @@ class PromiseRepository:
     # ============================================================
 
     def save_schema(self, schema: PromiseSchema) -> PromiseSchemaDB:
-        """Save a promise schema."""
-        db_schema = PromiseSchemaDB(
-            id=schema.id,
-            version=schema.version,
-            vertical=schema.vertical,
-            name=schema.name,
-            description=schema.description,
-            commitment_type=schema.commitment_type,
-            stakes=schema.stakes,
-            schema_json=schema.schema_json,
-            verification_type=schema.verification_type,
-            verification_rules=schema.verification_rules,
-            training_eligible=schema.training_eligible,
-            domain_tags=schema.domain_tags,
-            created_at=schema.created_at,
-            deprecated_at=schema.deprecated_at,
-        )
-        self.db.add(db_schema)
-        self.db.commit()
-        self.db.refresh(db_schema)
-        return db_schema
+        """Save a promise schema (upsert)."""
+        # Check if schema already exists
+        existing = self.db.query(PromiseSchemaDB).filter(
+            PromiseSchemaDB.id == schema.id
+        ).first()
+
+        if existing:
+            # Update existing schema
+            existing.version = schema.version
+            existing.vertical = schema.vertical
+            existing.name = schema.name
+            existing.description = schema.description
+            existing.commitment_type = schema.commitment_type
+            existing.stakes = schema.stakes
+            existing.schema_json = schema.schema_json
+            existing.verification_type = schema.verification_type
+            existing.verification_rules = schema.verification_rules
+            existing.training_eligible = schema.training_eligible
+            existing.domain_tags = schema.domain_tags
+            existing.deprecated_at = schema.deprecated_at
+            self.db.commit()
+            return existing
+        else:
+            # Insert new schema
+            db_schema = PromiseSchemaDB(
+                id=schema.id,
+                version=schema.version,
+                vertical=schema.vertical,
+                name=schema.name,
+                description=schema.description,
+                commitment_type=schema.commitment_type,
+                stakes=schema.stakes,
+                schema_json=schema.schema_json,
+                verification_type=schema.verification_type,
+                verification_rules=schema.verification_rules,
+                training_eligible=schema.training_eligible,
+                domain_tags=schema.domain_tags,
+                created_at=schema.created_at,
+                deprecated_at=schema.deprecated_at,
+            )
+            self.db.add(db_schema)
+            self.db.commit()
+            self.db.refresh(db_schema)
+            return db_schema
 
     def get_schema(self, schema_id: str, version: Optional[int] = None) -> Optional[PromiseSchemaDB]:
         """Get a promise schema by ID."""

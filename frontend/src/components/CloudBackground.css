@@ -1,0 +1,170 @@
+.cloud-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.sky-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    #87CEEB 0%,
+    #B3E5FC 50%,
+    #E0F6FF 100%
+  );
+}
+
+.clouds {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cloud {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 100px;
+  filter: blur(20px);
+}
+
+.cloud::before,
+.cloud::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 100px;
+}
+
+/* Cloud 1 - Large, slow */
+.cloud-1 {
+  width: 200px;
+  height: 60px;
+  top: 10%;
+  left: -200px;
+  animation: drift-cloud-1 120s linear infinite;
+}
+
+.cloud-1::before {
+  width: 120px;
+  height: 80px;
+  top: -40px;
+  left: 40px;
+}
+
+.cloud-1::after {
+  width: 80px;
+  height: 60px;
+  top: -20px;
+  right: 30px;
+}
+
+/* Cloud 2 - Medium, medium speed */
+.cloud-2 {
+  width: 150px;
+  height: 50px;
+  top: 30%;
+  left: -150px;
+  animation: drift-cloud-2 90s linear infinite;
+  animation-delay: -30s;
+}
+
+.cloud-2::before {
+  width: 100px;
+  height: 70px;
+  top: -35px;
+  left: 30px;
+}
+
+.cloud-2::after {
+  width: 70px;
+  height: 50px;
+  top: -15px;
+  right: 20px;
+}
+
+/* Cloud 3 - Small, faster */
+.cloud-3 {
+  width: 120px;
+  height: 40px;
+  top: 60%;
+  left: -120px;
+  animation: drift-cloud-3 70s linear infinite;
+  animation-delay: -50s;
+}
+
+.cloud-3::before {
+  width: 80px;
+  height: 60px;
+  top: -30px;
+  left: 20px;
+}
+
+.cloud-3::after {
+  width: 60px;
+  height: 40px;
+  top: -10px;
+  right: 15px;
+}
+
+/* Cloud 4 - Tiny, very slow */
+.cloud-4 {
+  width: 180px;
+  height: 55px;
+  top: 80%;
+  left: -180px;
+  animation: drift-cloud-4 140s linear infinite;
+  animation-delay: -70s;
+}
+
+.cloud-4::before {
+  width: 110px;
+  height: 75px;
+  top: -38px;
+  left: 35px;
+}
+
+.cloud-4::after {
+  width: 75px;
+  height: 55px;
+  top: -18px;
+  right: 25px;
+}
+
+/* Animation keyframes */
+@keyframes drift-cloud-1 {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100vw + 200px)); }
+}
+
+@keyframes drift-cloud-2 {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100vw + 150px)); }
+}
+
+@keyframes drift-cloud-3 {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100vw + 120px)); }
+}
+
+@keyframes drift-cloud-4 {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100vw + 180px)); }
+}
+
+/* Responsive - smaller clouds on mobile */
+@media (max-width: 768px) {
+  .cloud-1 { width: 150px; height: 45px; }
+  .cloud-2 { width: 110px; height: 38px; }
+  .cloud-3 { width: 90px; height: 30px; }
+  .cloud-4 { width: 130px; height: 40px; }
+}

@@ -544,6 +544,129 @@
   font-weight: bold;
 }
 
+/* Value Proposition Section */
+.value-prop-section {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 100px auto;
+  padding: 60px 40px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.value-prop-section h2 {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 50px;
+  color: #000;
+}
+
+.value-prop-content {
+  display: flex;
+  gap: 30px;
+  align-items: stretch;
+  margin-bottom: 40px;
+}
+
+.value-prop-card {
+  flex: 1;
+  background: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  border: 3px solid #ddd;
+  text-align: left;
+}
+
+.value-prop-card.before {
+  border-color: #F44336;
+  background: rgba(244, 67, 54, 0.05);
+}
+
+.value-prop-card.after {
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.05);
+}
+
+.value-prop-card h3 {
+  font-size: 1.5rem;
+  margin: 0 0 20px 0;
+  color: #000;
+}
+
+.value-prop-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 25px 0;
+}
+
+.value-prop-card li {
+  padding: 10px 0;
+  font-size: 1.05rem;
+  color: #333;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  line-height: 1.5;
+}
+
+.value-prop-card li:last-child {
+  border-bottom: none;
+}
+
+.value-prop-card em {
+  font-style: italic;
+  color: #000;
+  font-weight: bold;
+}
+
+.value-prop-cost {
+  text-align: center;
+  font-size: 1.1rem;
+  color: #666;
+  margin: 20px 0 0 0;
+  padding-top: 20px;
+  border-top: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.value-prop-cost strong {
+  font-size: 1.3rem;
+  color: #000;
+  font-weight: bold;
+}
+
+.value-prop-arrow {
+  display: flex;
+  align-items: center;
+  font-size: 3rem;
+  color: #87CEEB;
+  font-weight: bold;
+  padding: 0 10px;
+}
+
+.value-prop-roi {
+  background: rgba(135, 206, 235, 0.15);
+  padding: 25px 30px;
+  border-radius: 8px;
+  border: 2px solid #87CEEB;
+  text-align: center;
+}
+
+.value-prop-roi p {
+  font-size: 1.1rem;
+  color: #333;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.value-prop-roi strong {
+  color: #000;
+  font-weight: bold;
+}
+
+.value-prop-roi em {
+  font-style: italic;
+}
+
 /* Pricing Section */
 .pricing-section {
   position: relative;
@@ -992,6 +1115,23 @@
 
   .theory-quote {
     padding: 20px;
+    font-size: 1rem;
+  }
+
+  .value-prop-section {
+    padding: 40px 20px;
+  }
+
+  .value-prop-content {
+    flex-direction: column;
+  }
+
+  .value-prop-arrow {
+    transform: rotate(90deg);
+    padding: 20px 0;
+  }
+
+  .value-prop-roi p {
     font-size: 1rem;
   }
 

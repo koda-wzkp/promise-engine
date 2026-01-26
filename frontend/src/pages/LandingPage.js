@@ -350,13 +350,49 @@ function LandingPage() {
         </blockquote>
       </div>
 
+      {/* Value Proposition - Intelligent Auditing */}
+      <div className="value-prop-section">
+        <h2>Don't Audit Everything. Audit What Matters.</h2>
+        <div className="value-prop-content">
+          <div className="value-prop-card before">
+            <h3>❌ Traditional Approach</h3>
+            <ul>
+              <li>Quarterly audits "just in case"</li>
+              <li>$200K-$800K per comprehensive audit</li>
+              <li>3-6 month lag time to results</li>
+              <li>Most findings: "everything looks fine"</li>
+              <li>Real issues discovered too late</li>
+            </ul>
+            <p className="value-prop-cost">Cost: <strong>$800K-$3.2M/year</strong></p>
+          </div>
+
+          <div className="value-prop-arrow">→</div>
+
+          <div className="value-prop-card after">
+            <h3>✅ Promise Engine Approach</h3>
+            <ul>
+              <li>Continuous monitoring 24/7/365</li>
+              <li>Real-time anomaly detection</li>
+              <li>Automatic verification of every event</li>
+              <li>Deep audit <em>only when issues detected</em></li>
+              <li>Evidence-ready audit trails</li>
+            </ul>
+            <p className="value-prop-cost">Cost: <strong>$149-$499/month + targeted deep audits</strong></p>
+          </div>
+        </div>
+
+        <div className="value-prop-roi">
+          <p>
+            <strong>ROI Example:</strong> If Promise Engine prevents just <em>one</em> unnecessary $200K audit
+            per year, it pays for itself <strong>400× over</strong>. When it does detect an issue requiring
+            deep forensics, you have evidence-ready data to make that $200K audit laser-focused.
+          </p>
+        </div>
+      </div>
+
       {/* Pricing Section */}
       <div className="pricing-section" id="pricing">
         <h2>Pricing</h2>
-        <p className="pricing-context">
-          <strong>Enterprise AI compliance audits cost $200K-$800K annually.</strong><br />
-          Promise Engine brings automated verification to every organization.
-        </p>
         <p className="pricing-intro">14-Day Free Trial. No credit card required.</p>
 
         <div className="pricing-grid">
@@ -419,13 +455,15 @@ function LandingPage() {
           <div className="pricing-card">
             <div className="pricing-tier">ENTERPRISE</div>
             <div className="pricing-price">Custom</div>
-            <p className="pricing-description">Let's talk</p>
+            <p className="pricing-description">Intelligent audit triage at scale</p>
             <ul className="pricing-features">
               <li>✓ Unlimited events</li>
               <li>✓ On-prem deployment option</li>
               <li>✓ Compliance reports (SOC2, EU AI Act)</li>
               <li>✓ SLA guarantee</li>
               <li>✓ Custom integrations</li>
+              <li>✓ Evidence-ready audit trails</li>
+              <li>✓ Deep audit coordination when issues detected</li>
             </ul>
             <a href="mailto:sales@pleco.dev" className="pricing-cta secondary">
               Contact Sales

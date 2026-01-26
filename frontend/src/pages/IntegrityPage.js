@@ -7,13 +7,17 @@ function IntegrityPage() {
   const [integrity, setIntegrity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [agentType, setAgentType] = useState('platform');
-  const [agentId, setAgentId] = useState('codec');
-  const [vertical, setVertical] = useState('codec');
+  // const [agentType, setAgentType] = useState('platform');
+  // const [agentId, setAgentId] = useState('codec');
+  // const [vertical, setVertical] = useState('codec');
+  const agentType = 'platform';
+  const agentId = 'codec';
+  const vertical = 'codec';
 
   useEffect(() => {
     fetchIntegrity();
-  }, [agentType, agentId, vertical]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchIntegrity = async (refresh = false) => {
     try {

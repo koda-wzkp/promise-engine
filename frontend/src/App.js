@@ -8,25 +8,25 @@ import IntegrityPage from './pages/IntegrityPage';
 import PromisesPage from './pages/PromisesPage';
 
 function App() {
-  // Auth state
-  const [token, setToken] = useState(localStorage.getItem('token'));
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem('user') || 'null')
-  );
+  // Auth state (for future use)
+  // const [token, setToken] = useState(localStorage.getItem('token'));
+  // const [user, setUser] = useState(
+  //   JSON.parse(localStorage.getItem('user') || 'null')
+  // );
 
   const handleLogin = (authData) => {
-    setToken(authData.token);
-    setUser(authData.user);
+    // setToken(authData.token);
+    // setUser(authData.user);
     localStorage.setItem('token', authData.token);
     localStorage.setItem('user', JSON.stringify(authData.user));
   };
 
-  const handleLogout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  };
+  // const handleLogout = () => {
+  //   setToken(null);
+  //   setUser(null);
+  //   localStorage.removeItem('token');
+  //   localStorage.removeItem('user');
+  // };
 
   return (
     <div className="App">

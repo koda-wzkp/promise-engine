@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import IntegrityPage from './pages/IntegrityPage';
 import PromisesPage from './pages/PromisesPage';
+import LivingRoomWines from './pages/LivingRoomWines';
 
 function App() {
   // Auth state (for future use)
@@ -74,6 +75,9 @@ function App() {
         {/* Dashboard routes (accessible without auth for demo) */}
         <Route path="/integrity" element={<IntegrityPage />} />
         <Route path="/promises" element={<PromisesPage />} />
+
+        {/* CODEC Demos */}
+        <Route path="/demo/livingroom-wines" element={<LivingRoomWines />} />
 
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />

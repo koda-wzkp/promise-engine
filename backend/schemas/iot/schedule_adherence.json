@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IoT Schedule Adherence",
+  "description": "Promise schema for verifying IoT devices execute scheduled actions on time",
+  "type": "object",
+  "properties": {
+    "device_id": {
+      "type": "string",
+      "description": "Unique identifier for the IoT device"
+    },
+    "device_type": {
+      "type": "string",
+      "description": "Type of device (e.g., 'smart_lock', 'irrigation_system', 'light')"
+    },
+    "scheduled_action": {
+      "type": "string",
+      "description": "The action that was scheduled (e.g., 'lock_door', 'water_lawn', 'turn_off')"
+    },
+    "scheduled_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the action was scheduled to occur"
+    },
+    "actual_execution_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the action actually occurred"
+    },
+    "executed": {
+      "type": "boolean",
+      "description": "Whether the action was executed"
+    },
+    "on_time": {
+      "type": "boolean",
+      "description": "Whether the action was executed within acceptable time window"
+    },
+    "delay_seconds": {
+      "type": "number",
+      "description": "Delay in seconds (positive = late, negative = early)"
+    },
+    "acceptable_delay_seconds": {
+      "type": "number",
+      "default": 60,
+      "description": "Acceptable delay threshold in seconds"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the verification was performed"
+    }
+  },
+  "required": ["device_id", "device_type", "scheduled_action", "scheduled_time", "executed", "on_time", "timestamp"]
+}

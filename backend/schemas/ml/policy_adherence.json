@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ML Policy Adherence",
+  "description": "Promise schema for verifying AI model outputs comply with defined policies",
+  "type": "object",
+  "properties": {
+    "model_id": {
+      "type": "string",
+      "description": "Identifier for the AI model being audited"
+    },
+    "policy_id": {
+      "type": "string",
+      "description": "Identifier for the policy being checked"
+    },
+    "policy_name": {
+      "type": "string",
+      "description": "Human-readable policy name (e.g., 'No PII in outputs', 'EU AI Act compliance')"
+    },
+    "input_prompt": {
+      "type": "string",
+      "description": "The prompt given to the model"
+    },
+    "output_text": {
+      "type": "string",
+      "description": "The model's generated output"
+    },
+    "policy_check_type": {
+      "type": "string",
+      "enum": ["content_filter", "bias_check", "safety_check", "compliance_check", "privacy_check"],
+      "description": "Type of policy being verified"
+    },
+    "violation_detected": {
+      "type": "boolean",
+      "description": "Whether a policy violation was detected"
+    },
+    "violation_details": {
+      "type": "string",
+      "description": "Details of any violations found"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Severity of any violation"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the check was performed"
+    }
+  },
+  "required": ["model_id", "policy_id", "policy_name", "output_text", "policy_check_type", "violation_detected", "timestamp"]
+}

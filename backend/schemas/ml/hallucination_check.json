@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ML Hallucination Check",
+  "description": "Promise schema for verifying AI model outputs against hallucination criteria",
+  "type": "object",
+  "properties": {
+    "model_id": {
+      "type": "string",
+      "description": "Identifier for the AI model being audited"
+    },
+    "input_prompt": {
+      "type": "string",
+      "description": "The prompt given to the model"
+    },
+    "output_text": {
+      "type": "string",
+      "description": "The model's generated output"
+    },
+    "ground_truth": {
+      "type": "string",
+      "description": "Known factual information to verify against (optional)"
+    },
+    "verification_method": {
+      "type": "string",
+      "enum": ["fact_check", "citation_check", "consistency_check", "source_verification"],
+      "description": "Method used to verify the output"
+    },
+    "hallucination_detected": {
+      "type": "boolean",
+      "description": "Whether hallucination was detected in the output"
+    },
+    "confidence_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence in the verification result (0-1)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the check was performed"
+    }
+  },
+  "required": ["model_id", "input_prompt", "output_text", "verification_method", "hallucination_detected", "timestamp"]
+}

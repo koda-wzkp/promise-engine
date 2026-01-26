@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Infrastructure Latency SLA",
+  "description": "Promise schema for verifying infrastructure latency meets SLA commitments",
+  "type": "object",
+  "properties": {
+    "service_id": {
+      "type": "string",
+      "description": "Identifier for the service being monitored"
+    },
+    "service_name": {
+      "type": "string",
+      "description": "Human-readable service name"
+    },
+    "endpoint": {
+      "type": "string",
+      "description": "API endpoint or service endpoint being measured"
+    },
+    "sla_target_ms": {
+      "type": "number",
+      "description": "Promised latency in milliseconds (e.g., 100 for p95 < 100ms)"
+    },
+    "percentile": {
+      "type": "string",
+      "enum": ["p50", "p90", "p95", "p99", "p999"],
+      "description": "Percentile being measured (e.g., p95 = 95th percentile)"
+    },
+    "measurement_period": {
+      "type": "string",
+      "enum": ["hourly", "daily", "weekly", "monthly"],
+      "description": "Time period for SLA measurement"
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Start of measurement period"
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "End of measurement period"
+    },
+    "actual_latency_ms": {
+      "type": "number",
+      "description": "Actual latency achieved in milliseconds"
+    },
+    "sample_count": {
+      "type": "integer",
+      "description": "Number of requests sampled during period"
+    },
+    "sla_met": {
+      "type": "boolean",
+      "description": "Whether the SLA target was met"
+    },
+    "latency_distribution": {
+      "type": "object",
+      "description": "Full latency distribution",
+      "properties": {
+        "p50": {"type": "number"},
+        "p90": {"type": "number"},
+        "p95": {"type": "number"},
+        "p99": {"type": "number"},
+        "max": {"type": "number"}
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the verification was performed"
+    }
+  },
+  "required": ["service_id", "service_name", "sla_target_ms", "percentile", "measurement_period", "period_start", "period_end", "actual_latency_ms", "sample_count", "sla_met", "timestamp"]
+}

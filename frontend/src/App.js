@@ -36,7 +36,8 @@ function App() {
         <nav className="app-nav">
           <div className="nav-container">
             <Link to="/" className="nav-logo">
-              Promise Engine
+              <span className="logo-main">Promise Engine</span>
+              <span className="logo-subtitle">Universal Auditing</span>
             </Link>
             <div className="nav-links">
               <Link

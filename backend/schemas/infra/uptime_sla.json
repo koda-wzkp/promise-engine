@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Infrastructure Uptime SLA",
+  "description": "Promise schema for verifying infrastructure uptime meets SLA commitments",
+  "type": "object",
+  "properties": {
+    "service_id": {
+      "type": "string",
+      "description": "Identifier for the service being monitored"
+    },
+    "service_name": {
+      "type": "string",
+      "description": "Human-readable service name"
+    },
+    "sla_target": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Promised uptime percentage (e.g., 99.9 for 99.9%)"
+    },
+    "measurement_period": {
+      "type": "string",
+      "enum": ["hourly", "daily", "weekly", "monthly", "quarterly"],
+      "description": "Time period for SLA measurement"
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Start of measurement period"
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "End of measurement period"
+    },
+    "actual_uptime": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Actual uptime percentage achieved"
+    },
+    "total_downtime_seconds": {
+      "type": "number",
+      "description": "Total downtime in seconds during period"
+    },
+    "sla_met": {
+      "type": "boolean",
+      "description": "Whether the SLA target was met"
+    },
+    "incidents": {
+      "type": "array",
+      "description": "List of downtime incidents",
+      "items": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "duration_seconds": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the verification was performed"
+    }
+  },
+  "required": ["service_id", "service_name", "sla_target", "measurement_period", "period_start", "period_end", "actual_uptime", "sla_met", "timestamp"]
+}

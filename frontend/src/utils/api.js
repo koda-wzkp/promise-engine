@@ -87,4 +87,23 @@ export const api = {
       body: JSON.stringify({ email }),
     }),
   },
+
+  // HB 2021 vertical
+  hb2021: {
+    dashboard: () => apiRequest('/hb2021/dashboard'),
+    trajectory: (year) => apiRequest(`/hb2021/trajectory${year ? `?year=${year}` : ''}`),
+    verifyEmissions: (data) => apiRequest('/hb2021/verify-emissions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    agents: (filters) => {
+      const params = new URLSearchParams();
+      if (filters?.role) params.set('role', filters.role);
+      if (filters?.type) params.set('type', filters.type);
+      const qs = params.toString();
+      return apiRequest(`/hb2021/agents${qs ? `?${qs}` : ''}`);
+    },
+    agent: (id) => apiRequest(`/hb2021/agents/${id}`),
+    schemas: () => apiRequest('/hb2021/schemas'),
+  },
 };

@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceLine } from "recharts";
+import { api } from "../utils/api";
 
 // ─── DATA ───
 const AGENTS = [
@@ -133,6 +134,24 @@ function generateNarrative() {
 export default function HB2021Dashboard() {
   const [tab, setTab] = useState("summary");
   const [domainFilter, setDomainFilter] = useState("All");
+  const [liveData, setLiveData] = useState(null);
+  const [apiStatus, setApiStatus] = useState("loading"); // loading | connected | offline
+
+  // Fetch live data from API (falls back to hardcoded data gracefully)
+  useEffect(() => {
+    let cancelled = false;
+    api.hb2021.dashboard()
+      .then(data => {
+        if (!cancelled && data.success) {
+          setLiveData(data.dashboard);
+          setApiStatus("connected");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setApiStatus("offline");
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const narrative = useMemo(generateNarrative, []);
   const domains = ["All", ...new Set(PROMISES.map(p => p.domain))];
@@ -299,9 +318,19 @@ export default function HB2021Dashboard() {
         {tab === "trajectory" && (
           <div>
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "28px 32px", marginBottom: 24 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, fontFamily: serif, marginBottom: 6 }}>Are utilities on track to meet their targets?</h2>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 6 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 600, fontFamily: serif }}>Are utilities on track to meet their targets?</h2>
+                {apiStatus !== "loading" && (
+                  <span style={{
+                    fontSize: 10, fontFamily: mono, padding: "3px 8px", borderRadius: 3,
+                    color: apiStatus === "connected" ? C.verified : C.textLight,
+                    background: apiStatus === "connected" ? `${C.verified}12` : C.surfaceDark,
+                  }}>{apiStatus === "connected" ? "LIVE" : "STATIC"}</span>
+                )}
+              </div>
               <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 24, lineHeight: 1.6 }}>
                 The chart below shows actual emissions reductions (solid lines) and projected trajectories (dashed) against the statutory targets. The gap between the dashed line and the target line is the amount of additional reduction each utility needs to achieve.
+                {liveData && ` Data verified by Promise Engine API — ${liveData.utilities?.length || 0} utilities tracked.`}
               </p>
 
               {/* PGE Chart */}
@@ -352,6 +381,40 @@ export default function HB2021Dashboard() {
                 </p>
               </div>
             </div>
+
+            {/* Live projections from API */}
+            {liveData?.utilities && (
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "28px 32px" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, fontFamily: serif, marginBottom: 16 }}>Promise Engine Projections (Live)</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                  {liveData.utilities.map(u => (
+                    <div key={u.id} style={{ padding: 16, background: C.surfaceDark, borderRadius: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{u.name}</div>
+                      <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 8 }}>
+                        Current: {u.emissions.actual_reduction_pct}% reduction (gap: {u.emissions.gap_pct}%)
+                      </div>
+                      {Object.entries(u.projections).map(([year, proj]) => (
+                        <div key={year} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontFamily: mono, fontSize: 12, minWidth: 36 }}>{year}</span>
+                          <div style={{ flex: 1, height: 6, background: C.bg, borderRadius: 3, overflow: "hidden" }}>
+                            <div style={{
+                              width: `${Math.min(proj.projected_pct, 100)}%`, height: "100%",
+                              background: proj.on_track ? C.verified : C.violated, borderRadius: 3,
+                            }} />
+                          </div>
+                          <span style={{ fontFamily: mono, fontSize: 11, color: proj.on_track ? C.verified : C.violated, fontWeight: 600, minWidth: 44, textAlign: "right" }}>
+                            {proj.projected_pct}%
+                          </span>
+                          <span style={{ fontFamily: mono, fontSize: 10, color: C.textLight, minWidth: 36, textAlign: "right" }}>
+                            /{proj.target_pct}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

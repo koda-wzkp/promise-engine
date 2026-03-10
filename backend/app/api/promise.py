@@ -568,3 +568,250 @@ def health():
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat()
         }), 500
+
+
+# ============================================================
+# EVENTS QUERY
+# ============================================================
+
+@promise_bp.route("/events", methods=["GET"])
+def query_events():
+    """Query past promise events.
+
+    Query Parameters:
+        - vertical: Filter by vertical (optional)
+        - schema_id: Filter by schema (optional)
+        - agent_type: Agent type to filter (optional, requires agent_id)
+        - agent_id: Agent ID to filter (optional)
+        - result: Filter by result: kept, broken, pending, blocked, renegotiated (optional)
+        - since: ISO timestamp (optional)
+        - limit: Max results, default 100, max 1000 (optional)
+    """
+    try:
+        vertical = request.args.get("vertical")
+        schema_id = request.args.get("schema_id")
+        agent_type = request.args.get("agent_type")
+        agent_id = request.args.get("agent_id")
+        result_filter = request.args.get("result")
+        since_str = request.args.get("since")
+        limit = min(int(request.args.get("limit", 100)), 1000)
+
+        agent = None
+        if agent_type and agent_id:
+            try:
+                agent = Agent(type=AgentType(agent_type), id=agent_id)
+            except ValueError as e:
+                return jsonify({"success": False, "error": f"Invalid agent type: {e}"}), 400
+
+        result = None
+        if result_filter:
+            try:
+                result = PromiseResult(result_filter)
+            except ValueError:
+                return jsonify({"success": False, "error": f"Invalid result: {result_filter}"}), 400
+
+        since = None
+        if since_str:
+            try:
+                since = datetime.fromisoformat(since_str.replace("Z", "+00:00"))
+            except ValueError:
+                return jsonify({"success": False, "error": "Invalid 'since' format"}), 400
+
+        from app.database import get_db
+        from app.promise_engine.storage.repository import PromiseRepository
+
+        with get_db() as db:
+            repo = PromiseRepository(db)
+            events = repo.get_events(
+                agent=agent, vertical=vertical, schema_id=schema_id,
+                result=result, since=since, limit=limit,
+            )
+
+            return jsonify({
+                "success": True,
+                "events": [
+                    {
+                        "id": str(e.id),
+                        "timestamp": e.timestamp.isoformat(),
+                        "vertical": e.vertical,
+                        "schema_id": e.promise_schema_id,
+                        "promiser": {"type": e.promiser_type, "id": e.promiser_id},
+                        "promisee": {"type": e.promisee_type, "id": e.promisee_id},
+                        "result": e.result,
+                        "violation_type": e.violation_type,
+                        "signal_strength": e.signal_strength,
+                        "recovery_action": e.recovery_action,
+                        "recovery_outcome": e.recovery_outcome,
+                        "recovery_at": e.recovery_at.isoformat() if e.recovery_at else None,
+                    }
+                    for e in events
+                ],
+                "count": len(events),
+                "limit": limit,
+            }), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ============================================================
+# RECOVERY
+# ============================================================
+
+@promise_bp.route("/recovery", methods=["POST"])
+def log_recovery():
+    """Log a recovery action for a broken promise.
+
+    Request Body:
+        {
+            "event_id": "uuid",
+            "recovery_action": "refund_issued",
+            "recovery_outcome": "resolved"  // resolved, compensated, renegotiated, failed
+        }
+    """
+    try:
+        data = request.get_json()
+
+        required = ["event_id", "recovery_action", "recovery_outcome"]
+        missing = [f for f in required if f not in data]
+        if missing:
+            return jsonify({
+                "success": False,
+                "error": f"Missing required fields: {', '.join(missing)}"
+            }), 400
+
+        valid_outcomes = {"resolved", "compensated", "renegotiated", "failed"}
+        if data["recovery_outcome"] not in valid_outcomes:
+            return jsonify({
+                "success": False,
+                "error": f"Invalid outcome. Must be one of: {', '.join(sorted(valid_outcomes))}"
+            }), 400
+
+        from app.database import get_db
+        from app.promise_engine.storage.repository import PromiseRepository
+
+        with get_db() as db:
+            repo = PromiseRepository(db)
+            event = repo.log_recovery(
+                event_id=data["event_id"],
+                recovery_action=data["recovery_action"],
+                recovery_outcome=data["recovery_outcome"],
+            )
+
+            if not event:
+                return jsonify({
+                    "success": False,
+                    "error": "Event not found or not in 'broken' state"
+                }), 404
+
+            return jsonify({
+                "success": True,
+                "event_id": str(event.id),
+                "recovery_action": event.recovery_action,
+                "recovery_outcome": event.recovery_outcome,
+                "recovery_at": event.recovery_at.isoformat(),
+                "new_result": event.result,
+            }), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ============================================================
+# TRAINING DATA EXPORT
+# ============================================================
+
+@promise_bp.route("/export", methods=["GET"])
+def export_training_data():
+    """Export unexported training data as JSONL.
+
+    This is POD's core value: every promise event becomes
+    a labeled training signal — automatically.
+
+    Query Parameters:
+        - vertical: Filter by vertical (optional)
+        - limit: Max events to export, default 1000 (optional)
+        - mark: Whether to mark events as exported (default: true)
+
+    Response:
+        {
+            "success": true,
+            "format": "jsonl",
+            "count": 42,
+            "data": [
+                {"schema_id": "...", "input": {...}, "label": "kept", ...},
+                ...
+            ]
+        }
+    """
+    try:
+        vertical = request.args.get("vertical")
+        limit = min(int(request.args.get("limit", 1000)), 10000)
+        mark = request.args.get("mark", "true").lower() == "true"
+
+        from app.database import get_db
+        from app.promise_engine.storage.repository import PromiseRepository
+
+        with get_db() as db:
+            repo = PromiseRepository(db)
+            events = repo.get_unexported_events(vertical=vertical, limit=limit)
+
+            training_data = []
+            event_ids = []
+
+            for e in events:
+                training_data.append({
+                    "id": str(e.id),
+                    "schema_id": e.promise_schema_id,
+                    "vertical": e.vertical,
+                    "input": e.input_context,
+                    "output": e.output,
+                    "label": e.result,
+                    "signal_strength": e.signal_strength,
+                    "promiser": {"type": e.promiser_type, "id": e.promiser_id},
+                    "promisee": {"type": e.promisee_type, "id": e.promisee_id},
+                    "violation_type": e.violation_type,
+                    "timestamp": e.timestamp.isoformat(),
+                })
+                event_ids.append(e.id)
+
+            # Mark as exported
+            if mark and event_ids:
+                repo.mark_exported(event_ids)
+
+            return jsonify({
+                "success": True,
+                "format": "jsonl",
+                "count": len(training_data),
+                "marked_exported": mark,
+                "data": training_data,
+            }), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@promise_bp.route("/export/stats", methods=["GET"])
+def export_stats():
+    """Get training data export statistics.
+
+    Query Parameters:
+        - vertical: Filter by vertical (optional)
+    """
+    try:
+        vertical = request.args.get("vertical")
+
+        from app.database import get_db
+        from app.promise_engine.storage.repository import PromiseRepository
+
+        with get_db() as db:
+            repo = PromiseRepository(db)
+            stats = repo.get_export_stats(vertical=vertical)
+
+            return jsonify({
+                "success": True,
+                "stats": stats,
+            }), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500

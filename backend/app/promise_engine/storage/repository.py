@@ -287,6 +287,93 @@ class PromiseRepository:
             return db_agent
 
     # ============================================================
+    # TRAINING DATA EXPORT
+    # ============================================================
+
+    def get_unexported_events(
+        self,
+        vertical: Optional[str] = None,
+        limit: int = 1000,
+    ) -> List[PromiseEventDB]:
+        """Get training-eligible events that haven't been exported yet."""
+        query = self.db.query(PromiseEventDB).filter(
+            PromiseEventDB.training_eligible == True,
+            PromiseEventDB.exported_at == None,
+            PromiseEventDB.result != PromiseResult.PENDING.value,
+        )
+
+        if vertical:
+            query = query.filter(PromiseEventDB.vertical == vertical)
+
+        return query.order_by(PromiseEventDB.timestamp.asc()).limit(limit).all()
+
+    def mark_exported(self, event_ids: List, exported_at: Optional[datetime] = None) -> int:
+        """Mark events as exported. Returns count of updated rows."""
+        if not event_ids:
+            return 0
+        ts = exported_at or datetime.utcnow()
+        count = self.db.query(PromiseEventDB).filter(
+            PromiseEventDB.id.in_(event_ids)
+        ).update(
+            {PromiseEventDB.exported_at: ts},
+            synchronize_session='fetch'
+        )
+        self.db.commit()
+        return count
+
+    def get_export_stats(self, vertical: Optional[str] = None) -> Dict:
+        """Get export statistics."""
+        base_query = self.db.query(PromiseEventDB).filter(
+            PromiseEventDB.training_eligible == True,
+        )
+        if vertical:
+            base_query = base_query.filter(PromiseEventDB.vertical == vertical)
+
+        total = base_query.count()
+        exported = base_query.filter(PromiseEventDB.exported_at != None).count()
+        pending_export = base_query.filter(
+            PromiseEventDB.exported_at == None,
+            PromiseEventDB.result != PromiseResult.PENDING.value,
+        ).count()
+
+        return {
+            "total_eligible": total,
+            "exported": exported,
+            "pending_export": pending_export,
+        }
+
+    # ============================================================
+    # RECOVERY
+    # ============================================================
+
+    def log_recovery(
+        self,
+        event_id,
+        recovery_action: str,
+        recovery_outcome: str,
+    ) -> Optional[PromiseEventDB]:
+        """Log a recovery action for a broken promise."""
+        event = self.db.query(PromiseEventDB).filter(
+            PromiseEventDB.id == event_id
+        ).first()
+
+        if not event:
+            return None
+
+        if event.result != PromiseResult.BROKEN.value:
+            return None
+
+        event.recovery_action = recovery_action
+        event.recovery_outcome = recovery_outcome
+        event.recovery_at = datetime.utcnow()
+
+        if recovery_outcome in ("resolved", "compensated", "renegotiated"):
+            event.result = PromiseResult.RENEGOTIATED.value
+
+        self.db.commit()
+        return event
+
+    # ============================================================
     # ANALYTICS
     # ============================================================
 
@@ -354,12 +441,51 @@ class PromiseRepository:
             broken_count=broken,
             renegotiated_count=renegotiated,
             pending_count=pending,
-            trust_capital=0.0,  # TODO: Implement stakes-weighted scoring
+            trust_capital=self._compute_trust_capital(events),
             recovery_rate=round(recovery_rate, 4),
             trend_30d=trend_30d,
             trend_90d=trend_90d,
             vertical=vertical
         )
+
+    def _compute_trust_capital(self, events: List) -> float:
+        """Compute stakes-weighted trust score.
+
+        High-stakes promises kept = more trust capital.
+        High-stakes promises broken = larger trust penalty.
+
+        Weights: low=1, medium=2, high=3
+        Formula: sum(weight * kept) / sum(weight * resolved)
+        """
+        STAKES_WEIGHT = {"low": 1, "medium": 2, "high": 3}
+
+        # Build schema → stakes lookup
+        schema_stakes = {}
+        schema_ids = {e.promise_schema_id for e in events}
+        for sid in schema_ids:
+            schema = self.db.query(PromiseSchemaDB).filter(
+                PromiseSchemaDB.id == sid
+            ).first()
+            if schema:
+                schema_stakes[sid] = STAKES_WEIGHT.get(schema.stakes, 1)
+            else:
+                schema_stakes[sid] = 1
+
+        weighted_kept = 0.0
+        weighted_resolved = 0.0
+
+        for e in events:
+            if e.result == PromiseResult.PENDING.value:
+                continue
+            weight = schema_stakes.get(e.promise_schema_id, 1)
+            weighted_resolved += weight
+            if e.result == PromiseResult.KEPT.value:
+                weighted_kept += weight
+
+        if weighted_resolved == 0:
+            return 0.0
+
+        return round(weighted_kept / weighted_resolved, 4)
 
     def _calculate_trend_delta(self, all_events: List, recent_events: List) -> Optional[float]:
         """Calculate change in integrity score over time period."""

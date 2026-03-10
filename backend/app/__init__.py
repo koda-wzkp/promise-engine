@@ -105,11 +105,13 @@ def register_blueprints(app):
     from app.api.auth import auth_bp
     from app.api.beta import beta_bp
     from app.api.promise import promise_bp
+    from app.api.hb2021 import hb2021_bp
 
     # API v1 blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
     app.register_blueprint(beta_bp, url_prefix="/api/v1/beta")
     app.register_blueprint(promise_bp)  # Already has /api/v1/promise prefix
+    app.register_blueprint(hb2021_bp)  # Already has /api/v1/hb2021 prefix
 
     logger.info("API blueprints registered")
 
@@ -125,14 +127,13 @@ def register_blueprints(app):
 def init_promise_schemas():
     """Initialize Promise Engine and register schemas."""
     from app.api.promise import init_promise_engine
-    from app.promise_engine.verticals.codec.schemas import CODEC_SCHEMAS
+    from app.promise_engine.verticals import ALL_SCHEMAS
 
     engine = init_promise_engine()
 
-    # Register CODEC schemas
-    for schema_id, schema in CODEC_SCHEMAS.items():
+    # Register all vertical schemas
+    for schema_id, schema in ALL_SCHEMAS.items():
         try:
-            # Check if schema already exists
             existing = engine.get_schema(schema_id)
             if existing:
                 logger.info(f"Schema already registered: {schema_id}")
@@ -141,7 +142,6 @@ def init_promise_schemas():
                 logger.info(f"Registered new schema: {schema_id}")
         except Exception as e:
             logger.error(f"Error registering schema {schema_id}: {str(e)}")
-            # Continue with other schemas
             continue
 
-    logger.info("Promise Engine initialized with schemas")
+    logger.info(f"Promise Engine initialized with {len(ALL_SCHEMAS)} schemas")

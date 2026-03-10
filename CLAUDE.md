@@ -94,9 +94,28 @@ with transaction() as db:  # Auto-commits or rolls back
 
 ## Rules
 
-**Do:** Run `black`/`flake8`/`mypy` before committing. Use context managers for DB access. Follow `ValidationError`/`BusinessRuleViolation` patterns. Add Alembic migrations for schema changes. Keep standard API response format.
+**Do:** Run `black`/`flake8`/`mypy` before committing. Use context managers for DB access. Follow `ValidationError`/`BusinessRuleViolation` patterns. Add Alembic migrations for schema changes. Keep standard API response format. Add type annotations when in doubt. Comment the "why" not the "what".
 
 **Don't:** Expose secrets (`STRIPE_SECRET_KEY`, `ANTHROPIC_API_KEY`, `SECRET_KEY`) in client code. Write raw SQL outside migrations. Skip migrations for DB changes. Add deps without updating `requirements.txt`/`package.json`. Force push to main.
+
+## Invariants (never violate)
+
+- All DB writes go through API routes, never client-side
+- Promise schemas are immutable once published; new versions = new records
+- Training data export is append-only, no deletion
+- All API routes require auth except public read endpoints
+- Trust capital uses stakes weighting, never flat averaging
+- CLAUDE.md is source of truth; if code and spec diverge, flag it
+- Editorial content in frontend; computational backing in API
+
+## Process
+
+Full development process in [`docs/PROCESS.md`](docs/PROCESS.md). Key points:
+
+- **ADRs**: Significant technical choices get a record in `docs/decisions/` (see PROCESS.md for template)
+- **Testing**: Every feature needs unit + integration + axiom tests (Promise Theory properties)
+- **Build reports**: Self-review checklist after each session (deviations, debt, invariants, security)
+- **Uncertainty**: Choose simpler option, write ADR, flag in build report
 
 ## Architecture Decisions
 

@@ -61,6 +61,7 @@ class PromiseRepository:
             signal_strength=event.signal_strength.value,
             touchpoint_id=event.touchpoint_id,
             journey_id=event.journey_id,
+            due_by=event.due_by,
             training_eligible=event.training_eligible,
             exported_at=event.exported_at,
         )
@@ -122,10 +123,24 @@ class PromiseRepository:
         )
 
         if due_before:
-            # TODO: Add due_by field to schema
-            pass
+            query = query.filter(PromiseEventDB.due_by <= due_before)
 
         return query.order_by(PromiseEventDB.timestamp.asc()).all()
+
+    def get_overdue(
+        self,
+        promiser: Agent,
+        as_of: Optional[datetime] = None,
+    ) -> List[PromiseEventDB]:
+        """Get overdue promises — pending events past their due_by date."""
+        now = as_of or datetime.utcnow()
+        return self.db.query(PromiseEventDB).filter(
+            PromiseEventDB.promiser_type == promiser.type.value,
+            PromiseEventDB.promiser_id == promiser.id,
+            PromiseEventDB.result == PromiseResult.PENDING.value,
+            PromiseEventDB.due_by != None,
+            PromiseEventDB.due_by < now,
+        ).order_by(PromiseEventDB.due_by.asc()).all()
 
     # ============================================================
     # PROMISE SCHEMAS

@@ -91,6 +91,9 @@ class PromiseEventDB(Base):
     touchpoint_id = Column(String(100), index=True)
     journey_id = Column(String(100), index=True)
 
+    # Deadline tracking
+    due_by = Column(DateTime, index=True)
+
     # ML metadata
     training_eligible = Column(Boolean, default=True, index=True)
     exported_at = Column(DateTime)
@@ -104,6 +107,7 @@ class PromiseEventDB(Base):
         Index('idx_events_journey', 'journey_id'),
         Index('idx_events_training', 'training_eligible', 'exported_at'),
         Index('idx_events_pending', 'promiser_id', 'result'),
+        Index('idx_events_overdue', 'promiser_id', 'result', 'due_by'),
     )
 
 

@@ -125,7 +125,7 @@ def _make_event(
     promiser, promisee, schema_id="hb2021.emissions_target",
     result=PromiseResult.KEPT, vertical="hb2021",
     training_eligible=True, exported_at=None,
-    timestamp=None,
+    timestamp=None, due_by=None,
 ):
     """Helper to create a test PromiseEvent."""
     return PromiseEvent(
@@ -140,6 +140,7 @@ def _make_event(
         output={},
         result=result,
         signal_strength=SignalStrength.IMPLICIT,
+        due_by=due_by,
         training_eligible=training_eligible,
         exported_at=exported_at,
     )
@@ -502,3 +503,148 @@ class TestEventsQuery:
 
         events = repo.get_events()
         assert events[0].timestamp > events[1].timestamp
+
+
+# ============================================================
+# OVERDUE PROMISES
+# ============================================================
+
+class TestOverdue:
+    """Overdue detection: pending promises past their due_by date."""
+
+    def test_overdue_returns_past_due_pending(self, repo, pge, ratepayers, high_stakes_schema):
+        """Pending events with due_by in the past are overdue."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        past_due = _make_event(
+            pge, ratepayers, result=PromiseResult.PENDING,
+            due_by=datetime(2024, 1, 1),
+        )
+        repo.save_event(past_due)
+
+        overdue = repo.get_overdue(pge)
+        assert len(overdue) == 1
+        assert str(overdue[0].id) == str(past_due.id)
+
+    def test_future_due_not_overdue(self, repo, pge, ratepayers, high_stakes_schema):
+        """Pending events with future due_by are NOT overdue."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        future = _make_event(
+            pge, ratepayers, result=PromiseResult.PENDING,
+            due_by=datetime(2099, 12, 31),
+        )
+        repo.save_event(future)
+
+        overdue = repo.get_overdue(pge)
+        assert len(overdue) == 0
+
+    def test_no_due_by_not_overdue(self, repo, pge, ratepayers, high_stakes_schema):
+        """Pending events without due_by are never overdue."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        no_deadline = _make_event(
+            pge, ratepayers, result=PromiseResult.PENDING,
+            due_by=None,
+        )
+        repo.save_event(no_deadline)
+
+        overdue = repo.get_overdue(pge)
+        assert len(overdue) == 0
+
+    def test_kept_events_not_overdue(self, repo, pge, ratepayers, high_stakes_schema):
+        """Kept events are never overdue, even if past due_by."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        kept = _make_event(
+            pge, ratepayers, result=PromiseResult.KEPT,
+            due_by=datetime(2020, 1, 1),
+        )
+        repo.save_event(kept)
+
+        overdue = repo.get_overdue(pge)
+        assert len(overdue) == 0
+
+    def test_overdue_ordered_oldest_first(self, repo, pge, ratepayers, high_stakes_schema):
+        """Overdue events are returned oldest-due first."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        old = _make_event(
+            pge, ratepayers, result=PromiseResult.PENDING,
+            due_by=datetime(2022, 1, 1),
+        )
+        newer = _make_event(
+            pge, ratepayers, result=PromiseResult.PENDING,
+            due_by=datetime(2024, 6, 1),
+        )
+        repo.save_event(newer)
+        repo.save_event(old)
+
+        overdue = repo.get_overdue(pge)
+        assert len(overdue) == 2
+        assert overdue[0].due_by < overdue[1].due_by
+
+    def test_overdue_scoped_to_agent(self, repo, pge, ratepayers, high_stakes_schema):
+        """Overdue only returns events for the specified promiser."""
+        other = Agent(type=AgentType.BUSINESS, id="pacificorp")
+        repo.save_agent(pge)
+        repo.save_agent(other)
+        repo.save_agent(ratepayers)
+
+        pge_event = _make_event(
+            pge, ratepayers, result=PromiseResult.PENDING,
+            due_by=datetime(2023, 1, 1),
+        )
+        other_event = _make_event(
+            other, ratepayers, result=PromiseResult.PENDING,
+            due_by=datetime(2023, 1, 1),
+        )
+        repo.save_event(pge_event)
+        repo.save_event(other_event)
+
+        overdue = repo.get_overdue(pge)
+        assert len(overdue) == 1
+
+    def test_get_pending_with_due_before(self, repo, pge, ratepayers, high_stakes_schema):
+        """get_pending with due_before filters by due_by."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        soon = _make_event(
+            pge, ratepayers, result=PromiseResult.PENDING,
+            due_by=datetime(2025, 6, 1),
+        )
+        later = _make_event(
+            pge, ratepayers, result=PromiseResult.PENDING,
+            due_by=datetime(2030, 1, 1),
+        )
+        repo.save_event(soon)
+        repo.save_event(later)
+
+        pending = repo.get_pending(pge, due_before=datetime(2026, 1, 1))
+        assert len(pending) == 1
+        assert str(pending[0].id) == str(soon.id)
+
+    def test_as_of_parameter(self, repo, pge, ratepayers, high_stakes_schema):
+        """get_overdue as_of lets you check overdue at a specific point in time."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        event = _make_event(
+            pge, ratepayers, result=PromiseResult.PENDING,
+            due_by=datetime(2025, 6, 1),
+        )
+        repo.save_event(event)
+
+        # Not overdue as of 2025-01-01
+        overdue_before = repo.get_overdue(pge, as_of=datetime(2025, 1, 1))
+        assert len(overdue_before) == 0
+
+        # Overdue as of 2025-07-01
+        overdue_after = repo.get_overdue(pge, as_of=datetime(2025, 7, 1))
+        assert len(overdue_after) == 1

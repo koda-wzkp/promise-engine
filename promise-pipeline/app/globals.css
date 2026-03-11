@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600;700&display=swap');
+
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+/* Cascade animation for simulation */
+@keyframes cascadePulse {
+  0% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0.4; transform: scale(1); }
+}
+
+.cascade-pulse {
+  animation: cascadePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes edgeFlow {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.edge-flow {
+  stroke-dasharray: 5 5;
+  animation: edgeFlow 0.8s linear infinite;
+}
+
+/* Cloud background animation */
+@keyframes cloudDrift {
+  0% { transform: translateX(-10%); }
+  100% { transform: translateX(10%); }
+}
+
+.cloud-drift {
+  animation: cloudDrift 60s ease-in-out infinite alternate;
+}

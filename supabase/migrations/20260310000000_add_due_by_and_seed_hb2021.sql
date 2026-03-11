@@ -116,10 +116,24 @@ VALUES
    '{"utility_id":"pacificorp","advisory_group_convened":true,"assessment_period_start":"2023-01-01","assessment_period_end":"2024-12-31"}',
    '{"advisory_group_convened":true}', 'kept', 'implicit', NULL, true),
 
-  -- Fossil fuel ban (both kept)
+  -- ESS emissions filings
+  (gen_random_uuid(), '2020-12-31', 'hb2021', 'hb2021.emissions_target', 1, 'business', 'ess', 'community', 'ratepayers',
+   '{"utility_id":"ess","reporting_year":2020,"actual_reduction_pct":8.0,"baseline_emissions_mtco2e_per_mwh":0.428,"target_year":2030,"required_reduction_pct":80}',
+   '{"actual_reduction_pct":8.0}', 'pending', 'implicit', '2030-12-31', true),
+  (gen_random_uuid(), '2021-12-31', 'hb2021', 'hb2021.emissions_target', 1, 'business', 'ess', 'community', 'ratepayers',
+   '{"utility_id":"ess","reporting_year":2021,"actual_reduction_pct":9.0,"baseline_emissions_mtco2e_per_mwh":0.428,"target_year":2030,"required_reduction_pct":80}',
+   '{"actual_reduction_pct":9.0}', 'pending', 'implicit', '2030-12-31', true),
+  (gen_random_uuid(), '2022-12-31', 'hb2021', 'hb2021.emissions_target', 1, 'business', 'ess', 'community', 'ratepayers',
+   '{"utility_id":"ess","reporting_year":2022,"actual_reduction_pct":10.0,"baseline_emissions_mtco2e_per_mwh":0.428,"target_year":2030,"required_reduction_pct":80}',
+   '{"actual_reduction_pct":10.0}', 'pending', 'implicit', '2030-12-31', true),
+
+  -- Fossil fuel ban (all three kept)
   (gen_random_uuid(), '2023-03-31', 'hb2021', 'hb2021.fossil_fuel_ban', 1, 'business', 'pge', 'community', 'ratepayers',
    '{"utility_id":"pge","review_period_start":"2022-01-01","review_period_end":"2022-12-31","new_gas_plants_permitted":0,"existing_gas_expansions_permitted":0}',
    '{"compliant":true}', 'kept', 'implicit', NULL, true),
   (gen_random_uuid(), '2023-03-31', 'hb2021', 'hb2021.fossil_fuel_ban', 1, 'business', 'pacificorp', 'community', 'ratepayers',
    '{"utility_id":"pacificorp","review_period_start":"2022-01-01","review_period_end":"2022-12-31","new_gas_plants_permitted":0,"existing_gas_expansions_permitted":0}',
+   '{"compliant":true}', 'kept', 'implicit', NULL, true),
+  (gen_random_uuid(), '2023-03-31', 'hb2021', 'hb2021.fossil_fuel_ban', 1, 'business', 'ess', 'community', 'ratepayers',
+   '{"utility_id":"ess","review_period_start":"2022-01-01","review_period_end":"2022-12-31","new_gas_plants_permitted":0,"existing_gas_expansions_permitted":0}',
    '{"compliant":true}', 'kept', 'implicit', NULL, true);

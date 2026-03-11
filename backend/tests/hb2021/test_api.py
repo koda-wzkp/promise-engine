@@ -22,18 +22,19 @@ from app.promise_engine.verticals.hb2021.agents import HB2021_AGENTS
 class TestDashboardData:
     """Test the dashboard data assembly logic."""
 
-    def test_dashboard_has_both_utilities(self):
-        """Dashboard should include PGE and PacifiCorp."""
+    def test_dashboard_has_all_utilities(self):
+        """Dashboard should include PGE, PacifiCorp, and ESS."""
         from app.api.hb2021 import _build_utility_summaries
-        summaries = _build_utility_summaries()
+        summaries, data_source = _build_utility_summaries()
         ids = [s["id"] for s in summaries]
         assert "pge" in ids
         assert "pacificorp" in ids
+        assert "ess" in ids
 
     def test_utility_summary_structure(self):
         """Each utility summary has required fields."""
         from app.api.hb2021 import _build_utility_summaries
-        summaries = _build_utility_summaries()
+        summaries, _ = _build_utility_summaries()
         for summary in summaries:
             assert "id" in summary
             assert "name" in summary
@@ -47,7 +48,7 @@ class TestDashboardData:
         """Emissions data in dashboard matches verifier output."""
         from app.api.hb2021 import _build_utility_summaries
         verifier = EmissionsTrajectoryVerifier()
-        summaries = _build_utility_summaries()
+        summaries, _ = _build_utility_summaries()
 
         for summary in summaries:
             uid = summary["id"]
@@ -64,7 +65,7 @@ class TestDashboardData:
         """Dashboard projections must match standalone verifier output."""
         from app.api.hb2021 import _build_utility_summaries
         verifier = EmissionsTrajectoryVerifier()
-        summaries = _build_utility_summaries()
+        summaries, _ = _build_utility_summaries()
 
         for summary in summaries:
             actual = summary["emissions"]["actual_reduction_pct"]
@@ -80,13 +81,19 @@ class TestDashboardData:
     def test_trajectory_expected_covers_full_range(self):
         """Trajectory expected data should cover 2020-2040."""
         from app.api.hb2021 import _build_utility_summaries
-        summaries = _build_utility_summaries()
+        summaries, _ = _build_utility_summaries()
         for summary in summaries:
             trajectory = summary["emissions"]["trajectory_expected"]
             years = [t["year"] for t in trajectory]
             assert min(years) == 2020
             assert max(years) == 2040
             assert len(trajectory) == 21  # 2020 through 2040 inclusive
+
+    def test_data_source_reported(self):
+        """Build function reports whether data is from DB or static."""
+        from app.api.hb2021 import _build_utility_summaries
+        _, data_source = _build_utility_summaries()
+        assert data_source in ("database", "static")
 
 
 # ============================================================

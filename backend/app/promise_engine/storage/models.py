@@ -45,6 +45,36 @@ class PromiseSchemaDB(Base):
     )
 
 
+class PromiseSchemaVersionDB(Base):
+    """Schema version history — tracks every change to a schema definition.
+
+    When a schema's verification_rules, schema_json, or stakes change,
+    the old version is preserved here for auditability.
+    """
+
+    __tablename__ = "promise_schema_versions"
+
+    schema_id = Column(String(100), nullable=False, primary_key=True)
+    version = Column(Integer, nullable=False, primary_key=True)
+
+    # Snapshot of the schema at this version
+    name = Column(String(200), nullable=False)
+    description = Column(Text)
+    commitment_type = Column(String(100))
+    stakes = Column(String(20))
+    schema_json = Column(JSONB, nullable=False)
+    verification_type = Column(String(50))
+    verification_rules = Column(JSONB)
+
+    # Version metadata
+    change_summary = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        Index('idx_schema_versions_id', 'schema_id'),
+    )
+
+
 class PromiseEventDB(Base):
     """Promise events - THE GOLD.
 

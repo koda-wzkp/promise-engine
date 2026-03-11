@@ -7,6 +7,7 @@ Provides:
 - Promise event logging for HB 2021 schemas
 """
 
+import logging
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 
@@ -18,10 +19,61 @@ from app.promise_engine.verticals.hb2021.verification import (
     BASELINE_YEAR,
 )
 
+logger = logging.getLogger(__name__)
+
 hb2021_bp = Blueprint("hb2021", __name__, url_prefix="/api/v1/hb2021")
 
 # Shared verifier instance
 _verifier = EmissionsTrajectoryVerifier()
+
+# Fallback data for when DB is empty or unavailable
+_FALLBACK_UTILITY_DATA = {
+    "pge": {
+        "name": "Portland General Electric",
+        "short": "PGE",
+        "reporting_year": 2022,
+        "actual_reduction_pct": 27.0,
+        "emissions_history": [
+            {"year": 2020, "reduction_pct": 22.0},
+            {"year": 2021, "reduction_pct": 24.0},
+            {"year": 2022, "reduction_pct": 27.0},
+        ],
+        "cep_status": "accepted_with_conditions",
+        "cep_docket": "LC 80",
+        "advisory_group_convened": True,
+        "new_gas_plants": 0,
+    },
+    "pacificorp": {
+        "name": "PacifiCorp / Pacific Power",
+        "short": "PAC",
+        "reporting_year": 2022,
+        "actual_reduction_pct": 13.0,
+        "emissions_history": [
+            {"year": 2020, "reduction_pct": 10.0},
+            {"year": 2021, "reduction_pct": 11.0},
+            {"year": 2022, "reduction_pct": 13.0},
+        ],
+        "cep_status": "accepted_with_conditions",
+        "cep_docket": "LC 82",
+        "advisory_group_convened": True,
+        "new_gas_plants": 0,
+    },
+    "ess": {
+        "name": "Electricity Service Suppliers",
+        "short": "ESS",
+        "reporting_year": 2022,
+        "actual_reduction_pct": 10.0,
+        "emissions_history": [
+            {"year": 2020, "reduction_pct": 8.0},
+            {"year": 2021, "reduction_pct": 9.0},
+            {"year": 2022, "reduction_pct": 10.0},
+        ],
+        "cep_status": "pending",
+        "cep_docket": "",
+        "advisory_group_convened": False,
+        "new_gas_plants": 0,
+    },
+}
 
 
 # ============================================================
@@ -35,10 +87,11 @@ def dashboard():
     Returns all data the frontend needs in a single call:
     utilities, their latest emissions, trajectory status, and projections.
 
+    Reads from the database first; falls back to static data if DB is empty.
     Response shape matches what HB2021Dashboard.jsx expects.
     """
     try:
-        utilities = _build_utility_summaries()
+        utilities, data_source = _build_utility_summaries()
 
         return jsonify({
             "success": True,
@@ -52,6 +105,7 @@ def dashboard():
                 "utilities": utilities,
                 "schema_count": len(HB2021_SCHEMAS),
                 "agent_count": len(HB2021_AGENTS),
+                "data_source": data_source,
                 "updated_at": datetime.utcnow().isoformat(),
             }
         }), 200
@@ -61,57 +115,34 @@ def dashboard():
 
 
 def _build_utility_summaries():
-    """Build per-utility summary objects for the dashboard."""
-    # Current known data points (would come from DB in production)
-    utility_data = {
-        "pge": {
-            "name": "Portland General Electric",
-            "short": "PGE",
-            "reporting_year": 2022,
-            "actual_reduction_pct": 27.0,
-            "emissions_history": [
-                {"year": 2020, "reduction_pct": 22.0},
-                {"year": 2021, "reduction_pct": 24.0},
-                {"year": 2022, "reduction_pct": 27.0},
-            ],
-            "cep_status": "accepted_with_conditions",
-            "cep_docket": "LC 80",
-            "advisory_group_convened": True,
-            "new_gas_plants": 0,
-        },
-        "pacificorp": {
-            "name": "PacifiCorp / Pacific Power",
-            "short": "PAC",
-            "reporting_year": 2022,
-            "actual_reduction_pct": 13.0,
-            "emissions_history": [
-                {"year": 2020, "reduction_pct": 10.0},
-                {"year": 2021, "reduction_pct": 11.0},
-                {"year": 2022, "reduction_pct": 13.0},
-            ],
-            "cep_status": "accepted_with_conditions",
-            "cep_docket": "LC 82",
-            "advisory_group_convened": True,
-            "new_gas_plants": 0,
-        },
-    }
+    """Build per-utility summary objects for the dashboard.
+
+    Tries the database first. If no emissions events exist, falls back
+    to the hardcoded editorial data so the dashboard always works.
+
+    Returns:
+        (summaries_list, data_source_string)
+    """
+    utility_data = _load_utility_data_from_db()
+    data_source = "database"
+
+    if not utility_data:
+        utility_data = _FALLBACK_UTILITY_DATA
+        data_source = "static"
 
     summaries = []
     for uid, data in utility_data.items():
-        # Verify current emissions trajectory
         result = _verifier.verify(
             data["actual_reduction_pct"],
             data["reporting_year"],
             uid,
         )
 
-        # Project forward
         projections = _verifier.project_trajectory(
             data["actual_reduction_pct"],
             data["reporting_year"],
         )
 
-        # Build trajectory points for charting
         trajectory_expected = []
         for year in range(2020, 2041):
             tp = _verifier.expected_reduction(year)
@@ -124,7 +155,6 @@ def _build_utility_summaries():
             "id": uid,
             "name": data["name"],
             "short": data["short"],
-            # Emissions
             "emissions": {
                 "reporting_year": data["reporting_year"],
                 "actual_reduction_pct": data["actual_reduction_pct"],
@@ -134,7 +164,6 @@ def _build_utility_summaries():
                 "history": data["emissions_history"],
                 "trajectory_expected": trajectory_expected,
             },
-            # Projections
             "projections": {
                 year: {
                     "projected_pct": proj["projected_pct"],
@@ -144,10 +173,9 @@ def _build_utility_summaries():
                 }
                 for year, proj in projections.items()
             },
-            # Other promise statuses
             "clean_energy_plan": {
                 "status": data["cep_status"],
-                "docket": data["cep_docket"],
+                "docket": data.get("cep_docket", ""),
             },
             "community_benefits": {
                 "advisory_group_convened": data["advisory_group_convened"],
@@ -158,7 +186,115 @@ def _build_utility_summaries():
             },
         })
 
-    return summaries
+    return summaries, data_source
+
+
+def _load_utility_data_from_db():
+    """Load utility dashboard data from the promise_events table.
+
+    Queries emissions filings, CEP filings, community benefits,
+    and fossil fuel ban compliance events from the DB.
+
+    Returns:
+        dict keyed by utility_id, or empty dict if no data found.
+    """
+    try:
+        from app.database import get_db
+        from app.promise_engine.storage.repository import PromiseRepository
+        from app.promise_engine.core.models import Agent, AgentType
+
+        with get_db() as db:
+            repo = PromiseRepository(db)
+
+            # Get all HB2021 events
+            emissions_events = repo.get_events(
+                vertical="hb2021", schema_id="hb2021.emissions_target", limit=1000,
+            )
+
+            if not emissions_events:
+                return {}
+
+            # Group emissions by utility
+            utility_emissions = {}
+            for e in emissions_events:
+                uid = e.promiser_id
+                ctx = e.input_context or {}
+                year = ctx.get("reporting_year")
+                pct = ctx.get("actual_reduction_pct")
+                if uid and year and pct is not None:
+                    utility_emissions.setdefault(uid, []).append({
+                        "year": year, "reduction_pct": pct,
+                    })
+
+            if not utility_emissions:
+                return {}
+
+            # Get agent metadata for names
+            agent_meta = {}
+            for agent_id, agent in HB2021_AGENTS.items():
+                agent_meta[agent_id] = agent.metadata
+
+            # Get CEP filings
+            cep_events = repo.get_events(
+                vertical="hb2021", schema_id="hb2021.clean_energy_plan", limit=100,
+            )
+            utility_cep = {}
+            for e in cep_events:
+                uid = e.promiser_id
+                ctx = e.input_context or {}
+                # Keep the most recent CEP per utility
+                if uid not in utility_cep:
+                    utility_cep[uid] = {
+                        "status": ctx.get("puc_disposition", "pending"),
+                        "docket": ctx.get("cep_docket_number", ""),
+                    }
+
+            # Get community benefits
+            cb_events = repo.get_events(
+                vertical="hb2021", schema_id="hb2021.community_benefits", limit=100,
+            )
+            utility_cb = {}
+            for e in cb_events:
+                uid = e.promiser_id
+                ctx = e.input_context or {}
+                if uid not in utility_cb:
+                    utility_cb[uid] = ctx.get("advisory_group_convened", False)
+
+            # Get fossil fuel ban
+            ff_events = repo.get_events(
+                vertical="hb2021", schema_id="hb2021.fossil_fuel_ban", limit=100,
+            )
+            utility_ff = {}
+            for e in ff_events:
+                uid = e.promiser_id
+                ctx = e.input_context or {}
+                if uid not in utility_ff:
+                    utility_ff[uid] = ctx.get("new_gas_plants_permitted", 0)
+
+            # Assemble per-utility data
+            result = {}
+            for uid, history in utility_emissions.items():
+                sorted_history = sorted(history, key=lambda h: h["year"])
+                latest = sorted_history[-1]
+                meta = agent_meta.get(uid, {})
+
+                result[uid] = {
+                    "name": meta.get("name", uid),
+                    "short": meta.get("short", uid.upper()),
+                    "reporting_year": latest["year"],
+                    "actual_reduction_pct": latest["reduction_pct"],
+                    "emissions_history": sorted_history,
+                    "cep_status": utility_cep.get(uid, {}).get("status", "pending"),
+                    "cep_docket": utility_cep.get(uid, {}).get("docket", ""),
+                    "advisory_group_convened": utility_cb.get(uid, False),
+                    "new_gas_plants": utility_ff.get(uid, 0),
+                }
+
+            return result
+
+    except Exception as e:
+        logger.warning("Failed to load utility data from DB, using fallback: %s", e)
+        return {}
 
 
 # ============================================================

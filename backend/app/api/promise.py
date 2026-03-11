@@ -815,3 +815,183 @@ def export_stats():
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ============================================================
+# VOUCHING NETWORK
+# ============================================================
+
+@promise_bp.route("/vouch", methods=["POST"])
+def create_vouch():
+    """Create or update a vouch between agents.
+
+    Request Body:
+        {
+            "voucher": {"type": "business", "id": "pge"},
+            "vouchee": {"type": "platform", "id": "oregon_deq"},
+            "strength": 0.9,
+            "context": "Consistent accurate emissions reporting"
+        }
+    """
+    try:
+        data = request.get_json()
+
+        required = ["voucher", "vouchee", "strength"]
+        missing = [f for f in required if f not in data]
+        if missing:
+            return jsonify({
+                "success": False,
+                "error": f"Missing required fields: {', '.join(missing)}"
+            }), 400
+
+        try:
+            voucher = Agent(
+                type=AgentType(data["voucher"]["type"]),
+                id=data["voucher"]["id"]
+            )
+            vouchee = Agent(
+                type=AgentType(data["vouchee"]["type"]),
+                id=data["vouchee"]["id"]
+            )
+        except (KeyError, ValueError) as e:
+            return jsonify({
+                "success": False,
+                "error": f"Invalid agent format: {str(e)}"
+            }), 400
+
+        strength = data["strength"]
+        if not isinstance(strength, (int, float)) or strength < 0 or strength > 1:
+            return jsonify({
+                "success": False,
+                "error": "Strength must be a number between 0.0 and 1.0"
+            }), 400
+
+        from app.database import get_db
+        from app.promise_engine.storage.repository import PromiseRepository
+
+        with get_db() as db:
+            repo = PromiseRepository(db)
+            vouch = repo.vouch(
+                voucher=voucher,
+                vouchee=vouchee,
+                strength=strength,
+                context=data.get("context"),
+            )
+
+            return jsonify({
+                "success": True,
+                "vouch": {
+                    "voucher": {"type": vouch.voucher_type, "id": vouch.voucher_id},
+                    "vouchee": {"type": vouch.vouchee_type, "id": vouch.vouchee_id},
+                    "strength": vouch.strength,
+                    "context": vouch.context,
+                    "created_at": vouch.created_at.isoformat(),
+                }
+            }), 201
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@promise_bp.route("/vouch/revoke", methods=["POST"])
+def revoke_vouch():
+    """Revoke a vouch between agents.
+
+    Request Body:
+        {
+            "voucher": {"type": "business", "id": "pge"},
+            "vouchee": {"type": "platform", "id": "oregon_deq"}
+        }
+    """
+    try:
+        data = request.get_json()
+
+        try:
+            voucher = Agent(
+                type=AgentType(data["voucher"]["type"]),
+                id=data["voucher"]["id"]
+            )
+            vouchee = Agent(
+                type=AgentType(data["vouchee"]["type"]),
+                id=data["vouchee"]["id"]
+            )
+        except (KeyError, ValueError) as e:
+            return jsonify({
+                "success": False,
+                "error": f"Invalid agent format: {str(e)}"
+            }), 400
+
+        from app.database import get_db
+        from app.promise_engine.storage.repository import PromiseRepository
+
+        with get_db() as db:
+            repo = PromiseRepository(db)
+            revoked = repo.revoke_vouch(voucher, vouchee)
+
+            if not revoked:
+                return jsonify({
+                    "success": False,
+                    "error": "No active vouch found between these agents"
+                }), 404
+
+            return jsonify({"success": True, "revoked": True}), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@promise_bp.route("/vouch/<agent_type>/<agent_id>", methods=["GET"])
+def get_vouching_network(agent_type: str, agent_id: str):
+    """Get vouching network for an agent.
+
+    Query Parameters:
+        direction: "for" (who vouches FOR this agent) or "by" (who this agent vouches FOR)
+                   Default: returns both plus computed score.
+    """
+    try:
+        try:
+            agent = Agent(type=AgentType(agent_type), id=agent_id)
+        except ValueError as e:
+            return jsonify({"success": False, "error": f"Invalid agent type: {e}"}), 400
+
+        direction = request.args.get("direction")
+
+        from app.database import get_db
+        from app.promise_engine.storage.repository import PromiseRepository
+
+        with get_db() as db:
+            repo = PromiseRepository(db)
+
+            result = {}
+
+            if direction in (None, "for"):
+                vouches_for = repo.get_vouches_for(agent)
+                result["vouched_by"] = [
+                    {
+                        "voucher": {"type": v.voucher_type, "id": v.voucher_id},
+                        "strength": v.strength,
+                        "context": v.context,
+                        "created_at": v.created_at.isoformat(),
+                    }
+                    for v in vouches_for
+                ]
+
+            if direction in (None, "by"):
+                vouches_by = repo.get_vouches_by(agent)
+                result["vouching_for"] = [
+                    {
+                        "vouchee": {"type": v.vouchee_type, "id": v.vouchee_id},
+                        "strength": v.strength,
+                        "context": v.context,
+                        "created_at": v.created_at.isoformat(),
+                    }
+                    for v in vouches_by
+                ]
+
+            if direction is None:
+                result["score"] = repo.compute_vouching_score(agent)
+
+            return jsonify({"success": True, **result}), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500

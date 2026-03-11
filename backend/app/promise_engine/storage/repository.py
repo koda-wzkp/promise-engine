@@ -19,10 +19,12 @@ from app.promise_engine.core.models import (
 from app.promise_engine.storage.models import (
     PromiseEventDB,
     PromiseSchemaDB,
+    PromiseSchemaVersionDB,
     IntegrityScoreDB,
     AgentDB,
     TouchpointDB,
     JourneyDB,
+    VouchingDB,
 )
 
 
@@ -146,16 +148,30 @@ class PromiseRepository:
     # PROMISE SCHEMAS
     # ============================================================
 
-    def save_schema(self, schema: PromiseSchema) -> PromiseSchemaDB:
-        """Save a promise schema (upsert)."""
-        # Check if schema already exists
+    def save_schema(self, schema: PromiseSchema, change_summary: Optional[str] = None) -> PromiseSchemaDB:
+        """Save a promise schema (upsert with version tracking).
+
+        If the schema exists and material fields changed (schema_json,
+        verification_rules, stakes), the old version is archived and
+        the version number is auto-incremented.
+        """
         existing = self.db.query(PromiseSchemaDB).filter(
             PromiseSchemaDB.id == schema.id
         ).first()
 
         if existing:
-            # Update existing schema
-            existing.version = schema.version
+            # Detect material changes that warrant a new version
+            changed = (
+                existing.schema_json != schema.schema_json or
+                existing.verification_rules != schema.verification_rules or
+                existing.stakes != schema.stakes
+            )
+
+            if changed:
+                # Archive the old version before overwriting
+                self._archive_schema_version(existing)
+                existing.version = existing.version + 1
+
             existing.vertical = schema.vertical
             existing.name = schema.name
             existing.description = schema.description
@@ -167,10 +183,15 @@ class PromiseRepository:
             existing.training_eligible = schema.training_eligible
             existing.domain_tags = schema.domain_tags
             existing.deprecated_at = schema.deprecated_at
+
+            if changed:
+                # Archive the new version
+                self._archive_schema_version(existing, change_summary)
+
             self.db.commit()
             return existing
         else:
-            # Insert new schema
+            # Insert new schema + archive version 1
             db_schema = PromiseSchemaDB(
                 id=schema.id,
                 version=schema.version,
@@ -188,9 +209,47 @@ class PromiseRepository:
                 deprecated_at=schema.deprecated_at,
             )
             self.db.add(db_schema)
+            self.db.flush()
+
+            # Archive initial version
+            self._archive_schema_version(db_schema, change_summary or "Initial version")
+
             self.db.commit()
             self.db.refresh(db_schema)
             return db_schema
+
+    def _archive_schema_version(self, db_schema: PromiseSchemaDB, change_summary: Optional[str] = None):
+        """Save a snapshot of the current schema version to the history table.
+
+        Idempotent — skips if this exact version is already archived.
+        """
+        existing = self.db.query(PromiseSchemaVersionDB).filter(
+            PromiseSchemaVersionDB.schema_id == db_schema.id,
+            PromiseSchemaVersionDB.version == db_schema.version,
+        ).first()
+
+        if existing:
+            return
+
+        version_record = PromiseSchemaVersionDB(
+            schema_id=db_schema.id,
+            version=db_schema.version,
+            name=db_schema.name,
+            description=db_schema.description,
+            commitment_type=db_schema.commitment_type,
+            stakes=db_schema.stakes,
+            schema_json=db_schema.schema_json,
+            verification_type=db_schema.verification_type,
+            verification_rules=db_schema.verification_rules,
+            change_summary=change_summary,
+        )
+        self.db.add(version_record)
+
+    def get_schema_history(self, schema_id: str) -> List[PromiseSchemaVersionDB]:
+        """Get all versions of a schema, newest first."""
+        return self.db.query(PromiseSchemaVersionDB).filter(
+            PromiseSchemaVersionDB.schema_id == schema_id,
+        ).order_by(PromiseSchemaVersionDB.version.desc()).all()
 
     def get_schema(self, schema_id: str, version: Optional[int] = None) -> Optional[PromiseSchemaDB]:
         """Get a promise schema by ID."""
@@ -518,3 +577,133 @@ class PromiseRepository:
         recent = recent_kept / recent_resolved if recent_resolved > 0 else 1.0
 
         return round(recent - overall, 4)
+
+    # ============================================================
+    # VOUCHING NETWORK
+    # ============================================================
+
+    def vouch(
+        self,
+        voucher: Agent,
+        vouchee: Agent,
+        strength: float,
+        context: Optional[str] = None,
+    ) -> VouchingDB:
+        """Create or update a vouch from voucher to vouchee.
+
+        Idempotent — updates strength if the relationship already exists.
+
+        Args:
+            voucher: Agent doing the vouching
+            vouchee: Agent being vouched for
+            strength: Vouch strength 0.0-1.0
+            context: Why the vouch was given
+
+        Returns:
+            VouchingDB record
+        """
+        strength = max(0.0, min(1.0, strength))
+
+        existing = self.db.query(VouchingDB).filter(
+            VouchingDB.voucher_type == voucher.type.value,
+            VouchingDB.voucher_id == voucher.id,
+            VouchingDB.vouchee_type == vouchee.type.value,
+            VouchingDB.vouchee_id == vouchee.id,
+        ).first()
+
+        if existing:
+            existing.strength = strength
+            existing.context = context or existing.context
+            existing.revoked_at = None  # Re-activate if revoked
+            self.db.commit()
+            return existing
+
+        vouch_record = VouchingDB(
+            voucher_type=voucher.type.value,
+            voucher_id=voucher.id,
+            vouchee_type=vouchee.type.value,
+            vouchee_id=vouchee.id,
+            strength=strength,
+            context=context,
+        )
+        self.db.add(vouch_record)
+        self.db.commit()
+        return vouch_record
+
+    def revoke_vouch(self, voucher: Agent, vouchee: Agent) -> bool:
+        """Revoke a vouch. Returns True if vouch existed."""
+        existing = self.db.query(VouchingDB).filter(
+            VouchingDB.voucher_type == voucher.type.value,
+            VouchingDB.voucher_id == voucher.id,
+            VouchingDB.vouchee_type == vouchee.type.value,
+            VouchingDB.vouchee_id == vouchee.id,
+            VouchingDB.revoked_at == None,
+        ).first()
+
+        if not existing:
+            return False
+
+        existing.revoked_at = datetime.utcnow()
+        self.db.commit()
+        return True
+
+    def get_vouches_for(self, vouchee: Agent) -> List[VouchingDB]:
+        """Get all active vouches FOR an agent (who vouches for them)."""
+        return self.db.query(VouchingDB).filter(
+            VouchingDB.vouchee_type == vouchee.type.value,
+            VouchingDB.vouchee_id == vouchee.id,
+            VouchingDB.revoked_at == None,
+        ).order_by(VouchingDB.strength.desc()).all()
+
+    def get_vouches_by(self, voucher: Agent) -> List[VouchingDB]:
+        """Get all active vouches BY an agent (who they vouch for)."""
+        return self.db.query(VouchingDB).filter(
+            VouchingDB.voucher_type == voucher.type.value,
+            VouchingDB.voucher_id == voucher.id,
+            VouchingDB.revoked_at == None,
+        ).order_by(VouchingDB.strength.desc()).all()
+
+    def compute_vouching_score(self, agent: Agent) -> Dict:
+        """Compute vouching network metrics for an agent.
+
+        Returns:
+            {
+                "vouching_strength": float,  # Weighted average of incoming vouches
+                "vouched_by_count": int,     # Number of agents vouching for you
+                "vouching_accuracy": float,  # How well do YOUR vouchees perform?
+            }
+        """
+        # Incoming vouches (who vouches for this agent)
+        incoming = self.get_vouches_for(agent)
+        vouched_by_count = len(incoming)
+        vouching_strength = 0.0
+        if incoming:
+            vouching_strength = round(
+                sum(v.strength for v in incoming) / len(incoming), 4
+            )
+
+        # Outgoing vouches — compute accuracy
+        outgoing = self.get_vouches_by(agent)
+        vouching_accuracy = 0.0
+        if outgoing:
+            accuracies = []
+            for v in outgoing:
+                vouchee = Agent(
+                    type=self._parse_agent_type(v.vouchee_type),
+                    id=v.vouchee_id,
+                )
+                score = self.compute_integrity(vouchee)
+                accuracies.append(score.overall_score)
+            vouching_accuracy = round(sum(accuracies) / len(accuracies), 4)
+
+        return {
+            "vouching_strength": vouching_strength,
+            "vouched_by_count": vouched_by_count,
+            "vouching_accuracy": vouching_accuracy,
+        }
+
+    @staticmethod
+    def _parse_agent_type(type_str: str):
+        """Parse agent type string to AgentType enum."""
+        from app.promise_engine.core.models import AgentType
+        return AgentType(type_str)

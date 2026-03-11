@@ -648,3 +648,282 @@ class TestOverdue:
         # Overdue as of 2025-07-01
         overdue_after = repo.get_overdue(pge, as_of=datetime(2025, 7, 1))
         assert len(overdue_after) == 1
+
+
+# ============================================================
+# VOUCHING NETWORK
+# ============================================================
+
+class TestVouching:
+    """Trust network: agents vouch for each other."""
+
+    def test_create_vouch(self, repo, pge, ratepayers):
+        """Creating a vouch stores the relationship."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        vouch = repo.vouch(pge, ratepayers, strength=0.8, context="Good payer")
+        assert vouch.voucher_id == "pge"
+        assert vouch.vouchee_id == "ratepayers"
+        assert vouch.strength == 0.8
+        assert vouch.context == "Good payer"
+        assert vouch.revoked_at is None
+
+    def test_vouch_idempotent(self, repo, pge, ratepayers):
+        """Re-vouching updates strength instead of creating duplicate."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        repo.vouch(pge, ratepayers, strength=0.5)
+        repo.vouch(pge, ratepayers, strength=0.9)
+
+        vouches = repo.get_vouches_by(pge)
+        assert len(vouches) == 1
+        assert vouches[0].strength == 0.9
+
+    def test_vouch_clamps_strength(self, repo, pge, ratepayers):
+        """Strength is clamped to [0.0, 1.0]."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        v1 = repo.vouch(pge, ratepayers, strength=5.0)
+        assert v1.strength == 1.0
+
+        v2 = repo.vouch(pge, ratepayers, strength=-2.0)
+        assert v2.strength == 0.0
+
+    def test_revoke_vouch(self, repo, pge, ratepayers):
+        """Revoking sets revoked_at and excludes from active queries."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        repo.vouch(pge, ratepayers, strength=0.8)
+        assert repo.revoke_vouch(pge, ratepayers) is True
+
+        # No longer shows in active vouches
+        assert len(repo.get_vouches_by(pge)) == 0
+
+    def test_revoke_nonexistent_returns_false(self, repo, pge, ratepayers):
+        """Revoking a vouch that doesn't exist returns False."""
+        assert repo.revoke_vouch(pge, ratepayers) is False
+
+    def test_re_vouch_after_revoke(self, repo, pge, ratepayers):
+        """Re-vouching after revoke re-activates the relationship."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        repo.vouch(pge, ratepayers, strength=0.8)
+        repo.revoke_vouch(pge, ratepayers)
+        repo.vouch(pge, ratepayers, strength=0.95)
+
+        vouches = repo.get_vouches_by(pge)
+        assert len(vouches) == 1
+        assert vouches[0].strength == 0.95
+        assert vouches[0].revoked_at is None
+
+    def test_get_vouches_for(self, repo, pge, ratepayers):
+        """get_vouches_for returns who vouches for the given agent."""
+        other = Agent(type=AgentType.BUSINESS, id="pacificorp")
+        repo.save_agent(pge)
+        repo.save_agent(other)
+        repo.save_agent(ratepayers)
+
+        repo.vouch(pge, ratepayers, strength=0.9)
+        repo.vouch(other, ratepayers, strength=0.7)
+
+        incoming = repo.get_vouches_for(ratepayers)
+        assert len(incoming) == 2
+        # Ordered by strength desc
+        assert incoming[0].strength >= incoming[1].strength
+
+    def test_vouching_score_no_vouches(self, repo, pge):
+        """Agent with no vouches has zero vouching metrics."""
+        score = repo.compute_vouching_score(pge)
+        assert score["vouching_strength"] == 0.0
+        assert score["vouched_by_count"] == 0
+        assert score["vouching_accuracy"] == 0.0
+
+    def test_vouching_score_with_incoming(self, repo, pge, ratepayers, high_stakes_schema):
+        """Vouching strength is the average of incoming vouch strengths."""
+        other = Agent(type=AgentType.BUSINESS, id="pacificorp")
+        repo.save_agent(pge)
+        repo.save_agent(other)
+        repo.save_agent(ratepayers)
+
+        repo.vouch(other, pge, strength=0.8)
+        repo.vouch(ratepayers, pge, strength=0.6)
+
+        score = repo.compute_vouching_score(pge)
+        assert score["vouching_strength"] == 0.7  # (0.8+0.6)/2
+        assert score["vouched_by_count"] == 2
+
+    def test_vouching_accuracy(self, repo, pge, ratepayers, high_stakes_schema):
+        """Vouching accuracy reflects how well your vouchees perform."""
+        repo.save_agent(pge)
+        repo.save_agent(ratepayers)
+
+        # PGE vouches for ratepayers
+        repo.vouch(pge, ratepayers, strength=0.9)
+
+        # Ratepayers has 2 kept, 0 broken → 1.0 integrity
+        repo.save_event(_make_event(ratepayers, pge, result=PromiseResult.KEPT))
+        repo.save_event(_make_event(ratepayers, pge, result=PromiseResult.KEPT))
+
+        score = repo.compute_vouching_score(pge)
+        assert score["vouching_accuracy"] == 1.0
+
+
+# ============================================================
+# PROMISE VERSIONING
+# ============================================================
+
+class TestVersioning:
+    """Schema version tracking preserves history on material changes."""
+
+    def test_initial_save_creates_version(self, repo, db_session):
+        """First save archives version 1."""
+        from app.promise_engine.storage.models import PromiseSchemaVersionDB
+
+        schema = PromiseSchema(
+            id="test.versioning",
+            version=1,
+            vertical="test",
+            name="Test Schema",
+            description="Test",
+            commitment_type="test",
+            stakes="low",
+            schema_json={"type": "object", "properties": {}},
+            verification_type="automatic",
+            verification_rules={"rules": []},
+        )
+        repo.save_schema(schema, change_summary="Initial version")
+
+        versions = repo.get_schema_history("test.versioning")
+        assert len(versions) == 1
+        assert versions[0].version == 1
+        assert versions[0].change_summary == "Initial version"
+
+    def test_no_version_bump_on_cosmetic_change(self, repo, db_session):
+        """Non-material changes (name, description) don't bump version."""
+        schema = PromiseSchema(
+            id="test.cosmetic",
+            version=1,
+            vertical="test",
+            name="Original Name",
+            description="Original",
+            commitment_type="test",
+            stakes="low",
+            schema_json={"type": "object"},
+            verification_type="automatic",
+            verification_rules={"rules": []},
+        )
+        repo.save_schema(schema)
+
+        # Change only the name
+        schema.name = "Updated Name"
+        schema.description = "Updated description"
+        result = repo.save_schema(schema)
+
+        assert result.version == 1  # No bump
+        assert result.name == "Updated Name"
+
+        versions = repo.get_schema_history("test.cosmetic")
+        assert len(versions) == 1  # Still just version 1
+
+    def test_version_bump_on_stakes_change(self, repo, db_session):
+        """Changing stakes triggers a version bump."""
+        schema = PromiseSchema(
+            id="test.stakes",
+            version=1,
+            vertical="test",
+            name="Stakes Test",
+            description="Test",
+            commitment_type="test",
+            stakes="low",
+            schema_json={"type": "object"},
+            verification_type="automatic",
+            verification_rules={"rules": []},
+        )
+        repo.save_schema(schema)
+
+        # Change stakes from low to high
+        schema.stakes = "high"
+        result = repo.save_schema(schema, change_summary="Escalated to high stakes")
+
+        assert result.version == 2
+        versions = repo.get_schema_history("test.stakes")
+        assert len(versions) == 2
+        # v1 archived with "low", v2 with "high"
+        v1 = [v for v in versions if v.version == 1][0]
+        v2 = [v for v in versions if v.version == 2][0]
+        assert v1.stakes == "low"
+        assert v2.stakes == "high"
+        assert v2.change_summary == "Escalated to high stakes"
+
+    def test_version_bump_on_rules_change(self, repo, db_session):
+        """Changing verification_rules triggers a version bump."""
+        schema = PromiseSchema(
+            id="test.rules",
+            version=1,
+            vertical="test",
+            name="Rules Test",
+            description="Test",
+            commitment_type="test",
+            stakes="medium",
+            schema_json={"type": "object"},
+            verification_type="automatic",
+            verification_rules={"rules": [{"condition": "x > 0", "result": "kept"}]},
+        )
+        repo.save_schema(schema)
+
+        schema.verification_rules = {"rules": [{"condition": "x > 10", "result": "kept"}]}
+        result = repo.save_schema(schema)
+
+        assert result.version == 2
+
+    def test_version_bump_on_schema_json_change(self, repo, db_session):
+        """Changing schema_json triggers a version bump."""
+        schema = PromiseSchema(
+            id="test.json",
+            version=1,
+            vertical="test",
+            name="JSON Test",
+            description="Test",
+            commitment_type="test",
+            stakes="low",
+            schema_json={"type": "object", "properties": {"a": {"type": "string"}}},
+            verification_type="automatic",
+            verification_rules={"rules": []},
+        )
+        repo.save_schema(schema)
+
+        schema.schema_json = {"type": "object", "properties": {"a": {"type": "string"}, "b": {"type": "integer"}}}
+        result = repo.save_schema(schema)
+
+        assert result.version == 2
+
+    def test_history_ordered_newest_first(self, repo, db_session):
+        """get_schema_history returns versions newest first."""
+        schema = PromiseSchema(
+            id="test.order",
+            version=1,
+            vertical="test",
+            name="Order Test",
+            description="Test",
+            commitment_type="test",
+            stakes="low",
+            schema_json={"v": 1},
+            verification_type="automatic",
+            verification_rules={"rules": []},
+        )
+        repo.save_schema(schema)
+
+        # Two material changes = versions 1, 2, 3
+        schema.schema_json = {"v": 2}
+        repo.save_schema(schema)
+        schema.schema_json = {"v": 3}
+        repo.save_schema(schema)
+
+        versions = repo.get_schema_history("test.order")
+        assert len(versions) == 3
+        assert versions[0].version > versions[1].version > versions[2].version

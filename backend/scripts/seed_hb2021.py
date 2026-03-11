@@ -40,6 +40,10 @@ EMISSIONS_FILINGS = [
     {"utility": "pacificorp", "year": 2020, "reduction_pct": 10.0},
     {"utility": "pacificorp", "year": 2021, "reduction_pct": 11.0},
     {"utility": "pacificorp", "year": 2022, "reduction_pct": 13.0},
+    # ESS (Electricity Service Suppliers) — aggregate direct access portfolio
+    {"utility": "ess", "year": 2020, "reduction_pct": 8.0},
+    {"utility": "ess", "year": 2021, "reduction_pct": 9.0},
+    {"utility": "ess", "year": 2022, "reduction_pct": 10.0},
 ]
 
 CEP_FILINGS = [
@@ -88,6 +92,13 @@ FOSSIL_FUEL_REVIEWS = [
     },
     {
         "utility": "pacificorp",
+        "review_period_start": "2022-01-01",
+        "review_period_end": "2022-12-31",
+        "new_gas_plants_permitted": 0,
+        "existing_gas_expansions_permitted": 0,
+    },
+    {
+        "utility": "ess",
         "review_period_start": "2022-01-01",
         "review_period_end": "2022-12-31",
         "new_gas_plants_permitted": 0,

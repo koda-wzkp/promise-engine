@@ -123,7 +123,7 @@ const LandingPage = () => {
         <h2>See It In Action</h2>
         <div className="problem-grid">
           <div className="problem-card" onClick={() => navigate('/hb2021')} style={{ cursor: 'pointer' }}>
-            <div className="problem-icon">\u2696\uFE0F</div>
+            <div className="problem-icon">{'\u2696\uFE0F'}</div>
             <p className="problem-question">Oregon HB 2021</p>
             <p>
               Is Oregon's 100% clean electricity law working? We mapped all 20 promises,
@@ -135,7 +135,7 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="problem-card">
-            <div className="problem-icon">\uD83D\uDD0D</div>
+            <div className="problem-icon">{'\uD83D\uDD0D'}</div>
             <p className="problem-question">Who promised what?</p>
             <p>
               Legislation, corporate pledges, and AI systems all make commitments. But promises
@@ -144,7 +144,7 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="problem-card">
-            <div className="problem-icon">\uD83D\uDCC9</div>
+            <div className="problem-icon">{'\uD83D\uDCC9'}</div>
             <p className="problem-question">Are they keeping them?</p>
             <p>
               Continuous verification against structured schemas. Integrity scoring that builds

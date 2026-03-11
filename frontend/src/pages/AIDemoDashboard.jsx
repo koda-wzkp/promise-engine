@@ -62,13 +62,14 @@ const INSIGHTS = [
 
 // ─── STYLES ───
 const C = {
-  bg: "#faf9f6", surface: "#ffffff", surfaceDark: "#f5f3ee",
-  border: "#e2ddd5", text: "#2d2a26", textMuted: "#7a7267", textLight: "#a09889",
-  accent: "#1a5f4a", accentLight: "#e8f2ee",
+  bg: "#f5f0eb", surface: "#ffffff", surfaceDark: "#ece7e0",
+  border: "#d5cfc6", text: "#1a1a2e", textMuted: "#5a5670", textLight: "#8a8599",
+  accent: "#1a1a2e", accentLight: "#e8e6f0",
   verified: "#1a5f4a", declared: "#6b7280", degraded: "#b45309",
   violated: "#b91c1c", unverifiable: "#7c3aed",
   positive: "#1a5f4a", warning: "#b45309", critical: "#b91c1c",
   openai: "#10a37f", anthropic: "#d4a574", google: "#4285f4", meta: "#0668E1",
+  rule: "#1a1a2e",
 };
 
 const STATUS_LABELS = { verified: "On Track", declared: "Declared", degraded: "Behind Schedule", violated: "Off Track", unverifiable: "No Verification" };
@@ -143,21 +144,33 @@ export default function AIDemoDashboard() {
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: font }}>
       <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
 
-      <header style={{ borderBottom: `1px solid ${C.border}`, background: C.surface }}>
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "20px 24px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-            <span style={{ fontSize: 11, color: C.textLight, fontFamily: mono, textTransform: "uppercase", letterSpacing: 1.5 }}>Promise Engine &middot; AI/ML Demo</span>
-            <span style={{
-              fontSize: 10, fontFamily: mono, padding: "2px 8px", borderRadius: 3,
-              color: C.degraded, background: `${C.degraded}12`, border: `1px solid ${C.degraded}28`,
-            }}>DEMO DATA</span>
+      <header style={{ background: C.surface }}>
+        {/* Thin top bar */}
+        <div style={{ borderBottom: `1px solid ${C.border}`, padding: "6px 0" }}>
+          <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 10, fontFamily: mono, textTransform: "uppercase", letterSpacing: 2, color: C.textLight }}>Promise Engine &middot; AI/ML</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{
+                fontSize: 10, fontFamily: mono, padding: "2px 8px", borderRadius: 3,
+                color: C.degraded, background: `${C.degraded}12`, border: `1px solid ${C.degraded}28`,
+              }}>DEMO DATA</span>
+              <span style={{ fontSize: 10, fontFamily: mono, color: C.textLight, letterSpacing: 1 }}>
+                {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              </span>
+            </div>
           </div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, fontFamily: serif, letterSpacing: -0.5, marginBottom: 4 }}>
-            Are AI Systems Keeping Their Promises?
-          </h1>
-          <div style={{ fontSize: 14, color: C.textMuted }}>
-            Tracking 12 promises across 4 major AI providers — accuracy, safety, transparency, and performance
+        </div>
+        {/* Masthead */}
+        <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 24px 8px", textAlign: "center" }}>
+          <div style={{ borderTop: `3px double ${C.rule}`, borderBottom: `1px solid ${C.rule}`, padding: "16px 0 14px", marginBottom: 10 }}>
+            <h1 style={{ fontSize: 38, fontWeight: 700, fontFamily: serif, letterSpacing: -0.5, lineHeight: 1.15, color: C.text }}>
+              Are AI Systems Keeping Their Promises?
+            </h1>
           </div>
+          <div style={{ fontSize: 14, color: C.textMuted, fontFamily: serif, fontStyle: "italic", paddingBottom: 12 }}>
+            An accountability report tracking 12 promises across 4 major AI providers — accuracy, safety, transparency, and performance
+          </div>
+          <div style={{ borderBottom: `1px solid ${C.border}` }} />
         </div>
       </header>
 
@@ -179,104 +192,120 @@ export default function AIDemoDashboard() {
 
         {tab === "summary" && (
           <div>
-            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "32px 36px", marginBottom: 24 }}>
-              <div style={{ display: "flex", alignItems: "start", gap: 32, flexWrap: "wrap" }}>
-                <div style={{ textAlign: "center", minWidth: 100 }}>
+            {/* Lead story — most critical insight as a featured card */}
+            <div style={{
+              background: C.surface, border: `1px solid ${C.border}`, borderRadius: 0,
+              padding: "36px 40px", marginBottom: 28,
+              borderTop: `4px solid ${C.accent}`,
+            }}>
+              <div style={{ fontSize: 10, fontFamily: mono, textTransform: "uppercase", letterSpacing: 2, color: C.textLight, marginBottom: 10 }}>Lead Story</div>
+              <h2 style={{ fontSize: 30, fontWeight: 700, fontFamily: serif, lineHeight: 1.2, color: C.text, marginBottom: 14 }}>
+                {narrative.headline}
+              </h2>
+              <div style={{ width: 60, height: 2, background: C.accent, marginBottom: 14 }} />
+              <p style={{ fontSize: 16, lineHeight: 1.85, color: C.text, fontFamily: serif, maxWidth: 720 }}>
+                {narrative.summary}
+              </p>
+            </div>
+
+            {/* 3-column newspaper layout */}
+            <div style={{ display: "grid", gridTemplateColumns: "240px 1fr 220px", gap: 24, marginBottom: 24 }}>
+
+              {/* LEFT COLUMN — Grade + Status Breakdown */}
+              <div>
+                <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 0, padding: "24px", marginBottom: 20, textAlign: "center" }}>
+                  <div style={{ fontSize: 10, fontFamily: mono, textTransform: "uppercase", letterSpacing: 2, color: C.textLight, marginBottom: 12 }}>Overall Grade</div>
                   <div style={{
                     width: 88, height: 88, borderRadius: "50%",
                     border: `4px solid ${narrative.gradeColor}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 36, fontWeight: 700, fontFamily: mono, color: narrative.gradeColor,
-                    margin: "0 auto 8px",
+                    margin: "0 auto 6px",
                   }}>{narrative.grade}</div>
-                  <div style={{ fontSize: 11, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Overall</div>
                 </div>
-                <div style={{ flex: 1, minWidth: 300 }}>
-                  <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: serif, marginBottom: 12, color: C.text, lineHeight: 1.3 }}>
-                    {narrative.headline}
-                  </h2>
-                  <p style={{ fontSize: 15, lineHeight: 1.8, color: C.text, marginBottom: 0 }}>
-                    {narrative.summary}
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
-              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "24px" }}>
-                <div style={{ fontSize: 14, fontWeight: 600, fontFamily: serif, marginBottom: 16 }}>Promise Status Breakdown</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                  <ResponsiveContainer width={140} height={140}>
+                <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 0, padding: "20px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, fontFamily: serif, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14, borderBottom: `1px solid ${C.border}`, paddingBottom: 8 }}>Status Breakdown</div>
+                  <ResponsiveContainer width="100%" height={130}>
                     <PieChart>
-                      <Pie data={statusCounts.filter(s => s.value > 0)} cx="50%" cy="50%" innerRadius={36} outerRadius={62} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                      <Pie data={statusCounts.filter(s => s.value > 0)} cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={3} dataKey="value" strokeWidth={0}>
                         {statusCounts.filter(s => s.value > 0).map((s, i) => <Cell key={i} fill={s.color} />)}
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
-                  <div style={{ display: "grid", gap: 6, flex: 1 }}>
+                  <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
                     {statusCounts.filter(s => s.value > 0).map(s => (
                       <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ width: 10, height: 10, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: C.text, flex: 1 }}>{s.name}</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: mono, color: s.color }}>{s.value}</span>
+                        <span style={{ fontSize: 12, color: C.text, flex: 1 }}>{s.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: mono, color: s.color }}>{s.value}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "24px" }}>
-                <div style={{ fontSize: 14, fontWeight: 600, fontFamily: serif, marginBottom: 16 }}>Health by Domain</div>
-                <div style={{ display: "grid", gap: 8 }}>
-                  {domainHealth.sort((a, b) => a.health - b.health).map(d => (
-                    <div key={d.domain} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 12, color: C.text, minWidth: 100, fontWeight: 500 }}>{d.domain}</span>
-                      <div style={{ flex: 1, height: 8, background: C.surfaceDark, borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{
-                          width: `${Math.max(10, ((d.health + 1) / 4) * 100)}%`, height: "100%",
-                          background: d.color, borderRadius: 4,
-                        }} />
+              {/* MIDDLE COLUMN — Provider Scorecards stacked */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, fontFamily: serif, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, borderBottom: `1px solid ${C.border}`, paddingBottom: 8 }}>Provider Scorecards</div>
+                <div style={{ display: "grid", gap: 12 }}>
+                  {[
+                    { name: "OpenAI", color: C.openai, promises: PROMISES.filter(p => p.promiser === "openai"), icon: "O" },
+                    { name: "Anthropic", color: C.anthropic, promises: PROMISES.filter(p => p.promiser === "anthropic"), icon: "A" },
+                    { name: "Google DeepMind", color: C.google, promises: PROMISES.filter(p => p.promiser === "google"), icon: "G" },
+                    { name: "Meta AI", color: C.meta, promises: PROMISES.filter(p => p.promiser === "meta"), icon: "M" },
+                  ].map(provider => {
+                    const v = provider.promises.filter(p => p.status === "verified").length;
+                    const total = provider.promises.length;
+                    return (
+                      <div key={provider.name} style={{
+                        background: C.surface, border: `1px solid ${C.border}`, borderRadius: 0,
+                        padding: "16px 20px", borderLeft: `4px solid ${provider.color}`,
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ fontSize: 15, fontWeight: 600, fontFamily: serif }}>{provider.name}</span>
+                          <span style={{ fontFamily: mono, fontSize: 13, color: provider.color, fontWeight: 700 }}>{v}/{total}</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {provider.promises.map(p => (
+                            <div key={p.id} style={{
+                              flex: 1, height: 6, borderRadius: 3,
+                              background: C[p.status] || C.textMuted,
+                            }} />
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 12, color: C.textMuted, marginTop: 8 }}>
+                          {provider.promises.map(p => p.domain).filter((d, i, a) => a.indexOf(d) === i).join(" · ")}
+                        </div>
                       </div>
-                      <span style={{ fontSize: 11, fontFamily: mono, color: d.color, fontWeight: 600, minWidth: 20, textAlign: "right" }}>{d.count}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
-            </div>
 
-            {/* Provider cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {[
-                { name: "OpenAI", color: C.openai, promises: PROMISES.filter(p => p.promiser === "openai"), icon: "O" },
-                { name: "Anthropic", color: C.anthropic, promises: PROMISES.filter(p => p.promiser === "anthropic"), icon: "A" },
-                { name: "Google DeepMind", color: C.google, promises: PROMISES.filter(p => p.promiser === "google"), icon: "G" },
-                { name: "Meta AI", color: C.meta, promises: PROMISES.filter(p => p.promiser === "meta"), icon: "M" },
-              ].map(provider => {
-                const v = provider.promises.filter(p => p.status === "verified").length;
-                const total = provider.promises.length;
-                return (
-                  <div key={provider.name} style={{
-                    background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10,
-                    padding: "20px 24px", borderLeft: `4px solid ${provider.color}`,
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ fontSize: 15, fontWeight: 600, fontFamily: serif }}>{provider.name}</span>
-                      <span style={{ fontFamily: mono, fontSize: 13, color: provider.color, fontWeight: 700 }}>{v}/{total}</span>
-                    </div>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      {provider.promises.map(p => (
-                        <div key={p.id} style={{
-                          flex: 1, height: 6, borderRadius: 3,
-                          background: C[p.status] || C.textMuted,
-                        }} />
-                      ))}
-                    </div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 8 }}>
-                      {provider.promises.map(p => p.domain).filter((d, i, a) => a.indexOf(d) === i).join(" · ")}
-                    </div>
+              {/* RIGHT COLUMN — Domain Health */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, fontFamily: serif, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, borderBottom: `1px solid ${C.border}`, paddingBottom: 8 }}>Domain Health</div>
+                <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 0, padding: "20px" }}>
+                  <div style={{ display: "grid", gap: 14 }}>
+                    {domainHealth.sort((a, b) => a.health - b.health).map(d => (
+                      <div key={d.domain}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{d.domain}</span>
+                          <span style={{ fontSize: 11, fontFamily: mono, color: d.color, fontWeight: 600 }}>{d.count}</span>
+                        </div>
+                        <div style={{ height: 6, background: C.surfaceDark, borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{
+                            width: `${Math.max(10, ((d.health + 1) / 4) * 100)}%`, height: "100%",
+                            background: d.color, borderRadius: 3,
+                          }} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+              </div>
+
             </div>
           </div>
         )}
@@ -369,41 +398,85 @@ export default function AIDemoDashboard() {
         )}
 
         {tab === "insights" && (
-          <div style={{ display: "grid", gap: 20 }}>
-            {INSIGHTS.map((ins, i) => (
-              <div key={i} style={{
-                background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10,
-                padding: "28px 32px", borderLeft: `4px solid ${C[ins.severity]}`,
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <span style={{
-                    padding: "3px 10px", borderRadius: 4, fontSize: 10, fontWeight: 700,
-                    textTransform: "uppercase", letterSpacing: 0.8,
-                    color: C[ins.severity], background: `${C[ins.severity]}12`, border: `1px solid ${C[ins.severity]}28`,
-                  }}>{ins.severity}</span>
-                  <span style={{ fontSize: 11, color: C.textLight, fontFamily: mono }}>{ins.type}</span>
-                </div>
-                <h3 style={{ fontSize: 18, fontWeight: 600, fontFamily: serif, marginBottom: 12, lineHeight: 1.3 }}>{ins.title}</h3>
-                <p style={{ fontSize: 14, lineHeight: 1.8, color: C.text, marginBottom: 16 }}>{ins.body}</p>
-                {ins.promises.length > 0 && (
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {ins.promises.map(pid => {
-                      const pr = PROMISES.find(p => p.id === pid);
-                      if (!pr) return null;
-                      return (
-                        <div key={pid} style={{
-                          padding: "8px 12px", background: C.surfaceDark, borderRadius: 6,
-                          borderLeft: `3px solid ${C[pr.status]}`, fontSize: 12,
-                        }}>
-                          <span style={{ fontFamily: mono, color: C.accent, fontWeight: 600, marginRight: 6 }}>{pr.id}</span>
-                          <span style={{ color: C.text }}>{pr.body}</span>
-                        </div>
-                      );
-                    })}
+          <div>
+            {/* Featured first insight — front-page story */}
+            {INSIGHTS.length > 0 && (() => {
+              const ins = INSIGHTS[0];
+              return (
+                <div style={{
+                  background: C.surface, border: `1px solid ${C.border}`, borderRadius: 0,
+                  padding: "36px 40px", marginBottom: 28,
+                  borderTop: `4px solid ${C[ins.severity]}`,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                    <span style={{
+                      padding: "3px 10px", borderRadius: 4, fontSize: 10, fontWeight: 700,
+                      textTransform: "uppercase", letterSpacing: 0.8,
+                      color: C[ins.severity], background: `${C[ins.severity]}12`, border: `1px solid ${C[ins.severity]}28`,
+                    }}>{ins.severity}</span>
+                    <span style={{ fontSize: 11, color: C.textLight, fontFamily: mono }}>{ins.type}</span>
                   </div>
-                )}
-              </div>
-            ))}
+                  <h3 style={{ fontSize: 26, fontWeight: 700, fontFamily: serif, marginBottom: 14, lineHeight: 1.25, color: C.text }}>{ins.title}</h3>
+                  <div style={{ width: 50, height: 2, background: C.accent, marginBottom: 14 }} />
+                  <p style={{ fontSize: 16, lineHeight: 1.85, color: C.text, fontFamily: serif, maxWidth: 720, marginBottom: 18 }}>{ins.body}</p>
+                  {ins.promises.length > 0 && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {ins.promises.map(pid => {
+                        const pr = PROMISES.find(p => p.id === pid);
+                        if (!pr) return null;
+                        return (
+                          <div key={pid} style={{
+                            padding: "8px 12px", background: C.surfaceDark, borderRadius: 0,
+                            borderLeft: `3px solid ${C[pr.status]}`, fontSize: 12,
+                          }}>
+                            <span style={{ fontFamily: mono, color: C.accent, fontWeight: 600, marginRight: 6 }}>{pr.id}</span>
+                            <span style={{ color: C.text }}>{pr.body}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Remaining insights in 2-column grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              {INSIGHTS.slice(1).map((ins, i) => (
+                <div key={i} style={{
+                  background: C.surface, border: `1px solid ${C.border}`, borderRadius: 0,
+                  padding: "24px 28px", borderTop: `3px solid ${C[ins.severity]}`,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <span style={{
+                      padding: "3px 10px", borderRadius: 4, fontSize: 10, fontWeight: 700,
+                      textTransform: "uppercase", letterSpacing: 0.8,
+                      color: C[ins.severity], background: `${C[ins.severity]}12`, border: `1px solid ${C[ins.severity]}28`,
+                    }}>{ins.severity}</span>
+                    <span style={{ fontSize: 11, color: C.textLight, fontFamily: mono }}>{ins.type}</span>
+                  </div>
+                  <h3 style={{ fontSize: 17, fontWeight: 600, fontFamily: serif, marginBottom: 10, lineHeight: 1.3 }}>{ins.title}</h3>
+                  <p style={{ fontSize: 13, lineHeight: 1.75, color: C.text, marginBottom: 14 }}>{ins.body}</p>
+                  {ins.promises.length > 0 && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {ins.promises.map(pid => {
+                        const pr = PROMISES.find(p => p.id === pid);
+                        if (!pr) return null;
+                        return (
+                          <div key={pid} style={{
+                            padding: "6px 10px", background: C.surfaceDark, borderRadius: 0,
+                            borderLeft: `3px solid ${C[pr.status]}`, fontSize: 11,
+                          }}>
+                            <span style={{ fontFamily: mono, color: C.accent, fontWeight: 600, marginRight: 4 }}>{pr.id}</span>
+                            <span style={{ color: C.text }}>{pr.body}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>

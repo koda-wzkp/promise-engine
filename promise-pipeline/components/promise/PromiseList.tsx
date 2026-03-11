@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Promise as PromiseType, Agent, Domain, PromiseStatus } from "@/lib/types/promise";
 import PromiseCard from "./PromiseCard";
 import DomainFilter from "./DomainFilter";
@@ -11,6 +11,8 @@ interface PromiseListProps {
   domains: Domain[];
   onWhatIf?: (promiseId: string) => void;
   simulatedIds?: Set<string>;
+  onPromiseClick?: (promiseId: string) => void;
+  initialDomainFilter?: string | null;
 }
 
 const STATUS_ORDER: PromiseStatus[] = ["violated", "degraded", "unverifiable", "declared", "verified"];
@@ -21,9 +23,18 @@ export default function PromiseList({
   domains,
   onWhatIf,
   simulatedIds,
+  onPromiseClick,
+  initialDomainFilter,
 }: PromiseListProps) {
-  const [domainFilter, setDomainFilter] = useState<string | null>(null);
+  const [domainFilter, setDomainFilter] = useState<string | null>(initialDomainFilter ?? null);
   const [statusFilter, setStatusFilter] = useState<PromiseStatus | null>(null);
+
+  // Sync external domain filter
+  useEffect(() => {
+    if (initialDomainFilter !== undefined && initialDomainFilter !== null) {
+      setDomainFilter(initialDomainFilter);
+    }
+  }, [initialDomainFilter]);
 
   let filtered = promises;
   if (domainFilter) filtered = filtered.filter((p) => p.domain === domainFilter);
@@ -61,7 +72,7 @@ export default function PromiseList({
         Showing {filtered.length} of {promises.length} promises
       </p>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {filtered.map((p) => (
           <PromiseCard
             key={p.id}
@@ -70,6 +81,7 @@ export default function PromiseList({
             allPromises={promises}
             simulated={simulatedIds?.has(p.id)}
             onWhatIf={onWhatIf}
+            onClick={onPromiseClick ? () => onPromiseClick(p.id) : undefined}
           />
         ))}
       </div>

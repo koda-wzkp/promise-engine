@@ -6,6 +6,7 @@ import StatusBadge from "../promise/StatusBadge";
 interface InsightsTabProps {
   insights: Insight[];
   promises: PromiseType[];
+  onPromiseClick?: (promiseId: string) => void;
 }
 
 const severityStyles = {
@@ -29,7 +30,7 @@ const severityStyles = {
   },
 };
 
-export default function InsightsTab({ insights, promises }: InsightsTabProps) {
+export default function InsightsTab({ insights, promises, onPromiseClick }: InsightsTabProps) {
   return (
     <div className="space-y-4">
       {insights.map((insight, i) => {
@@ -52,18 +53,19 @@ export default function InsightsTab({ insights, promises }: InsightsTabProps) {
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-gray-700">{insight.body}</p>
 
-                {/* Referenced promises */}
+                {/* Referenced promises — clickable */}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {insight.promises.map((id) => {
                     const p = promises.find((pr) => pr.id === id);
                     return p ? (
-                      <div
+                      <button
                         key={id}
-                        className="flex items-center gap-1.5 rounded bg-white/70 px-2 py-1 text-xs"
+                        onClick={() => onPromiseClick?.(id)}
+                        className="flex items-center gap-1.5 rounded bg-white/70 px-2 py-1 text-xs transition-colors hover:bg-white"
                       >
-                        <span className="font-mono text-gray-500">{id}</span>
+                        <span className="font-mono font-semibold text-gray-500">{id}</span>
                         <StatusBadge status={p.status} size="sm" />
-                      </div>
+                      </button>
                     ) : (
                       <span key={id} className="font-mono text-xs text-gray-400">{id}</span>
                     );

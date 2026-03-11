@@ -57,8 +57,9 @@ export function buildPromiseGraph(promises: Promise[], agents: Agent[]): Promise
 }
 
 /**
- * Simple force-directed layout for graph visualization.
- * Groups promises by domain, places agents on the periphery.
+ * Domain-clustered layout with wider spread and agent orbiting.
+ * Promises are grouped by domain into distinct clusters with visual separation.
+ * Agents orbit the periphery near their associated promise clusters.
  */
 export function layoutGraph(graph: PromiseGraph, width: number, height: number): PromiseGraph {
   const centerX = width / 2;
@@ -69,36 +70,88 @@ export function layoutGraph(graph: PromiseGraph, width: number, height: number):
     graph.nodes.filter((n) => n.type === "promise" && n.domain).map((n) => n.domain!)
   ));
 
-  // Assign angular sectors to each domain
+  // Assign angular sectors to each domain with more separation
   const domainAngle = (2 * Math.PI) / Math.max(domains.length, 1);
-  const domainMap = new Map(domains.map((d, i) => [d, i * domainAngle]));
+  const domainMap = new Map(domains.map((d, i) => [d, i * domainAngle - Math.PI / 2]));
 
-  // Promise ring radius
-  const promiseRadius = Math.min(width, height) * 0.3;
-  // Agent ring radius (outer)
-  const agentRadius = Math.min(width, height) * 0.42;
+  // Use more of the available space
+  const promiseRadius = Math.min(width, height) * 0.32;
+  const agentRadius = Math.min(width, height) * 0.46;
 
-  const positioned = graph.nodes.map((node, i) => {
+  // Build a map: agent → which domains they're connected to (promiser edges)
+  const agentDomains = new Map<string, string[]>();
+  for (const edge of graph.edges) {
+    if (edge.type === "promiser") {
+      const promiseNode = graph.nodes.find((n) => n.id === edge.target);
+      if (promiseNode?.domain) {
+        const existing = agentDomains.get(edge.source) ?? [];
+        if (!existing.includes(promiseNode.domain)) {
+          existing.push(promiseNode.domain);
+        }
+        agentDomains.set(edge.source, existing);
+      }
+    }
+  }
+
+  const positioned = graph.nodes.map((node) => {
     if (node.type === "promise" && node.domain) {
       const baseAngle = domainMap.get(node.domain) ?? 0;
-      // Find index within domain for slight offset
       const domainNodes = graph.nodes.filter(
         (n) => n.type === "promise" && n.domain === node.domain
       );
       const idx = domainNodes.indexOf(node);
-      const spread = domainAngle * 0.7;
-      const angle = baseAngle + ((idx / Math.max(domainNodes.length - 1, 1)) - 0.5) * spread;
+      const count = domainNodes.length;
+
+      // Spread within the domain sector — use more of the angular space
+      // but leave gaps between domains for visual separation
+      const sectorSize = domainAngle * 0.65;
+      let angle: number;
+      if (count === 1) {
+        angle = baseAngle;
+      } else {
+        angle = baseAngle + ((idx / (count - 1)) - 0.5) * sectorSize;
+      }
+
+      // Stagger radius slightly for nodes in same domain to reduce overlap
+      const radiusJitter = (idx % 2 === 0 ? -1 : 1) * Math.min(width, height) * 0.04;
+      const r = promiseRadius + radiusJitter;
 
       return {
         ...node,
-        x: centerX + promiseRadius * Math.cos(angle),
-        y: centerY + promiseRadius * Math.sin(angle),
+        x: centerX + r * Math.cos(angle),
+        y: centerY + r * Math.sin(angle),
       };
     } else {
-      // Agent: place on outer ring, evenly spaced
-      const agentNodes = graph.nodes.filter((n) => n.type === "agent");
-      const idx = agentNodes.indexOf(node);
-      const angle = (idx / Math.max(agentNodes.length, 1)) * 2 * Math.PI;
+      // Agent: place near the average angle of their associated domains
+      const domains = agentDomains.get(node.id) ?? [];
+      let angle: number;
+
+      if (domains.length > 0) {
+        // Compute average angle of associated domains
+        let sumSin = 0, sumCos = 0;
+        for (const d of domains) {
+          const a = domainMap.get(d) ?? 0;
+          sumSin += Math.sin(a);
+          sumCos += Math.cos(a);
+        }
+        angle = Math.atan2(sumSin / domains.length, sumCos / domains.length);
+
+        // Slight offset per agent to avoid overlap
+        const agentNodes = graph.nodes.filter((n) => n.type === "agent");
+        const sameAngleAgents = agentNodes.filter((n) => {
+          const ad = agentDomains.get(n.id) ?? [];
+          return ad.some((d) => domains.includes(d));
+        });
+        const subIdx = sameAngleAgents.indexOf(node);
+        const spread = 0.25;
+        angle += (subIdx - (sameAngleAgents.length - 1) / 2) * spread;
+      } else {
+        // Fallback: evenly space unconnected agents
+        const agentNodes = graph.nodes.filter((n) => n.type === "agent");
+        const idx = agentNodes.indexOf(node);
+        angle = (idx / Math.max(agentNodes.length, 1)) * 2 * Math.PI;
+      }
+
       return {
         ...node,
         x: centerX + agentRadius * Math.cos(angle),

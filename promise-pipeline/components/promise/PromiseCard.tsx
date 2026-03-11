@@ -12,6 +12,7 @@ interface PromiseCardProps {
   allPromises: PromiseType[];
   simulated?: boolean;
   onWhatIf?: (promiseId: string) => void;
+  onClick?: () => void;
 }
 
 export default function PromiseCard({
@@ -20,6 +21,7 @@ export default function PromiseCard({
   allPromises,
   simulated,
   onWhatIf,
+  onClick,
 }: PromiseCardProps) {
   const [expanded, setExpanded] = useState(false);
   const promiser = agents.find((a) => a.id === promise.promiser);
@@ -34,19 +36,20 @@ export default function PromiseCard({
 
   return (
     <div
-      className={`rounded-lg border bg-white p-4 transition-shadow hover:shadow-md ${
+      className={`group rounded-lg border bg-white p-4 transition-all hover:shadow-md ${
         simulated ? "ring-2 ring-yellow-300" : "border-gray-200"
-      }`}
+      } ${onClick ? "cursor-pointer" : ""}`}
+      onClick={onClick}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="mb-1 flex items-center gap-2">
-            <span className="font-mono text-xs text-gray-400">{promise.id}</span>
+            <span className="font-mono text-xs font-semibold text-gray-400">{promise.id}</span>
             {promise.ref && (
-              <span className="text-xs text-gray-400">{promise.ref}</span>
+              <span className="font-mono text-[10px] text-gray-300">{promise.ref}</span>
             )}
             <span
-              className="rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
+              className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white"
               style={{ backgroundColor: domainColor }}
             >
               {promise.domain}
@@ -86,7 +89,7 @@ export default function PromiseCard({
       )}
 
       {/* Expand / What If buttons */}
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => setExpanded(!expanded)}
           className="text-xs text-gray-500 hover:text-gray-700"
@@ -112,8 +115,8 @@ export default function PromiseCard({
 
       {/* Expanded detail */}
       {expanded && (
-        <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
-          <p className="text-xs text-gray-600">{promise.note}</p>
+        <div className="mt-3 space-y-2 border-t border-gray-100 pt-3" onClick={(e) => e.stopPropagation()}>
+          <p className="text-xs leading-relaxed text-gray-600">{promise.note}</p>
 
           <div className="text-xs text-gray-500">
             <span className="font-medium">Verification:</span>{" "}
@@ -128,7 +131,7 @@ export default function PromiseCard({
               <ul className="ml-3 mt-1 space-y-0.5">
                 {dependencies.map((dep) => (
                   <li key={dep.id} className="flex items-center gap-1 text-xs text-gray-500">
-                    <span className="font-mono">{dep.id}</span>
+                    <span className="font-mono font-semibold">{dep.id}</span>
                     <StatusBadge status={dep.status} size="sm" />
                     <span className="truncate">{dep.body}</span>
                   </li>
@@ -143,7 +146,7 @@ export default function PromiseCard({
               <ul className="ml-3 mt-1 space-y-0.5">
                 {dependents.map((dep) => (
                   <li key={dep.id} className="flex items-center gap-1 text-xs text-gray-500">
-                    <span className="font-mono">{dep.id}</span>
+                    <span className="font-mono font-semibold">{dep.id}</span>
                     <StatusBadge status={dep.status} size="sm" />
                     <span className="truncate">{dep.body}</span>
                   </li>

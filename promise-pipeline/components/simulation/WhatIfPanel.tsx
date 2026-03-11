@@ -9,11 +9,13 @@ interface WhatIfPanelProps {
   agents: Agent[];
   onSimulate: (promiseId: string, newStatus: PromiseStatus) => void;
   onClose: () => void;
+  statusOptions?: PromiseStatus[];
 }
 
-const STATUSES: PromiseStatus[] = ["verified", "declared", "degraded", "violated", "unverifiable"];
+const DEFAULT_STATUSES: PromiseStatus[] = ["verified", "declared", "degraded", "violated", "unverifiable"];
 
-export default function WhatIfPanel({ promise, agents, onSimulate, onClose }: WhatIfPanelProps) {
+export default function WhatIfPanel({ promise, agents, onSimulate, onClose, statusOptions }: WhatIfPanelProps) {
+  const STATUSES = statusOptions ?? DEFAULT_STATUSES;
   const [selectedStatus, setSelectedStatus] = useState<PromiseStatus>(
     promise.status === "violated" ? "verified" : "violated"
   );

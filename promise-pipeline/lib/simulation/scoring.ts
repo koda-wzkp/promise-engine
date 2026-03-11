@@ -51,13 +51,15 @@ export function calculateNetworkHealth(promises: Promise[]): NetworkHealthScore 
   const sorted = Array.from(depCounts.entries()).sort((a, b) => b[1] - a[1]);
   const bottlenecks = sorted.filter(([, count]) => count > 0).map(([id]) => id);
 
-  // At risk: promises that have upstream dependencies in degraded/violated state
+  // At risk: promises that have upstream dependencies in failing state
+  const healthyStatuses: PromiseStatus[] = ["verified", "declared", "kept", "delayed", "modified"];
+  const failingStatuses: PromiseStatus[] = ["violated", "degraded", "broken", "repealed", "legally_challenged"];
   const atRisk: string[] = [];
   for (const p of promises) {
-    if (p.status === "verified" || p.status === "declared") {
+    if (healthyStatuses.includes(p.status)) {
       const hasFailingUpstream = p.depends_on.some((depId) => {
         const dep = promises.find((d) => d.id === depId);
-        return dep && (dep.status === "violated" || dep.status === "degraded");
+        return dep && failingStatuses.includes(dep.status);
       });
       if (hasFailingUpstream) atRisk.push(p.id);
     }

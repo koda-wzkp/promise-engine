@@ -4,13 +4,13 @@ import { useState, useMemo, useReducer, useCallback } from "react";
 import { PromiseStatus } from "@/lib/types/promise";
 import { WhatIfQuery, CascadeResult } from "@/lib/types/simulation";
 import {
-  HB2021_DASHBOARD,
-  HB2021_PROMISES,
-  HB2021_AGENTS,
-  HB2021_DOMAINS,
-  HB2021_INSIGHTS,
-  HB2021_TRAJECTORIES,
-} from "@/lib/data/hb2021";
+  ACA_DASHBOARD,
+  ACA_PROMISES,
+  ACA_AGENTS,
+  ACA_DOMAINS,
+  ACA_INSIGHTS,
+  ACA_TRAJECTORIES,
+} from "@/lib/data/aca";
 import { simulateCascade, applySimulation } from "@/lib/simulation/cascade";
 import { calculateNetworkHealth } from "@/lib/simulation/scoring";
 import Navbar from "@/components/layout/Navbar";
@@ -64,10 +64,15 @@ interface CompareScenario {
   result: CascadeResult;
 }
 
+// ─── ACA-specific status list for What-If ───
+const ACA_STATUSES: PromiseStatus[] = [
+  "kept", "broken", "partial", "delayed", "modified", "legally_challenged", "repealed",
+];
+
 const TABS = ["Summary", "Network", "Trajectory", "Promises", "Insights", "About"] as const;
 type Tab = (typeof TABS)[number];
 
-export default function HB2021Dashboard() {
+export default function ACADashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("Summary");
   const [sim, dispatch] = useReducer(simReducer, {
     mode: "actual",
@@ -76,27 +81,20 @@ export default function HB2021Dashboard() {
     selectedPromise: null,
   });
 
-  // Detail panel state — independent from the What If panel
   const [detailPromiseId, setDetailPromiseId] = useState<string | null>(null);
-
-  // Compare mode: stored scenarios
   const [compareScenarios, setCompareScenarios] = useState<CompareScenario[]>([]);
   const [showCompare, setShowCompare] = useState(false);
-
-  // Domain filter from summary tab
   const [pendingDomainFilter, setPendingDomainFilter] = useState<string | null>(null);
 
-  // Compute promises (actual or simulated)
   const displayPromises = useMemo(() => {
     if (sim.mode === "simulating" && sim.activeQuery && sim.cascadeResult) {
-      return applySimulation(HB2021_PROMISES, sim.activeQuery, sim.cascadeResult);
+      return applySimulation(ACA_PROMISES, sim.activeQuery, sim.cascadeResult);
     }
-    return HB2021_PROMISES;
+    return ACA_PROMISES;
   }, [sim]);
 
   const health = useMemo(() => calculateNetworkHealth(displayPromises), [displayPromises]);
 
-  // Set of simulated promise IDs for visual highlighting
   const simulatedIds = useMemo(() => {
     if (!sim.cascadeResult) return new Set<string>();
     const ids = new Set(sim.cascadeResult.affectedPromises.map((a) => a.promiseId));
@@ -104,14 +102,13 @@ export default function HB2021Dashboard() {
     return ids;
   }, [sim]);
 
-  // Handlers
   function handleSelectPromise(id: string) {
     dispatch({ type: "SELECT_PROMISE", promiseId: id });
   }
 
   function handleSimulate(promiseId: string, newStatus: PromiseStatus) {
     const query: WhatIfQuery = { promiseId, newStatus };
-    const result = simulateCascade(HB2021_PROMISES, query);
+    const result = simulateCascade(ACA_PROMISES, query);
     dispatch({ type: "RUN_SIMULATION", query, result });
   }
 
@@ -124,46 +121,37 @@ export default function HB2021Dashboard() {
     dispatch({ type: "RESET" });
   }
 
-  // Open promise detail panel from anywhere
   const handleOpenDetail = useCallback((promiseId: string) => {
     setDetailPromiseId(promiseId);
   }, []);
 
-  // From detail panel → simulate cascade
   const handleDetailSimulate = useCallback((promiseId: string) => {
     setDetailPromiseId(null);
     dispatch({ type: "SELECT_PROMISE", promiseId });
     setActiveTab("Network");
   }, []);
 
-  // Navigate detail panel to a different promise
   const handleDetailNavigate = useCallback((promiseId: string) => {
     setDetailPromiseId(promiseId);
   }, []);
 
-  // Domain click from summary → filter Promises tab
   const handleDomainClick = useCallback((domain: string) => {
     setPendingDomainFilter(domain);
     setActiveTab("Promises");
   }, []);
 
-  // Save current scenario for comparison
   function handleSaveScenario() {
     if (!sim.activeQuery || !sim.cascadeResult) return;
-    const source = HB2021_PROMISES.find((p) => p.id === sim.activeQuery!.promiseId);
+    const source = ACA_PROMISES.find((p) => p.id === sim.activeQuery!.promiseId);
     const label = source
       ? `${source.id} → ${sim.activeQuery.newStatus}`
       : `${sim.activeQuery.promiseId} → ${sim.activeQuery.newStatus}`;
 
-    setCompareScenarios((prev) => {
-      // Max 2 scenarios
-      const next = [...prev, { label, query: sim.activeQuery!, result: sim.cascadeResult! }];
-      return next.slice(-2);
-    });
+    setCompareScenarios((prev) => [...prev, { label, query: sim.activeQuery!, result: sim.cascadeResult! }].slice(-2));
   }
 
   const selectedPromiseData = sim.selectedPromise
-    ? HB2021_PROMISES.find((p) => p.id === sim.selectedPromise)
+    ? ACA_PROMISES.find((p) => p.id === sim.selectedPromise)
     : null;
 
   const detailPromiseData = detailPromiseId
@@ -171,18 +159,18 @@ export default function HB2021Dashboard() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#faf9f6]">
+    <div className="min-h-screen bg-[#f8fafc]">
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-4 py-6">
         {/* Header */}
         <div className="mb-6">
           <h1 className="font-serif text-3xl font-bold text-gray-900">
-            {HB2021_DASHBOARD.title}
+            {ACA_DASHBOARD.title}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">{HB2021_DASHBOARD.subtitle}</p>
+          <p className="mt-1 text-sm text-gray-500">{ACA_DASHBOARD.subtitle}</p>
           <p className="mt-1 font-mono text-xs text-gray-400">
-            {HB2021_PROMISES.length} promises · {HB2021_AGENTS.length} agents · {HB2021_DOMAINS.length} domains
+            {ACA_PROMISES.length} promises · {ACA_AGENTS.length} agents · {ACA_DOMAINS.length} domains · POAD methodology
           </p>
         </div>
 
@@ -223,7 +211,7 @@ export default function HB2021Dashboard() {
               }}
               className={`tab-transition whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${
                 activeTab === tab
-                  ? "border-gray-900 text-gray-900"
+                  ? "border-blue-700 text-blue-900"
                   : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
             >
@@ -232,11 +220,11 @@ export default function HB2021Dashboard() {
           ))}
         </div>
 
-        {/* Tab content with transition wrapper */}
+        {/* Tab content */}
         <div className="tab-content-fade">
           {activeTab === "Summary" && (
             <SummaryTab
-              data={{ ...HB2021_DASHBOARD, promises: displayPromises }}
+              data={{ ...ACA_DASHBOARD, promises: displayPromises }}
               health={health}
               onDomainClick={handleDomainClick}
               onPromiseClick={handleOpenDetail}
@@ -248,7 +236,9 @@ export default function HB2021Dashboard() {
               <div className="lg:col-span-2">
                 <PromiseGraph
                   promises={displayPromises}
-                  agents={HB2021_AGENTS}
+                  agents={ACA_AGENTS}
+                  width={900}
+                  height={700}
                   cascadeResult={sim.cascadeResult}
                   selectedPromise={sim.selectedPromise}
                   onSelectPromise={(id) => {
@@ -257,22 +247,24 @@ export default function HB2021Dashboard() {
                   }}
                 />
                 <p className="mt-2 text-xs text-gray-400">
-                  Click any promise node to view details. Scroll to zoom, drag to pan. Node size = downstream dependents.
+                  Click any promise node to view details. Scroll to zoom, drag to pan.
+                  Diamond nodes (◆) are legal modifier nodes. Node size = downstream dependents.
                 </p>
               </div>
               <div className="space-y-4">
                 {selectedPromiseData && !sim.cascadeResult && (
                   <WhatIfPanel
                     promise={selectedPromiseData}
-                    agents={HB2021_AGENTS}
+                    agents={ACA_AGENTS}
                     onSimulate={handleSimulate}
                     onClose={() => dispatch({ type: "SELECT_PROMISE", promiseId: "" })}
+                    statusOptions={ACA_STATUSES}
                   />
                 )}
                 {sim.cascadeResult && (
                   <CascadeResults
                     result={sim.cascadeResult}
-                    promises={HB2021_PROMISES}
+                    promises={ACA_PROMISES}
                     onReset={handleReset}
                     onPromiseClick={handleOpenDetail}
                   />
@@ -333,14 +325,14 @@ export default function HB2021Dashboard() {
           )}
 
           {activeTab === "Trajectory" && (
-            <TrajectoryTab trajectories={HB2021_TRAJECTORIES} />
+            <TrajectoryTab trajectories={ACA_TRAJECTORIES} />
           )}
 
           {activeTab === "Promises" && (
             <PromiseList
               promises={displayPromises}
-              agents={HB2021_AGENTS}
-              domains={HB2021_DOMAINS}
+              agents={ACA_AGENTS}
+              domains={ACA_DOMAINS}
               onWhatIf={handleWhatIf}
               simulatedIds={simulatedIds}
               onPromiseClick={handleOpenDetail}
@@ -350,7 +342,7 @@ export default function HB2021Dashboard() {
 
           {activeTab === "Insights" && (
             <InsightsTab
-              insights={HB2021_INSIGHTS}
+              insights={ACA_INSIGHTS}
               promises={displayPromises}
               onPromiseClick={handleOpenDetail}
             />
@@ -362,11 +354,11 @@ export default function HB2021Dashboard() {
 
       <Footer />
 
-      {/* Promise Detail Panel — slides in from right */}
+      {/* Promise Detail Panel */}
       {detailPromiseData && (
         <PromiseDetailPanel
           promise={detailPromiseData}
-          agents={HB2021_AGENTS}
+          agents={ACA_AGENTS}
           allPromises={displayPromises}
           onClose={() => setDetailPromiseId(null)}
           onSimulateCascade={handleDetailSimulate}

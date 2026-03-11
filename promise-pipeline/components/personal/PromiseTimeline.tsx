@@ -16,6 +16,14 @@ const STATUS_TRANSITIONS: Record<PromiseStatus, PromiseStatus[]> = {
   degraded: ["verified", "violated"],
   violated: ["declared"],
   unverifiable: [],
+  // ACA-extended statuses (not used in personal promises, but needed for type completeness)
+  kept: [],
+  broken: ["declared"],
+  partial: ["kept", "broken"],
+  delayed: ["kept", "broken"],
+  modified: ["kept", "broken"],
+  legally_challenged: ["kept", "broken"],
+  repealed: [],
 };
 
 export default function PromiseTimeline({ promises, onUpdateStatus, onReflect }: PromiseTimelineProps) {

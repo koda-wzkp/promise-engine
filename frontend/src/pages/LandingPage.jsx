@@ -15,7 +15,7 @@ const USE_CASES = [
     points: [
       'Map every commitment in a bill to a structured promise',
       'Track progress against statutory deadlines',
-      'Surface broken promise chains and equity gaps',
+      'Surface off-track promise chains and accountability gaps',
       'Give citizens tools to verify institutional claims',
     ],
   },
@@ -148,7 +148,7 @@ const LandingPage = () => {
             <p className="problem-question">Are they keeping them?</p>
             <p>
               Continuous verification against structured schemas. Integrity scoring that builds
-              trust capital over time — or erodes it when promises break. No more "trust us."
+              trust capital over time — or erodes it when promises fall behind. No more "trust us."
             </p>
           </div>
         </div>
@@ -249,7 +249,7 @@ const LandingPage = () => {
           <div className="stat-card">
             <div className="stat-value">4</div>
             <div className="stat-label">Promises off track</div>
-            <div className="stat-source">PacifiCorp's entire emissions chain is broken</div>
+            <div className="stat-source">PacifiCorp's entire emissions chain is off track</div>
           </div>
         </div>
       </section>
@@ -304,7 +304,7 @@ const LandingPage = () => {
               <li>Promises buried in 50-page bills and corporate filings</li>
               <li>No structured way to track who owes what to whom</li>
               <li>Accountability requires hiring lawyers and reading regulatory orders</li>
-              <li>Broken promises discovered years too late</li>
+              <li>Off-track promises discovered years too late</li>
               <li>Equity commitments with no verification mechanism</li>
             </ul>
           </div>
@@ -322,7 +322,7 @@ const LandingPage = () => {
         </div>
         <div className="value-prop-roi">
           <p>
-            <strong>PacifiCorp's broken promise chain</strong> — canceled renewables, rejected
+            <strong>PacifiCorp's off-track promise chain</strong> — canceled renewables, rejected
             Clean Energy Plan, coal-to-gas conversions — was surfaced by mapping 20 statutory
             promises into a verifiable network. <em>The data was always public. The structure
             wasn't.</em>

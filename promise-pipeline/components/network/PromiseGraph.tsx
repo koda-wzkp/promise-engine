@@ -3,8 +3,11 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { Promise as PromiseType, Agent } from "@/lib/types/promise";
 import { buildPromiseGraph, layoutGraph, countDependents } from "@/lib/simulation/graph";
-import { statusColors, agentColors, hb2021DomainColors } from "@/lib/utils/colors";
+import { statusColors, agentColors, hb2021DomainColors, acaDomainColors } from "@/lib/utils/colors";
 import { CascadeResult } from "@/lib/types/simulation";
+
+// Merged domain colors for all demos
+const allDomainColors: Record<string, string> = { ...hb2021DomainColors, ...acaDomainColors };
 
 interface PromiseGraphProps {
   promises: PromiseType[];
@@ -259,8 +262,8 @@ export default function PromiseGraph({
             y={y}
             textAnchor="middle"
             className="pointer-events-none select-none fill-gray-400 text-[10px] font-sans font-semibold uppercase tracking-wider"
-            style={{ color: hb2021DomainColors[domain] ?? "#6b7280" }}
-            fill={hb2021DomainColors[domain] ?? "#9ca3af"}
+            style={{ color: allDomainColors[domain] ?? "#6b7280" }}
+            fill={allDomainColors[domain] ?? "#9ca3af"}
             opacity={0.6}
           >
             {domain}
@@ -418,15 +421,29 @@ export default function PromiseGraph({
                   />
                 )}
 
-                {/* Main circle */}
-                <circle
-                  cx={node.x}
-                  cy={node.y}
-                  r={radius}
-                  fill={color}
-                  stroke={isHovered ? "#1e293b" : "rgba(255,255,255,0.3)"}
-                  strokeWidth={isHovered ? 2 : 1}
-                />
+                {/* Main shape — diamond for modifier nodes, circle for standard */}
+                {promise.nodeType === "modifier" ? (
+                  <rect
+                    x={node.x - radius * 0.75}
+                    y={node.y - radius * 0.75}
+                    width={radius * 1.5}
+                    height={radius * 1.5}
+                    rx={3}
+                    fill={color}
+                    stroke={isHovered ? "#1e293b" : "rgba(255,255,255,0.3)"}
+                    strokeWidth={isHovered ? 2 : 1}
+                    transform={`rotate(45, ${node.x}, ${node.y})`}
+                  />
+                ) : (
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={radius}
+                    fill={color}
+                    stroke={isHovered ? "#1e293b" : "rgba(255,255,255,0.3)"}
+                    strokeWidth={isHovered ? 2 : 1}
+                  />
+                )}
 
                 {/* Promise ID label */}
                 <text

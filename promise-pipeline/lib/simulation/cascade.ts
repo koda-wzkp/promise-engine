@@ -14,6 +14,15 @@ function degradeStatus(status: PromiseStatus): PromiseStatus {
     case "degraded": return "violated";
     case "violated": return "violated";
     case "unverifiable": return "unverifiable";
+    // ACA extended statuses
+    case "kept": return "partial";
+    case "partial": return "broken";
+    case "delayed": return "broken";
+    case "modified": return "partial";
+    case "broken": return "broken";
+    case "legally_challenged": return "broken";
+    case "repealed": return "repealed";
+    default: return status;
   }
 }
 
@@ -81,8 +90,11 @@ export function simulateCascade(
     const [currentId, depth] = queue.shift()!;
     const currentStatus = simulatedStatuses.get(currentId)!;
 
-    // Only propagate from degraded or violated states
-    if (currentStatus !== "degraded" && currentStatus !== "violated") continue;
+    // Only propagate from negative states
+    const propagatingStatuses: PromiseStatus[] = [
+      "degraded", "violated", "broken", "repealed", "legally_challenged",
+    ];
+    if (!propagatingStatuses.includes(currentStatus)) continue;
 
     const dependents = reverseDeps.get(currentId) ?? [];
     for (const depId of dependents) {
@@ -95,20 +107,23 @@ export function simulateCascade(
       const originalDepStatus = depPromise.status;
       const currentSimulatedStatus = simulatedStatuses.get(depId)!;
 
-      // Unverifiable promises don't degrade further
-      if (currentSimulatedStatus === "unverifiable") continue;
+      // Non-degradable statuses
+      if (currentSimulatedStatus === "unverifiable" || currentSimulatedStatus === "repealed") continue;
 
       // Apply degradation
       let newStatus: PromiseStatus;
-      if (currentStatus === "violated") {
+      const hardFailures: PromiseStatus[] = ["violated", "broken", "repealed"];
+      const healthyStatuses: PromiseStatus[] = ["verified", "declared", "kept", "delayed", "modified"];
+
+      if (hardFailures.includes(currentStatus)) {
         // Hard upstream failure: degrade by one level
         newStatus = degradeStatus(currentSimulatedStatus);
       } else {
         // Soft upstream degradation: degrade only if we're still healthy
-        if (currentSimulatedStatus === "verified" || currentSimulatedStatus === "declared") {
-          newStatus = "degraded";
+        if (healthyStatuses.includes(currentSimulatedStatus)) {
+          newStatus = degradeStatus(currentSimulatedStatus);
         } else {
-          newStatus = currentSimulatedStatus; // Already degraded or worse
+          newStatus = currentSimulatedStatus; // Already in a negative state
         }
       }
 

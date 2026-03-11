@@ -1,16 +1,26 @@
 // ─── STATUS ───
+// Base statuses (HB 2021 and general use)
+// Extended statuses (ACA: historical legislation with 15+ year track records)
 export type PromiseStatus =
-  | "verified"      // On track, evidence confirms
-  | "declared"      // Announced/committed, not yet verifiable
-  | "degraded"      // Behind schedule or partially failing
-  | "violated"      // Off track, commitment broken
-  | "unverifiable"; // No verification mechanism exists
+  | "verified"            // On track, evidence confirms
+  | "declared"            // Announced/committed, not yet verifiable
+  | "degraded"            // Behind schedule or partially failing
+  | "violated"            // Off track, commitment broken
+  | "unverifiable"        // No verification mechanism exists
+  | "kept"                // Promise fulfilled with measurable evidence
+  | "broken"              // Promise clearly not met
+  | "partial"             // Partially fulfilled
+  | "delayed"             // Implemented late or still pending
+  | "modified"            // Changed from original commitment
+  | "legally_challenged"  // Subject to legal challenge affecting implementation
+  | "repealed";           // Legislatively or administratively reversed
 
 // ─── AGENT ───
 export type AgentType =
   | "legislator" | "utility" | "regulator" | "community"
   | "auditor" | "provider" | "stakeholder" | "certifier"
-  | "brand" | "monitor";
+  | "brand" | "monitor"
+  | "executive" | "insurer" | "judiciary" | "federal";
 
 export interface Agent {
   id: string;
@@ -26,7 +36,9 @@ export type VerificationMethod =
   | "self-report"  // Self-assessed
   | "sensor"       // Automated sensor/API (future)
   | "benchmark"    // Standardized benchmark
-  | "none";        // No verification mechanism
+  | "none"         // No verification mechanism
+  | "data"         // Public data/statistics
+  | "legal";       // Court ruling / legal record
 
 export interface VerificationSource {
   method: VerificationMethod;
@@ -38,6 +50,27 @@ export interface VerificationSource {
     value: number;
   };
   frequency?: string;
+}
+
+// ─── ACA-SPECIFIC EXTENSIONS ───
+export interface OutcomeData {
+  metric: string;
+  target: string | number;
+  actual: string | number;
+  source: string;
+}
+
+export interface LegalChallenge {
+  case: string;
+  year: number;
+  outcome: string;
+  impact: string;
+}
+
+export interface StateVariance {
+  description: string;
+  statesAffected: number;
+  details: string;
 }
 
 // ─── PROMISE ───
@@ -55,11 +88,17 @@ export interface Promise {
   note: string;
   verification: VerificationSource;
   depends_on: string[];
+  // ACA extensions (optional — backward compatible)
+  effectiveDate?: string;
+  nodeType?: "promise" | "modifier";
+  outcomeData?: OutcomeData[];
+  legalChallenges?: LegalChallenge[];
+  stateVariance?: StateVariance;
 }
 
 // ─── INSIGHT ───
 export type InsightSeverity = "critical" | "warning" | "positive";
-export type InsightType = "Cascade" | "Gap" | "Conflict" | "Working" | "Drift";
+export type InsightType = "Cascade" | "Gap" | "Conflict" | "Working" | "Drift" | "Legal" | "Paradox";
 
 export interface Insight {
   severity: InsightSeverity;

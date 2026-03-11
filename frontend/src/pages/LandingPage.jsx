@@ -118,11 +118,18 @@ const LandingPage = () => {
         </p>
       </section>
 
-      {/* ── LIVE DEMO FEATURE ── */}
+      {/* ── LIVE DEMO ── */}
       <section className="problem-section">
         <h2>See It In Action</h2>
         <div className="problem-grid">
-          <div className="problem-card" onClick={() => navigate('/hb2021')} style={{ cursor: 'pointer' }}>
+          <div className="problem-card live-card" onClick={() => navigate('/hb2021')} style={{ cursor: 'pointer', border: '2px solid #87CEEB', position: 'relative' }}>
+            <span style={{
+              position: 'absolute', top: 12, right: 12,
+              background: '#1a5f4a', color: '#fff',
+              padding: '3px 10px', borderRadius: 12,
+              fontSize: '0.7rem', fontWeight: 'bold',
+              letterSpacing: '1px', textTransform: 'uppercase',
+            }}>LIVE DATA</span>
             <div className="problem-icon">{'\u2696\uFE0F'}</div>
             <p className="problem-question">Oregon HB 2021</p>
             <p>
@@ -130,25 +137,72 @@ const LandingPage = () => {
               11 agents, and 6 domains. PacifiCorp is off track. The equity promises have
               no verification mechanism. The oversight system caught the problem.
             </p>
+            <p style={{ marginTop: '15px', fontWeight: 'bold', color: '#1a5f4a' }}>
+              Explore the live dashboard &rarr;
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── DEMO DASHBOARDS ── */}
+      <section className="problem-section" style={{ marginTop: '60px' }}>
+        <h2>Coming Soon: More Verticals</h2>
+        <p style={{ fontSize: '1.15rem', color: '#666', marginBottom: '40px', maxWidth: '700px', marginLeft: 'auto', marginRight: 'auto' }}>
+          The same promise network framework, specialized for different domains. Explore demo dashboards with representative data.
+        </p>
+        <div className="problem-grid">
+          <div className="problem-card" onClick={() => navigate('/demo/ai')} style={{ cursor: 'pointer', position: 'relative' }}>
+            <span style={{
+              position: 'absolute', top: 12, right: 12,
+              background: '#b45309', color: '#fff',
+              padding: '3px 10px', borderRadius: 12,
+              fontSize: '0.7rem', fontWeight: 'bold',
+              letterSpacing: '1px', textTransform: 'uppercase',
+            }}>DEMO</span>
+            <div className="problem-icon">{'\uD83E\uDD16'}</div>
+            <p className="problem-question">AI / ML Auditing</p>
+            <p>
+              Are AI systems keeping their promises? Track hallucination rates, safety commitments,
+              and compliance across OpenAI, Anthropic, Google, and Meta.
+            </p>
             <p style={{ marginTop: '15px', fontWeight: 'bold', color: '#87CEEB' }}>
-              Explore the dashboard &rarr;
+              View demo dashboard &rarr;
             </p>
           </div>
-          <div className="problem-card">
-            <div className="problem-icon">{'\uD83D\uDD0D'}</div>
-            <p className="problem-question">Who promised what?</p>
+          <div className="problem-card" onClick={() => navigate('/demo/infrastructure')} style={{ cursor: 'pointer', position: 'relative' }}>
+            <span style={{
+              position: 'absolute', top: 12, right: 12,
+              background: '#b45309', color: '#fff',
+              padding: '3px 10px', borderRadius: 12,
+              fontSize: '0.7rem', fontWeight: 'bold',
+              letterSpacing: '1px', textTransform: 'uppercase',
+            }}>DEMO</span>
+            <div className="problem-icon">{'\u2601\uFE0F'}</div>
+            <p className="problem-question">Infrastructure SLAs</p>
             <p>
-              Legislation, corporate pledges, and AI systems all make commitments. But promises
-              get buried in dense text, split across agencies, and lost in complexity.
-              Promise Engine makes them legible.
+              Are cloud providers meeting their SLAs? Verify uptime, latency, and capacity
+              commitments across AWS, GCP, Azure, and Cloudflare.
+            </p>
+            <p style={{ marginTop: '15px', fontWeight: 'bold', color: '#87CEEB' }}>
+              View demo dashboard &rarr;
             </p>
           </div>
-          <div className="problem-card">
-            <div className="problem-icon">{'\uD83D\uDCC9'}</div>
-            <p className="problem-question">Are they keeping them?</p>
+          <div className="problem-card" onClick={() => navigate('/demo/supply-chain')} style={{ cursor: 'pointer', position: 'relative' }}>
+            <span style={{
+              position: 'absolute', top: 12, right: 12,
+              background: '#b45309', color: '#fff',
+              padding: '3px 10px', borderRadius: 12,
+              fontSize: '0.7rem', fontWeight: 'bold',
+              letterSpacing: '1px', textTransform: 'uppercase',
+            }}>DEMO</span>
+            <div className="problem-icon">{'\uD83D\uDCE6'}</div>
+            <p className="problem-question">Supply Chain</p>
             <p>
-              Continuous verification against structured schemas. Integrity scoring that builds
-              trust capital over time — or erodes it when promises fall behind. No more "trust us."
+              Are brands keeping their supply chain promises? Track provenance, ethics, and
+              sustainability commitments across Patagonia, Nike, Nestl&eacute;, and Unilever.
+            </p>
+            <p style={{ marginTop: '15px', fontWeight: 'bold', color: '#87CEEB' }}>
+              View demo dashboard &rarr;
             </p>
           </div>
         </div>
@@ -220,13 +274,28 @@ const LandingPage = () => {
                 ))}
               </ul>
             </div>
-            {currentUseCase.id === 'civic' && (
-              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+              {currentUseCase.id === 'civic' && (
                 <button className="cta-button primary" onClick={() => navigate('/hb2021')}>
-                  See the HB 2021 Dashboard
+                  See the Live Dashboard
                 </button>
-              </div>
-            )}
+              )}
+              {currentUseCase.id === 'ai' && (
+                <button className="cta-button secondary" onClick={() => navigate('/demo/ai')}>
+                  See the Demo Dashboard
+                </button>
+              )}
+              {currentUseCase.id === 'infra' && (
+                <button className="cta-button secondary" onClick={() => navigate('/demo/infrastructure')}>
+                  See the Demo Dashboard
+                </button>
+              )}
+              {currentUseCase.id === 'supply' && (
+                <button className="cta-button secondary" onClick={() => navigate('/demo/supply-chain')}>
+                  See the Demo Dashboard
+                </button>
+              )}
+            </div>
           </div>
         )}
       </section>

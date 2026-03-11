@@ -8,6 +8,9 @@ import IntegrityPage from './pages/IntegrityPage';
 import PromisesPage from './pages/PromisesPage';
 import LivingRoomWines from './pages/LivingRoomWines';
 import HB2021Dashboard from './pages/HB2021Dashboard';
+import AIDemoDashboard from './pages/AIDemoDashboard';
+import InfraDemoDashboard from './pages/InfraDemoDashboard';
+import SupplyChainDemoDashboard from './pages/SupplyChainDemoDashboard';
 
 function App() {
   // Auth state (for future use)
@@ -35,7 +38,8 @@ function App() {
       {/* Navigation - Show on dashboard pages */}
       {(window.location.pathname.startsWith('/integrity') ||
         window.location.pathname.startsWith('/promises') ||
-        window.location.pathname.startsWith('/hb2021')) && (
+        window.location.pathname.startsWith('/hb2021') ||
+        window.location.pathname.startsWith('/demo/')) && (
         <nav className="app-nav">
           <div className="nav-container">
             <Link to="/" className="nav-logo">
@@ -88,7 +92,10 @@ function App() {
         <Route path="/integrity" element={<IntegrityPage />} />
         <Route path="/promises" element={<PromisesPage />} />
 
-        {/* CODEC Demos */}
+        {/* Vertical Demos */}
+        <Route path="/demo/ai" element={<AIDemoDashboard />} />
+        <Route path="/demo/infrastructure" element={<InfraDemoDashboard />} />
+        <Route path="/demo/supply-chain" element={<SupplyChainDemoDashboard />} />
         <Route path="/demo/livingroom-wines" element={<LivingRoomWines />} />
 
         {/* HB 2021 Civic Pilot */}

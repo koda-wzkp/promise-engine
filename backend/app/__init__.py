@@ -31,10 +31,11 @@ def create_app(config=None):
     else:
         app.config.from_object(config)
 
-    # Enable CORS - allow all origins (restrict later for production)
+    # Enable CORS
+    cors_origins = app.config.get("CORS_ORIGINS", "*")
     CORS(app, resources={
         r"/api/*": {
-            "origins": "*",
+            "origins": cors_origins,
             "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS", "PUT"],
             "allow_headers": ["Content-Type", "Authorization"]
         }

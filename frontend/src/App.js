@@ -34,7 +34,8 @@ function App() {
     <div className="App">
       {/* Navigation - Show on dashboard pages */}
       {(window.location.pathname.startsWith('/integrity') ||
-        window.location.pathname.startsWith('/promises')) && (
+        window.location.pathname.startsWith('/promises') ||
+        window.location.pathname.startsWith('/hb2021')) && (
         <nav className="app-nav">
           <div className="nav-container">
             <Link to="/" className="nav-logo">
@@ -42,6 +43,16 @@ function App() {
               <span className="logo-subtitle">Universal Auditing</span>
             </Link>
             <div className="nav-links">
+              <Link
+                to="/hb2021"
+                className={
+                  window.location.pathname === '/hb2021'
+                    ? 'nav-link active'
+                    : 'nav-link'
+                }
+              >
+                HB 2021
+              </Link>
               <Link
                 to="/integrity"
                 className={

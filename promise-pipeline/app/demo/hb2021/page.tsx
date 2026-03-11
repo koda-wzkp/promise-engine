@@ -174,7 +174,7 @@ export default function HB2021Dashboard() {
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <main id="main-content" className="mx-auto max-w-7xl px-4 py-6">
         {/* Header */}
         <div className="mb-6">
           <h1 className="font-serif text-3xl font-bold text-gray-900">
@@ -213,15 +213,34 @@ export default function HB2021Dashboard() {
         )}
 
         {/* Tabs */}
-        <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200">
+        <div role="tablist" aria-label="Dashboard sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200">
           {TABS.map((tab) => (
             <button
               key={tab}
+              role="tab"
+              id={`tab-${tab.toLowerCase()}`}
+              aria-selected={activeTab === tab}
+              aria-controls={`tabpanel-${tab.toLowerCase()}`}
+              tabIndex={activeTab === tab ? 0 : -1}
               onClick={() => {
                 setActiveTab(tab);
                 if (tab !== "Promises") setPendingDomainFilter(null);
               }}
-              className={`tab-transition whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${
+              onKeyDown={(e) => {
+                const idx = TABS.indexOf(tab);
+                if (e.key === "ArrowRight") {
+                  e.preventDefault();
+                  const next = TABS[(idx + 1) % TABS.length];
+                  setActiveTab(next);
+                  document.getElementById(`tab-${next.toLowerCase()}`)?.focus();
+                } else if (e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  const prev = TABS[(idx - 1 + TABS.length) % TABS.length];
+                  setActiveTab(prev);
+                  document.getElementById(`tab-${prev.toLowerCase()}`)?.focus();
+                }
+              }}
+              className={`tab-transition whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
                 activeTab === tab
                   ? "border-gray-900 text-gray-900"
                   : "border-transparent text-gray-400 hover:text-gray-600"
@@ -233,7 +252,7 @@ export default function HB2021Dashboard() {
         </div>
 
         {/* Tab content with transition wrapper */}
-        <div className="tab-content-fade">
+        <div className="tab-content-fade" role="tabpanel" id={`tabpanel-${activeTab.toLowerCase()}`} aria-labelledby={`tab-${activeTab.toLowerCase()}`}>
           {activeTab === "Summary" && (
             <SummaryTab
               data={{ ...HB2021_DASHBOARD, promises: displayPromises }}

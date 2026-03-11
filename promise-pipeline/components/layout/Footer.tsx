@@ -14,17 +14,17 @@ export default function Footer() {
             </p>
           </div>
           <div className="flex gap-6 text-xs text-gray-500">
-            <Link href="/about" className="hover:text-gray-900">
+            <Link href="/about" className="hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded">
               About
             </Link>
-            <Link href="/blog" className="hover:text-gray-900">
+            <Link href="/blog" className="hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded">
               Blog
             </Link>
             <a
               href="https://github.com/koda-wzkp/promise-pipeline"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-gray-900"
+              className="hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"
             >
               GitHub
             </a>

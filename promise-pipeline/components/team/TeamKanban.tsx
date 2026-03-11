@@ -52,10 +52,10 @@ function KanbanCard({
   onUpdateStatus: (id: string, status: PromiseStatus) => void;
 }) {
   const priorityColors: Record<string, string> = {
-    critical: "#b91c1c",
-    high: "#b45309",
-    normal: "#6b7280",
-    low: "#9ca3af",
+    critical: "#991b1b",
+    high: "#78350f",
+    normal: "#4b5563",
+    low: "#6b7280",
   };
 
   const status: PromiseStatus = promise.status;

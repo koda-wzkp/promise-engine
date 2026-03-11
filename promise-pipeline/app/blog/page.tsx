@@ -40,7 +40,7 @@ export default function BlogPage() {
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
-      <main className="mx-auto max-w-3xl px-4 py-12">
+      <main id="main-content" className="mx-auto max-w-3xl px-4 py-12">
         <h1 className="font-serif text-4xl font-bold text-gray-900">Blog</h1>
         <p className="mt-2 text-sm text-gray-500">
           Research notes, case studies, and updates from the Promise Pipeline project.

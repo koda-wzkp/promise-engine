@@ -4,11 +4,26 @@
 
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600;700&display=swap');
 
-body {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+/* ─── WCAG AAA Color Variables ─── */
+:root {
+  --text-body: #1f2937;
+  --text-muted: #4b5563;
+  --bg: #faf9f6;
+  --bg-warm: #faf9f6;
 }
 
-/* Cascade animation for simulation */
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: var(--text-body);
+}
+
+/* ─── Focus indicators (WCAG) ─── */
+*:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* ─── Cascade animation for simulation ─── */
 @keyframes cascadePulse {
   0% { opacity: 0.4; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.15); }
@@ -72,5 +87,29 @@ body {
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+/* ─── Reduced Motion (WCAG) ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── High Contrast Mode (WCAG) ─── */
+@media (prefers-contrast: more) {
+  :root {
+    --text-body: #000000;
+    --text-muted: #1f2937;
+    --bg: #ffffff;
+    --bg-warm: #ffffff;
+  }
+  .promise-card, .graph-container, .health-card, [class*="border"] {
+    border-width: 2px;
+    border-color: #000000;
   }
 }

@@ -10,7 +10,7 @@ interface TrajectoryTabProps {
   trajectories: Trajectory[];
 }
 
-const COLORS = ["#2563eb", "#dc2626", "#059669", "#d97706"];
+const COLORS = ["#1e40af", "#991b1b", "#1a5f4a", "#78350f"];
 
 export default function TrajectoryTab({ trajectories }: TrajectoryTabProps) {
   return (
@@ -39,18 +39,18 @@ export default function TrajectoryTab({ trajectories }: TrajectoryTabProps) {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis
                     dataKey="year"
-                    tick={{ fontSize: 11, fill: "#9ca3af" }}
+                    tick={{ fontSize: 11, fill: "#4b5563" }}
                     tickLine={false}
                   />
                   <YAxis
                     domain={[0, 100]}
-                    tick={{ fontSize: 11, fill: "#9ca3af" }}
+                    tick={{ fontSize: 11, fill: "#4b5563" }}
                     tickLine={false}
                     label={{
                       value: "% Reduction",
                       angle: -90,
                       position: "insideLeft",
-                      style: { fontSize: 11, fill: "#9ca3af" },
+                      style: { fontSize: 11, fill: "#4b5563" },
                     }}
                   />
                   <Tooltip
@@ -62,9 +62,9 @@ export default function TrajectoryTab({ trajectories }: TrajectoryTabProps) {
                   />
 
                   {/* Target reference lines */}
-                  <ReferenceLine y={80} stroke="#dc2626" strokeDasharray="5 5" label={{ value: "80% (2030)", position: "right", fontSize: 10, fill: "#dc2626" }} />
-                  <ReferenceLine y={90} stroke="#d97706" strokeDasharray="5 5" label={{ value: "90% (2035)", position: "right", fontSize: 10, fill: "#d97706" }} />
-                  <ReferenceLine y={100} stroke="#059669" strokeDasharray="5 5" label={{ value: "100% (2040)", position: "right", fontSize: 10, fill: "#059669" }} />
+                  <ReferenceLine y={80} stroke="#991b1b" strokeDasharray="5 5" label={{ value: "80% (2030)", position: "right", fontSize: 10, fill: "#991b1b" }} />
+                  <ReferenceLine y={90} stroke="#78350f" strokeDasharray="5 5" label={{ value: "90% (2035)", position: "right", fontSize: 10, fill: "#78350f" }} />
+                  <ReferenceLine y={100} stroke="#1a5f4a" strokeDasharray="5 5" label={{ value: "100% (2040)", position: "right", fontSize: 10, fill: "#1a5f4a" }} />
 
                   <Area
                     type="monotone"

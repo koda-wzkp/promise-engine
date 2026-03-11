@@ -8,7 +8,7 @@ interface TeamHealthBarProps {
 
 export default function TeamHealthBar({ health }: TeamHealthBarProps) {
   const score = Math.round(health.overall);
-  const color = score >= 70 ? "#1a5f4a" : score >= 40 ? "#b45309" : "#b91c1c";
+  const color = score >= 70 ? "#1a5f4a" : score >= 40 ? "#78350f" : "#991b1b";
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">

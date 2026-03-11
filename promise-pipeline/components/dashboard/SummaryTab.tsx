@@ -35,7 +35,7 @@ export default function SummaryTab({ data, health, onDomainClick, onPromiseClick
         {/* Grade */}
         <div className="rounded-lg border border-gray-200 bg-white p-6 text-center">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Overall Grade</p>
-          <p className="mt-2 font-serif text-5xl font-bold text-gray-900">{grade}</p>
+          <p className="mt-2 font-serif text-5xl font-bold text-gray-900" aria-label={`Overall grade: ${grade}`}>{grade}</p>
           <p className="mt-2 text-xs text-gray-500">{data.gradeExplanation}</p>
           {gradeHint && (
             <p className="mt-2 rounded bg-blue-50 px-2 py-1 text-[11px] text-blue-700">
@@ -77,6 +77,7 @@ export default function SummaryTab({ data, health, onDomainClick, onPromiseClick
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: statusColors[status as keyof typeof statusColors] }}
+                    aria-hidden="true"
                   />
                   <span className="text-xs capitalize text-gray-600">{status}</span>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Promise as PromiseType, PromiseStatus, Agent } from "@/lib/types/promise";
 import StatusBadge from "../promise/StatusBadge";
 
@@ -20,9 +20,24 @@ export default function WhatIfPanel({ promise, agents, onSimulate, onClose, stat
     promise.status === "violated" ? "verified" : "violated"
   );
   const promiser = agents.find((a) => a.id === promise.promiser);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
 
   return (
-    <div className="rounded-lg border-2 border-yellow-300 bg-yellow-50 p-4">
+    <div
+      ref={panelRef}
+      className="rounded-lg border-2 border-yellow-300 bg-yellow-50 p-4"
+      role="region"
+      aria-label="What If simulation panel"
+    >
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-sm font-bold text-gray-900">What If?</h3>
@@ -30,8 +45,12 @@ export default function WhatIfPanel({ promise, agents, onSimulate, onClose, stat
             Simulate a status change and see cascade effects
           </p>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"
+          aria-label="Close What If panel"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -47,13 +66,15 @@ export default function WhatIfPanel({ promise, agents, onSimulate, onClose, stat
       </div>
 
       <div className="mt-3">
-        <label className="text-xs font-medium text-gray-600">Change status to:</label>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
+        <label id="whatif-status-label" className="text-xs font-medium text-gray-600">Change status to:</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5" role="radiogroup" aria-labelledby="whatif-status-label">
           {STATUSES.filter((s) => s !== promise.status).map((s) => (
             <button
               key={s}
+              role="radio"
+              aria-checked={selectedStatus === s}
               onClick={() => setSelectedStatus(s)}
-              className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors ${
+              className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
                 selectedStatus === s
                   ? "bg-yellow-400 text-yellow-900"
                   : "bg-white text-gray-500 hover:bg-gray-100"
@@ -67,7 +88,7 @@ export default function WhatIfPanel({ promise, agents, onSimulate, onClose, stat
 
       <button
         onClick={() => onSimulate(promise.id, selectedStatus)}
-        className="mt-4 w-full rounded-lg bg-yellow-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-yellow-600"
+        className="mt-4 w-full rounded-lg bg-yellow-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-yellow-600 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
       >
         Simulate Cascade
       </button>

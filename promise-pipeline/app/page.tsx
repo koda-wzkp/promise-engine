@@ -79,12 +79,13 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
+      <main id="main-content">
       {/* Hero */}
-      <section className="mx-auto max-w-4xl px-4 py-20 text-center">
+      <section className="mx-auto max-w-4xl px-4 py-20 text-center" aria-labelledby="hero-heading">
         <p className="mb-4 text-sm font-medium uppercase tracking-widest text-gray-400">
           A trust primitive for commitment networks
         </p>
-        <h1 className="font-serif text-5xl font-bold leading-tight text-gray-900 md:text-6xl">
+        <h1 id="hero-heading" className="font-serif text-5xl font-bold leading-tight text-gray-900 md:text-6xl">
           See what happens when
           <br />
           <span className="text-blue-600">promises break</span>
@@ -235,13 +236,16 @@ export default function LandingPage() {
             </p>
           ) : (
             <form onSubmit={handleBetaSignup} className="mt-6 flex gap-2">
+              <label htmlFor="beta-email" className="sr-only">Email address</label>
               <input
+                id="beta-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                 required
+                autoComplete="email"
               />
               <button
                 type="submit"
@@ -253,6 +257,8 @@ export default function LandingPage() {
           )}
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

@@ -190,13 +190,34 @@ export default function HB2021Dashboard() {
 
       {/* HEADER */}
       <header style={{ borderBottom: `1px solid ${C.border}`, background: C.surface }}>
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "20px 24px" }}>
-          <div style={{ fontSize: 11, color: C.textLight, fontFamily: mono, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>Promise Engine &middot; Civic Pilot</div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, fontFamily: serif, letterSpacing: -0.5, marginBottom: 4 }}>
-            Is Oregon's Clean Electricity Law Working?
-          </h1>
-          <div style={{ fontSize: 14, color: C.textMuted }}>
-            Tracking the 20 promises in HB 2021 &mdash; who made them, to whom, and whether they're being kept
+        <div style={{ maxWidth: 960, margin: "0 auto", padding: "28px 24px 24px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "end" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                <span style={{ fontSize: 11, color: C.textLight, fontFamily: mono, textTransform: "uppercase", letterSpacing: 2 }}>Promise Engine</span>
+                <span style={{
+                  fontSize: 10, fontFamily: mono, padding: "3px 10px", borderRadius: 3,
+                  color: "#fff", background: C.accent,
+                  fontWeight: 700, letterSpacing: 1,
+                }}>LIVE</span>
+              </div>
+              <h1 style={{ fontSize: 30, fontWeight: 700, fontFamily: serif, letterSpacing: -0.5, marginBottom: 6, lineHeight: 1.15 }}>
+                Is Oregon's Clean Electricity<br />Law Working?
+              </h1>
+              <div style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.5 }}>
+                Tracking the 20 promises in HB 2021 &mdash; who made them, to whom, and whether they're being kept
+              </div>
+            </div>
+            <div style={{ textAlign: "right", paddingBottom: 4 }}>
+              <div style={{ fontSize: 11, fontFamily: mono, color: C.textLight, marginBottom: 4 }}>CIVIC PILOT</div>
+              <div style={{ fontSize: 11, fontFamily: mono, color: C.textLight }}>Oregon &middot; 2021&ndash;2040</div>
+              {apiStatus === "connected" && (
+                <div style={{ fontSize: 10, fontFamily: mono, color: C.verified, marginTop: 6, display: "flex", alignItems: "center", gap: 5, justifyContent: "flex-end" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.verified, display: "inline-block" }} />
+                  API Connected
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -221,28 +242,28 @@ export default function HB2021Dashboard() {
         {/* SUMMARY */}
         {tab === "summary" && (
           <div>
-            {/* Hero card */}
-            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "32px 36px", marginBottom: 24 }}>
-              <div style={{ display: "flex", alignItems: "start", gap: 32, flexWrap: "wrap" }}>
-                {/* Grade */}
-                <div style={{ textAlign: "center", minWidth: 100 }}>
-                  <div style={{
-                    width: 88, height: 88, borderRadius: "50%",
-                    border: `4px solid ${narrative.gradeColor}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 36, fontWeight: 700, fontFamily: mono, color: narrative.gradeColor,
-                    margin: "0 auto 8px",
-                  }}>{narrative.grade}</div>
-                  <div style={{ fontSize: 11, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Overall</div>
-                </div>
-                {/* Narrative */}
-                <div style={{ flex: 1, minWidth: 300 }}>
+            {/* Hero card — asymmetric */}
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "36px", marginBottom: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: 36 }}>
+                {/* Narrative — left, larger */}
+                <div>
                   <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: serif, marginBottom: 12, color: C.text, lineHeight: 1.3 }}>
                     {narrative.headline}
                   </h2>
                   <p style={{ fontSize: 15, lineHeight: 1.8, color: C.text, marginBottom: 0 }}>
                     {narrative.summary}
                   </p>
+                </div>
+                {/* Grade — right column */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderLeft: `1px solid ${C.border}`, paddingLeft: 32 }}>
+                  <div style={{
+                    width: 80, height: 80, borderRadius: "50%",
+                    border: `4px solid ${narrative.gradeColor}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 32, fontWeight: 700, fontFamily: mono, color: narrative.gradeColor,
+                    marginBottom: 8,
+                  }}>{narrative.grade}</div>
+                  <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, fontFamily: mono }}>Overall</div>
                 </div>
               </div>
             </div>

@@ -93,62 +93,142 @@ const LandingPage = () => {
 
       {/* ── HERO ── */}
       <section className="hero-section">
-        <div className="hero-badge">Universal Auditing Infrastructure</div>
-        <h1 className="hero-title">
-          <span className="title-line">Promise Engine</span>
-        </h1>
-        <p className="hero-subtitle">The world runs on promises. We make them auditable.</p>
-        <p className="hero-description">
-          Governments pass laws. Utilities pledge clean energy. AI models claim accuracy.
-          <strong> Promise Engine</strong> decomposes these commitments into structured promise
-          networks — then tracks whether they're actually being kept.
-        </p>
-        <div className="hero-actions">
-          <button className="cta-button primary" onClick={() => navigate('/hb2021')}>
-            See the Live Demo
-          </button>
-          <button className="cta-button secondary" onClick={() => {
-            document.querySelector('.beta-section')?.scrollIntoView({ behavior: 'smooth' });
-          }}>
-            Join the Beta
-          </button>
+        <div className="hero-left">
+          <div className="hero-badge">Universal Auditing Infrastructure</div>
+          <h1 className="hero-title">
+            <span className="title-line">Promise</span>
+            <span className="title-line">Engine</span>
+          </h1>
+          <p className="hero-subtitle">The world runs on promises. We make them auditable.</p>
+          <p className="hero-description">
+            Governments pass laws. Utilities pledge clean energy. AI models claim accuracy.
+            <strong> Promise Engine</strong> decomposes these commitments into structured promise
+            networks — then tracks whether they're actually being kept.
+          </p>
+          <div className="hero-actions">
+            <button className="cta-button primary" onClick={() => navigate('/hb2021')}>
+              See the Live Demo
+            </button>
+            <button className="cta-button secondary" onClick={() => {
+              document.querySelector('.beta-section')?.scrollIntoView({ behavior: 'smooth' });
+            }}>
+              Join the Beta
+            </button>
+          </div>
+          <p className="hero-demo-note">
+            Live now: tracking 20 promises in Oregon's clean electricity law
+          </p>
         </div>
-        <p className="hero-demo-note">
-          Live now: tracking 20 promises in Oregon's clean electricity law
-        </p>
+        <div className="hero-right">
+          <div className="hero-float-stats">
+            <div className="float-stat">
+              <div className="float-stat-value">20</div>
+              <div className="float-stat-label">Promises mapped in Oregon HB 2021</div>
+            </div>
+            <div className="float-stat">
+              <div className="float-stat-value warning">4</div>
+              <div className="float-stat-label">Promises off track or violated</div>
+            </div>
+            <div className="float-stat">
+              <div className="float-stat-value danger">3</div>
+              <div className="float-stat-label">Equity promises with no verification</div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* ── LIVE DEMO FEATURE ── */}
+      {/* ── LIVE DEMO ── */}
       <section className="problem-section">
         <h2>See It In Action</h2>
+        <hr className="section-rule" />
         <div className="problem-grid">
-          <div className="problem-card" onClick={() => navigate('/hb2021')} style={{ cursor: 'pointer' }}>
-            <div className="problem-icon">{'\u2696\uFE0F'}</div>
-            <p className="problem-question">Oregon HB 2021</p>
+          <div className="problem-card live-card" onClick={() => navigate('/hb2021')} style={{ cursor: 'pointer', position: 'relative' }}>
+            <div>
+              <span style={{
+                display: 'inline-block', marginBottom: 16,
+                background: '#1a5f4a', color: '#fff',
+                padding: '4px 12px', borderRadius: 4,
+                fontSize: '0.7rem', fontWeight: 700,
+                letterSpacing: '1.5px', textTransform: 'uppercase',
+                fontFamily: "'IBM Plex Mono', monospace",
+              }}>LIVE DATA</span>
+              <p className="problem-question">Oregon HB 2021</p>
+              <p>
+                Is Oregon's 100% clean electricity law working? We mapped all 20 promises,
+                11 agents, and 6 domains. PacifiCorp is off track. The equity promises have
+                no verification mechanism. The oversight system caught the problem.
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '4rem', marginBottom: 8 }}>{'\u2696\uFE0F'}</div>
+              <p style={{ fontWeight: 600, color: '#1a5f4a', fontSize: '0.95rem' }}>
+                Explore the live dashboard &rarr;
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── DEMO DASHBOARDS ── */}
+      <section className="problem-section">
+        <h2>More Verticals</h2>
+        <hr className="section-rule" />
+        <p style={{ fontSize: '1.05rem', color: '#7a7267', marginBottom: '36px', maxWidth: '560px', lineHeight: 1.7 }}>
+          The same promise network framework, specialized for different domains.
+        </p>
+        <div className="demo-grid">
+          <div className="problem-card" onClick={() => navigate('/demo/ai')} style={{ cursor: 'pointer', position: 'relative' }}>
+            <span style={{
+              display: 'inline-block', marginBottom: 12,
+              background: '#b45309', color: '#fff',
+              padding: '3px 10px', borderRadius: 4,
+              fontSize: '0.65rem', fontWeight: 700,
+              letterSpacing: '1.5px', textTransform: 'uppercase',
+              fontFamily: "'IBM Plex Mono', monospace",
+            }}>DEMO</span>
+            <div className="problem-icon">{'\uD83E\uDD16'}</div>
+            <p className="problem-question">AI / ML Auditing</p>
             <p>
-              Is Oregon's 100% clean electricity law working? We mapped all 20 promises,
-              11 agents, and 6 domains. PacifiCorp is off track. The equity promises have
-              no verification mechanism. The oversight system caught the problem.
+              Track hallucination rates, safety commitments, and compliance across major AI providers.
             </p>
-            <p style={{ marginTop: '15px', fontWeight: 'bold', color: '#87CEEB' }}>
-              Explore the dashboard &rarr;
+            <p style={{ marginTop: '12px', fontWeight: 600, color: '#1a5f4a', fontSize: '0.9rem' }}>
+              View dashboard &rarr;
             </p>
           </div>
-          <div className="problem-card">
-            <div className="problem-icon">{'\uD83D\uDD0D'}</div>
-            <p className="problem-question">Who promised what?</p>
+          <div className="problem-card" onClick={() => navigate('/demo/infrastructure')} style={{ cursor: 'pointer', position: 'relative' }}>
+            <span style={{
+              display: 'inline-block', marginBottom: 12,
+              background: '#b45309', color: '#fff',
+              padding: '3px 10px', borderRadius: 4,
+              fontSize: '0.65rem', fontWeight: 700,
+              letterSpacing: '1.5px', textTransform: 'uppercase',
+              fontFamily: "'IBM Plex Mono', monospace",
+            }}>DEMO</span>
+            <div className="problem-icon">{'\u2601\uFE0F'}</div>
+            <p className="problem-question">Infrastructure SLAs</p>
             <p>
-              Legislation, corporate pledges, and AI systems all make commitments. But promises
-              get buried in dense text, split across agencies, and lost in complexity.
-              Promise Engine makes them legible.
+              Verify uptime, latency, and capacity commitments across AWS, GCP, Azure, and Cloudflare.
+            </p>
+            <p style={{ marginTop: '12px', fontWeight: 600, color: '#1a5f4a', fontSize: '0.9rem' }}>
+              View dashboard &rarr;
             </p>
           </div>
-          <div className="problem-card">
-            <div className="problem-icon">{'\uD83D\uDCC9'}</div>
-            <p className="problem-question">Are they keeping them?</p>
+          <div className="problem-card" onClick={() => navigate('/demo/supply-chain')} style={{ cursor: 'pointer', position: 'relative' }}>
+            <span style={{
+              display: 'inline-block', marginBottom: 12,
+              background: '#b45309', color: '#fff',
+              padding: '3px 10px', borderRadius: 4,
+              fontSize: '0.65rem', fontWeight: 700,
+              letterSpacing: '1.5px', textTransform: 'uppercase',
+              fontFamily: "'IBM Plex Mono', monospace",
+            }}>DEMO</span>
+            <div className="problem-icon">{'\uD83D\uDCE6'}</div>
+            <p className="problem-question">Supply Chain</p>
             <p>
-              Continuous verification against structured schemas. Integrity scoring that builds
-              trust capital over time — or erodes it when promises fall behind. No more "trust us."
+              Track provenance, ethics, and sustainability across Patagonia, Nike, Nestl&eacute;, and Unilever.
+            </p>
+            <p style={{ marginTop: '12px', fontWeight: 600, color: '#1a5f4a', fontSize: '0.9rem' }}>
+              View dashboard &rarr;
             </p>
           </div>
         </div>
@@ -157,6 +237,7 @@ const LandingPage = () => {
       {/* ── HOW IT WORKS ── */}
       <section className="solution-section">
         <h2>How It Works</h2>
+        <hr className="section-rule" />
         <p className="solution-intro">
           Promise Engine applies Promise Theory — developed by Mark Burgess in 2004 — to
           decompose any system of commitments into auditable promise networks.
@@ -191,6 +272,7 @@ const LandingPage = () => {
       {/* ── USE CASES ── */}
       <section className="use-cases-section">
         <h2>Promise Networks Everywhere</h2>
+        <hr className="section-rule" />
         <div className="use-case-tabs">
           {USE_CASES.map((uc) => (
             <button
@@ -220,13 +302,28 @@ const LandingPage = () => {
                 ))}
               </ul>
             </div>
-            {currentUseCase.id === 'civic' && (
-              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+              {currentUseCase.id === 'civic' && (
                 <button className="cta-button primary" onClick={() => navigate('/hb2021')}>
-                  See the HB 2021 Dashboard
+                  See the Live Dashboard
                 </button>
-              </div>
-            )}
+              )}
+              {currentUseCase.id === 'ai' && (
+                <button className="cta-button secondary" onClick={() => navigate('/demo/ai')}>
+                  See the Demo Dashboard
+                </button>
+              )}
+              {currentUseCase.id === 'infra' && (
+                <button className="cta-button secondary" onClick={() => navigate('/demo/infrastructure')}>
+                  See the Demo Dashboard
+                </button>
+              )}
+              {currentUseCase.id === 'supply' && (
+                <button className="cta-button secondary" onClick={() => navigate('/demo/supply-chain')}>
+                  See the Demo Dashboard
+                </button>
+              )}
+            </div>
           </div>
         )}
       </section>

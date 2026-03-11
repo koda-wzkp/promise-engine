@@ -5,74 +5,101 @@
 
 /* Navigation */
 .app-nav {
-  background: #333;
-  padding: 15px 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: #1a1a1a;
+  padding: 0;
   position: sticky;
   top: 0;
   z-index: 100;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .nav-container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 40px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: stretch;
+  height: 56px;
 }
 
 .nav-logo {
-  font-family: 'Courier New', monospace;
-  font-size: 1.3rem;
-  font-weight: bold;
-  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   text-decoration: none;
-  transition: color 0.3s;
+  gap: 1px;
+  transition: opacity 0.2s;
 }
 
 .nav-logo:hover {
-  color: #87CEEB;
+  opacity: 0.8;
+}
+
+.logo-main {
+  font-family: 'IBM Plex Serif', Georgia, serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+
+.logo-subtitle {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
 }
 
 .nav-links {
   display: flex;
-  gap: 30px;
+  gap: 0;
+  align-items: stretch;
 }
 
 .nav-link {
-  font-family: 'Courier New', monospace;
-  font-size: 1rem;
-  color: #fff;
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  transition: background 0.3s, color 0.3s;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  letter-spacing: 0.3px;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #87CEEB;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .nav-link.active {
-  background: #87CEEB;
   color: #fff;
+  border-bottom-color: #1a5f4a;
+  font-weight: 600;
 }
 
 /* Responsive Nav */
 @media (max-width: 768px) {
   .nav-container {
-    flex-direction: column;
-    gap: 15px;
+    padding: 0 16px;
+    height: 48px;
   }
 
   .nav-links {
-    gap: 15px;
+    gap: 0;
   }
 
   .nav-link {
-    font-size: 0.9rem;
-    padding: 6px 12px;
+    font-size: 0.75rem;
+    padding: 0 12px;
+  }
+
+  .logo-subtitle {
+    display: none;
   }
 }

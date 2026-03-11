@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceLine } from "recharts";
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceLine } from "recharts";
 
 // ─── DEMO DATA ───
 const AGENTS = [
@@ -82,7 +82,7 @@ function StatusBadge({ status }) {
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
       padding: "3px 10px", borderRadius: 4, fontSize: 11, fontWeight: 600,
-      color: c, background: `${c}12`, border: `1px solid ${c}28`,
+      color: c, background: `${c}18`, border: `1px solid ${c}30`,
       fontFamily: "'IBM Plex Mono', monospace",
     }}>
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: c, flexShrink: 0 }} />
@@ -113,13 +113,6 @@ export default function InfraDemoDashboard() {
   const domains = ["All", ...new Set(PROMISES.map(p => p.domain))];
   const filtered = domainFilter === "All" ? PROMISES : PROMISES.filter(p => p.domain === domainFilter);
 
-  const statusCounts = [
-    { name: "On Track", value: PROMISES.filter(p => p.status === "verified").length, color: C.verified },
-    { name: "Behind", value: PROMISES.filter(p => p.status === "degraded").length, color: C.degraded },
-    { name: "Off Track", value: PROMISES.filter(p => p.status === "violated").length, color: C.violated },
-    { name: "Declared", value: PROMISES.filter(p => p.status === "declared").length, color: C.declared },
-  ];
-
   const domainHealth = domains.filter(d => d !== "All").map(d => {
     const ps = PROMISES.filter(p => p.domain === d);
     const rank = { verified: 3, declared: 2, degraded: 1, unverifiable: 0, violated: -1 };
@@ -135,65 +128,64 @@ export default function InfraDemoDashboard() {
   ];
 
   const font = "'IBM Plex Sans', -apple-system, sans-serif";
-  const serif = "'IBM Plex Serif', Georgia, serif";
   const mono = "'IBM Plex Mono', monospace";
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: font }}>
       <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
 
-      {/* Dark ops header */}
-      <header style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
+      {/* ─── OPS HEADER ─── */}
+      <header style={{ background: "#1a1a2e", borderBottom: `1px solid ${C.border}` }}>
         <div style={{ maxWidth: 960, margin: "0 auto", padding: "16px 24px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 10, color: C.accent, fontFamily: mono, textTransform: "uppercase", letterSpacing: 2, fontWeight: 700 }}>Promise Engine</span>
-              <span style={{ fontSize: 10, color: C.textLight }}>|</span>
-              <span style={{ fontSize: 10, color: C.textLight, fontFamily: mono, textTransform: "uppercase", letterSpacing: 1.5 }}>Infrastructure</span>
-              <span style={{
-                fontSize: 9, fontFamily: mono, padding: "2px 8px", borderRadius: 2,
-                color: C.degraded, background: `${C.degraded}15`, border: `1px solid ${C.degraded}30`,
-                textTransform: "uppercase", letterSpacing: 1,
-              }}>DEMO</span>
-            </div>
-            <span style={{ fontSize: 10, fontFamily: mono, color: C.textLight }}>
-              {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-            </span>
-          </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, fontFamily: mono, letterSpacing: -0.3, marginBottom: 12, color: C.text }}>
-            SLA Status Board
-          </h1>
-          {/* Provider status strip */}
-          <div style={{ display: "flex", gap: 24, padding: "10px 0", borderTop: `1px solid ${C.border}` }}>
-            {[
-              { name: "AWS", color: C.aws, ok: PROMISES.filter(p => p.promiser === "aws" && p.status === "verified").length, total: PROMISES.filter(p => p.promiser === "aws").length },
-              { name: "GCP", color: C.gcp, ok: PROMISES.filter(p => p.promiser === "gcp" && p.status === "verified").length, total: PROMISES.filter(p => p.promiser === "gcp").length },
-              { name: "Azure", color: C.azure, ok: PROMISES.filter(p => p.promiser === "azure" && p.status === "verified").length, total: PROMISES.filter(p => p.promiser === "azure").length },
-              { name: "Cloudflare", color: C.cloudflare, ok: PROMISES.filter(p => p.promiser === "cloudflare" && p.status === "verified").length, total: PROMISES.filter(p => p.promiser === "cloudflare").length },
-            ].map(p => (
-              <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: "#556677", fontFamily: mono, textTransform: "uppercase", letterSpacing: 1.5 }}>Promise Engine &middot; Infrastructure Demo</span>
                 <span style={{
-                  width: 8, height: 8, borderRadius: "50%",
-                  background: p.ok === p.total ? C.verified : p.ok >= p.total - 1 ? C.degraded : C.violated,
-                  boxShadow: `0 0 6px ${p.ok === p.total ? C.verified : p.ok >= p.total - 1 ? C.degraded : C.violated}60`,
-                }} />
-                <span style={{ fontFamily: mono, fontSize: 12, color: p.color, fontWeight: 600 }}>{p.name}</span>
-                <span style={{ fontFamily: mono, fontSize: 11, color: C.textMuted }}>{p.ok}/{p.total}</span>
+                  fontSize: 10, fontFamily: mono, padding: "2px 8px", borderRadius: 3,
+                  color: C.degraded, background: `${C.degraded}18`, border: `1px solid ${C.degraded}30`,
+                }}>DEMO DATA</span>
               </div>
-            ))}
+              <h1 style={{ fontSize: 22, fontWeight: 700, fontFamily: mono, letterSpacing: -0.5, color: "#ffffff" }}>
+                Are Cloud Providers Keeping Their SLAs?
+              </h1>
+            </div>
+            {/* Provider status indicators */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              {[
+                { name: "AWS", color: C.aws, id: "aws" },
+                { name: "GCP", color: C.gcp, id: "gcp" },
+                { name: "Azure", color: C.azure, id: "azure" },
+                { name: "Cloudflare", color: C.cloudflare, id: "cloudflare" },
+              ].map(p => {
+                const ps = PROMISES.filter(pr => pr.promiser === p.id);
+                const statusColor = ps.some(pr => pr.status === "violated") ? C.violated : ps.some(pr => pr.status === "degraded") ? C.degraded : C.verified;
+                return (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{
+                      width: 8, height: 8, borderRadius: "50%",
+                      background: statusColor,
+                      boxShadow: `0 0 6px ${statusColor}80`,
+                      flexShrink: 0,
+                    }} />
+                    <span style={{ fontSize: 12, fontFamily: mono, color: "#ffffff", fontWeight: 500 }}>{p.name}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </header>
 
-      <nav style={{ borderBottom: `1px solid ${C.border}`, background: C.surfaceDark, position: "sticky", top: 0, zIndex: 10 }}>
+      <nav style={{ borderBottom: `1px solid ${C.border}`, background: C.surface, position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 24px", display: "flex", gap: 0, overflowX: "auto" }}>
           {tabDefs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
-              padding: "12px 18px", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap",
+              padding: "12px 18px", fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap",
               color: tab === t.id ? C.accent : C.textMuted,
               background: "none", border: "none",
               borderBottom: tab === t.id ? `2px solid ${C.accent}` : "2px solid transparent",
-              fontFamily: mono, textTransform: "uppercase", letterSpacing: 0.5,
+              fontFamily: mono,
             }}>{t.label}</button>
           ))}
         </div>
@@ -203,93 +195,94 @@ export default function InfraDemoDashboard() {
 
         {tab === "summary" && (
           <div>
-            {/* Metric tiles strip */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+            {/* ─── Metric status bar: 4 tiles side by side ─── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
               {[
                 { label: "Total SLAs", value: PROMISES.length, color: C.accent },
                 { label: "On Track", value: PROMISES.filter(p => p.status === "verified").length, color: C.verified },
                 { label: "Behind", value: PROMISES.filter(p => p.status === "degraded").length, color: C.degraded },
                 { label: "Off Track", value: PROMISES.filter(p => p.status === "violated").length, color: C.violated },
-              ].map(m => (
-                <div key={m.label} style={{
+              ].map(tile => (
+                <div key={tile.label} style={{
                   background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6,
-                  padding: "20px", borderTop: `3px solid ${m.color}`,
+                  padding: "16px 20px", borderTop: `3px solid ${tile.color}`,
                 }}>
-                  <div style={{ fontSize: 10, fontFamily: mono, color: C.textMuted, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>{m.label}</div>
-                  <div style={{ fontSize: 36, fontWeight: 700, fontFamily: mono, color: m.color, lineHeight: 1 }}>{m.value}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted, fontFamily: mono, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{tile.label}</div>
+                  <div style={{ fontSize: 32, fontWeight: 700, fontFamily: mono, color: tile.color }}>{tile.value}</div>
                 </div>
               ))}
             </div>
 
-            {/* Narrative */}
-            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "24px 28px", marginBottom: 24 }}>
-              <p style={{ fontSize: 15, lineHeight: 1.8, color: C.text, margin: 0 }}>
+            {/* ─── Narrative summary ─── */}
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "20px 24px", marginBottom: 24 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, fontFamily: mono, marginBottom: 8, color: C.accent }}>
+                {narrative.headline}
+              </h2>
+              <p style={{ fontSize: 14, lineHeight: 1.8, color: C.textMuted, marginBottom: 0 }}>
                 {narrative.summary}
               </p>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "24px" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, fontFamily: mono, marginBottom: 16, textTransform: "uppercase", letterSpacing: 1, color: C.textMuted }}>Status Breakdown</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                  <ResponsiveContainer width={140} height={140}>
-                    <PieChart>
-                      <Pie data={statusCounts.filter(s => s.value > 0)} cx="50%" cy="50%" innerRadius={36} outerRadius={62} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                        {statusCounts.filter(s => s.value > 0).map((s, i) => <Cell key={i} fill={s.color} />)}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div style={{ display: "grid", gap: 6, flex: 1 }}>
-                    {statusCounts.filter(s => s.value > 0).map(s => (
-                      <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ width: 10, height: 10, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: C.text, flex: 1 }}>{s.name}</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: mono, color: s.color }}>{s.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "24px" }}>
-                <div style={{ fontSize: 14, fontWeight: 600, fontFamily: serif, marginBottom: 16 }}>Health by Domain</div>
-                <div style={{ display: "grid", gap: 8 }}>
-                  {domainHealth.sort((a, b) => a.health - b.health).map(d => (
-                    <div key={d.domain} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 12, color: C.text, minWidth: 90, fontWeight: 500 }}>{d.domain}</span>
-                      <div style={{ flex: 1, height: 8, background: C.surfaceDark, borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{
-                          width: `${Math.max(10, ((d.health + 1) / 4) * 100)}%`, height: "100%",
-                          background: d.color, borderRadius: 4,
+            {/* ─── Provider cards: Cloudflare large + 3 small ─── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
+              {/* Cloudflare - leader card spanning full width */}
+              {(() => {
+                const ps = PROMISES.filter(p => p.promiser === "cloudflare");
+                const v = ps.filter(p => p.status === "verified").length;
+                return (
+                  <div style={{
+                    gridColumn: "1 / -1",
+                    background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6,
+                    padding: "24px 28px", borderLeft: `4px solid ${C.cloudflare}`,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{
+                          width: 10, height: 10, borderRadius: "50%", background: C.cloudflare,
+                          boxShadow: `0 0 8px ${C.cloudflare}60`,
                         }} />
+                        <span style={{ fontSize: 18, fontWeight: 600, fontFamily: mono, color: "#ffffff" }}>Cloudflare</span>
+                        <span style={{
+                          fontSize: 10, fontFamily: mono, padding: "2px 8px", borderRadius: 3,
+                          color: C.verified, background: `${C.verified}18`, border: `1px solid ${C.verified}30`,
+                          textTransform: "uppercase", letterSpacing: 0.8,
+                        }}>Leader</span>
                       </div>
-                      <span style={{ fontSize: 11, fontFamily: mono, color: d.color, fontWeight: 600, minWidth: 20, textAlign: "right" }}>{d.count}</span>
+                      <span style={{ fontFamily: mono, fontSize: 18, color: C.cloudflare, fontWeight: 700 }}>{v}/{ps.length}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Provider scorecards — 1 featured + 3 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: 12 }}>
+                    <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                      {ps.map(p => (
+                        <div key={p.id} style={{
+                          flex: 1, height: 8, borderRadius: 4,
+                          background: C[p.status] || C.textMuted,
+                          boxShadow: `0 0 4px ${(C[p.status] || C.textMuted)}40`,
+                        }} />
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 12, color: C.textMuted, fontFamily: mono }}>
+                      {ps.map(p => p.domain).filter((d, i, a) => a.indexOf(d) === i).join(" / ")}
+                    </div>
+                  </div>
+                );
+              })()}
+              {/* Other 3 providers in a row */}
               {[
-                { name: "Cloudflare", color: C.cloudflare, id: "cloudflare" },
                 { name: "AWS", color: C.aws, id: "aws" },
-                { name: "GCP", color: C.gcp, id: "gcp" },
+                { name: "Google Cloud", color: C.gcp, id: "gcp" },
                 { name: "Azure", color: C.azure, id: "azure" },
-              ].map((provider, idx) => {
+              ].map(provider => {
                 const ps = PROMISES.filter(p => p.promiser === provider.id);
                 const v = ps.filter(p => p.status === "verified").length;
                 return (
                   <div key={provider.name} style={{
                     background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6,
-                    padding: idx === 0 ? "24px" : "16px 18px", borderTop: `3px solid ${provider.color}`,
+                    padding: "16px 20px", borderLeft: `4px solid ${provider.color}`,
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ fontSize: idx === 0 ? 15 : 13, fontWeight: 600, fontFamily: mono }}>{provider.name}</span>
-                      <span style={{ fontFamily: mono, fontSize: 13, color: provider.color, fontWeight: 700 }}>{v}/{ps.length}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, fontFamily: mono, color: "#ffffff" }}>{provider.name}</span>
+                      <span style={{ fontFamily: mono, fontSize: 14, color: provider.color, fontWeight: 700 }}>{v}/{ps.length}</span>
                     </div>
-                    <div style={{ display: "flex", gap: 4 }}>
+                    <div style={{ display: "flex", gap: 3 }}>
                       {ps.map(p => (
                         <div key={p.id} style={{
                           flex: 1, height: 6, borderRadius: 3,
@@ -297,12 +290,32 @@ export default function InfraDemoDashboard() {
                         }} />
                       ))}
                     </div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 8 }}>
-                      {ps.map(p => p.domain).filter((d, i, a) => a.indexOf(d) === i).join(" · ")}
+                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, fontFamily: mono }}>
+                      {ps.map(p => p.domain).filter((d, i, a) => a.indexOf(d) === i).join(" / ")}
                     </div>
                   </div>
                 );
               })}
+            </div>
+
+            {/* ─── Domain health horizontal bars ─── */}
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "20px 24px" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, fontFamily: mono, marginBottom: 16, color: C.accent, textTransform: "uppercase", letterSpacing: 1 }}>Domain Health</div>
+              <div style={{ display: "grid", gap: 10 }}>
+                {domainHealth.sort((a, b) => a.health - b.health).map(d => (
+                  <div key={d.domain} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 12, color: C.text, minWidth: 90, fontWeight: 500, fontFamily: mono }}>{d.domain}</span>
+                    <div style={{ flex: 1, height: 10, background: C.surfaceDark, borderRadius: 5, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                      <div style={{
+                        width: `${Math.max(10, ((d.health + 1) / 4) * 100)}%`, height: "100%",
+                        background: `linear-gradient(90deg, ${d.color}cc, ${d.color})`, borderRadius: 5,
+                        boxShadow: `0 0 6px ${d.color}40`,
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 11, fontFamily: mono, color: d.color, fontWeight: 600, minWidth: 20, textAlign: "right" }}>{d.count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -310,8 +323,8 @@ export default function InfraDemoDashboard() {
         {tab === "uptime" && (
           <div>
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "28px 32px", marginBottom: 24 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, fontFamily: serif, marginBottom: 6 }}>Monthly Composite Uptime</h2>
-              <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 24, lineHeight: 1.6 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 600, fontFamily: mono, marginBottom: 6, color: C.accent }}>Monthly Composite Uptime</h2>
+              <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.6, fontFamily: mono }}>
                 Weighted average uptime across each provider's core services. The 99.99% line represents the four-nines standard. Cloudflare operates at five-nines scale (shown off the top of chart).
               </p>
               <ResponsiveContainer width="100%" height={320}>
@@ -319,7 +332,7 @@ export default function InfraDemoDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
                   <XAxis dataKey="month" fontSize={11} fontFamily={mono} tick={{ fill: C.textMuted }} />
                   <YAxis domain={[99.9, 100]} fontSize={11} fontFamily={mono} tick={{ fill: C.textMuted }} tickFormatter={v => `${v}%`} />
-                  <Tooltip contentStyle={{ fontSize: 12, fontFamily: font, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text }} formatter={(v) => [`${v}%`]} />
+                  <Tooltip contentStyle={{ fontSize: 12, fontFamily: font, background: C.surfaceDark, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text }} formatter={(v) => [`${v}%`]} />
                   <ReferenceLine y={99.99} stroke={C.verified} strokeDasharray="8 4" strokeOpacity={0.5} label={{ value: "99.99% SLA", position: "right", fontSize: 10, fill: C.verified }} />
                   <Area type="monotone" dataKey="aws" stroke={C.aws} fill="none" strokeWidth={2} dot={{ r: 3 }} name="AWS" />
                   <Area type="monotone" dataKey="gcp" stroke={C.gcp} fill="none" strokeWidth={2} dot={{ r: 3 }} name="GCP" />
@@ -329,8 +342,8 @@ export default function InfraDemoDashboard() {
             </div>
 
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "28px 32px" }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, fontFamily: serif, marginBottom: 6 }}>Monthly Incident Count</h2>
-              <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 24, lineHeight: 1.6 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 600, fontFamily: mono, marginBottom: 6, color: C.accent }}>Monthly Incident Count</h2>
+              <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.6, fontFamily: mono }}>
                 Number of service-impacting incidents per provider per month. Includes both outages and significant degradations as reported on provider status pages.
               </p>
               <ResponsiveContainer width="100%" height={280}>
@@ -338,7 +351,7 @@ export default function InfraDemoDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
                   <XAxis dataKey="month" fontSize={11} fontFamily={mono} tick={{ fill: C.textMuted }} />
                   <YAxis fontSize={11} fontFamily={mono} tick={{ fill: C.textMuted }} />
-                  <Tooltip contentStyle={{ fontSize: 12, fontFamily: font, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text }} />
+                  <Tooltip contentStyle={{ fontSize: 12, fontFamily: font, background: C.surfaceDark, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text }} />
                   <Area type="monotone" dataKey="aws" stroke={C.aws} fill={`${C.aws}20`} strokeWidth={2} name="AWS" />
                   <Area type="monotone" dataKey="gcp" stroke={C.gcp} fill={`${C.gcp}20`} strokeWidth={2} name="GCP" />
                   <Area type="monotone" dataKey="azure" stroke={C.azure} fill={`${C.azure}20`} strokeWidth={2} name="Azure" />
@@ -356,9 +369,9 @@ export default function InfraDemoDashboard() {
                 <button key={d} onClick={() => setDomainFilter(d)} style={{
                   padding: "5px 14px", borderRadius: 4, fontSize: 12, fontWeight: 500, cursor: "pointer",
                   background: domainFilter === d ? C.accent : C.surface,
-                  color: domainFilter === d ? "#fff" : C.textMuted,
+                  color: domainFilter === d ? "#0f1419" : C.textMuted,
                   border: `1px solid ${domainFilter === d ? C.accent : C.border}`,
-                  fontFamily: font,
+                  fontFamily: mono,
                 }}>{d}</button>
               ))}
             </div>
@@ -374,7 +387,7 @@ export default function InfraDemoDashboard() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontFamily: mono, fontSize: 12, color: C.accent, fontWeight: 600 }}>{pr.id}</span>
-                        <span style={{ fontSize: 11, color: C.textMuted, background: C.surfaceDark, padding: "2px 8px", borderRadius: 3 }}>{pr.domain}</span>
+                        <span style={{ fontSize: 11, color: C.textMuted, background: C.surfaceDark, padding: "2px 8px", borderRadius: 3, border: `1px solid ${C.border}` }}>{pr.domain}</span>
                       </div>
                       <StatusBadge status={pr.status} />
                     </div>
@@ -403,12 +416,12 @@ export default function InfraDemoDashboard() {
                   <span style={{
                     padding: "3px 10px", borderRadius: 4, fontSize: 10, fontWeight: 700,
                     textTransform: "uppercase", letterSpacing: 0.8,
-                    color: C[ins.severity], background: `${C[ins.severity]}12`, border: `1px solid ${C[ins.severity]}28`,
+                    color: C[ins.severity], background: `${C[ins.severity]}18`, border: `1px solid ${C[ins.severity]}30`,
                   }}>{ins.severity}</span>
                   <span style={{ fontSize: 11, color: C.textLight, fontFamily: mono }}>{ins.type}</span>
                 </div>
-                <h3 style={{ fontSize: 18, fontWeight: 600, fontFamily: serif, marginBottom: 12, lineHeight: 1.3 }}>{ins.title}</h3>
-                <p style={{ fontSize: 14, lineHeight: 1.8, color: C.text, marginBottom: 16 }}>{ins.body}</p>
+                <h3 style={{ fontSize: 18, fontWeight: 600, fontFamily: mono, marginBottom: 12, lineHeight: 1.3, color: C.text }}>{ins.title}</h3>
+                <p style={{ fontSize: 14, lineHeight: 1.8, color: C.textMuted, marginBottom: 16 }}>{ins.body}</p>
                 {ins.promises.length > 0 && (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {ins.promises.map(pid => {
@@ -418,6 +431,7 @@ export default function InfraDemoDashboard() {
                         <div key={pid} style={{
                           padding: "8px 12px", background: C.surfaceDark, borderRadius: 6,
                           borderLeft: `3px solid ${C[pr.status]}`, fontSize: 12,
+                          border: `1px solid ${C.border}`,
                         }}>
                           <span style={{ fontFamily: mono, color: C.accent, fontWeight: 600, marginRight: 6 }}>{pr.id}</span>
                           <span style={{ color: C.text }}>{pr.body}</span>

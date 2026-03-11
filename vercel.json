@@ -1,10 +1,8 @@
 {
-  "buildCommand": "cd frontend && CI=false npm run build",
-  "outputDirectory": "frontend/build",
-  "installCommand": "cd frontend && npm ci",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
+  "buildCommand": "cd promise-pipeline && npm run build",
+  "outputDirectory": "promise-pipeline/.next",
+  "installCommand": "cd promise-pipeline && npm ci",
+  "framework": "nextjs",
   "headers": [
     {
       "source": "/(.*)",
@@ -20,10 +18,6 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
         }
       ]
     }

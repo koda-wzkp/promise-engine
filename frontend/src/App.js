@@ -4,8 +4,6 @@ import './App.css';
 import LandingPage from './pages/LandingPage.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
-import IntegrityPage from './pages/IntegrityPage';
-import PromisesPage from './pages/PromisesPage';
 import LivingRoomWines from './pages/LivingRoomWines';
 import HB2021Dashboard from './pages/HB2021Dashboard';
 import AIDemoDashboard from './pages/AIDemoDashboard';
@@ -36,9 +34,7 @@ function App() {
   return (
     <div className="App">
       {/* Navigation - Show on dashboard pages */}
-      {(window.location.pathname.startsWith('/integrity') ||
-        window.location.pathname.startsWith('/promises') ||
-        window.location.pathname.startsWith('/hb2021') ||
+      {(window.location.pathname.startsWith('/hb2021') ||
         window.location.pathname.startsWith('/demo/')) && (
         <nav className="app-nav">
           <div className="nav-container">
@@ -58,24 +54,34 @@ function App() {
                 HB 2021
               </Link>
               <Link
-                to="/integrity"
+                to="/demo/ai"
                 className={
-                  window.location.pathname === '/integrity'
+                  window.location.pathname === '/demo/ai'
                     ? 'nav-link active'
                     : 'nav-link'
                 }
               >
-                Integrity
+                AI/ML
               </Link>
               <Link
-                to="/promises"
+                to="/demo/infrastructure"
                 className={
-                  window.location.pathname === '/promises'
+                  window.location.pathname === '/demo/infrastructure'
                     ? 'nav-link active'
                     : 'nav-link'
                 }
               >
-                Promises
+                Infrastructure
+              </Link>
+              <Link
+                to="/demo/supply-chain"
+                className={
+                  window.location.pathname === '/demo/supply-chain'
+                    ? 'nav-link active'
+                    : 'nav-link'
+                }
+              >
+                Supply Chain
               </Link>
             </div>
           </div>
@@ -87,10 +93,6 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/register" element={<Register onLogin={handleLogin} />} />
-
-        {/* Dashboard routes (accessible without auth for demo) */}
-        <Route path="/integrity" element={<IntegrityPage />} />
-        <Route path="/promises" element={<PromisesPage />} />
 
         {/* Vertical Demos */}
         <Route path="/demo/ai" element={<AIDemoDashboard />} />

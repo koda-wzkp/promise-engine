@@ -1,8 +1,4 @@
 {
-  "buildCommand": "cd promise-pipeline && npm run build",
-  "outputDirectory": "promise-pipeline/.next",
-  "installCommand": "cd promise-pipeline && npm ci",
-  "framework": "nextjs",
   "headers": [
     {
       "source": "/(.*)",

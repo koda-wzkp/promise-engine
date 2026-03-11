@@ -1,9 +1,9 @@
 import React from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import './App.css';
-import LandingPage from './pages/LandingPage';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import LandingPage from './pages/LandingPage.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
 import IntegrityPage from './pages/IntegrityPage';
 import PromisesPage from './pages/PromisesPage';
 import LivingRoomWines from './pages/LivingRoomWines';

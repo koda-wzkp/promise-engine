@@ -75,6 +75,9 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="mx-auto max-w-4xl px-4 py-20 text-center">
+        <p className="mb-4 text-sm font-medium uppercase tracking-widest text-gray-400">
+          A trust primitive for commitment networks
+        </p>
         <h1 className="font-serif text-5xl font-bold leading-tight text-gray-900 md:text-6xl">
           See what happens when
           <br />
@@ -98,6 +101,59 @@ export default function LandingPage() {
           >
             Learn More
           </Link>
+        </div>
+      </section>
+
+      {/* X-ray vs MRI */}
+      <section className="border-t border-gray-200 bg-white px-4 py-16">
+        <div className="mx-auto max-w-4xl">
+          <h2 className="text-center font-serif text-3xl font-bold text-gray-900">
+            From Dashboard to Graph
+          </h2>
+          <div className="mt-8 grid gap-6 md:grid-cols-3">
+            <div className="rounded-lg border border-gray-200 p-6">
+              <h3 className="font-serif text-lg font-semibold text-gray-400">Status Dashboard</h3>
+              <p className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-400">The X-ray</p>
+              <p className="mt-3 text-sm text-gray-600">
+                Shows which commitments are on track and which are not — in isolation.
+                Tells you <strong>what is broken</strong>.
+              </p>
+            </div>
+            <div className="rounded-lg border-2 border-gray-900 p-6">
+              <h3 className="font-serif text-lg font-semibold text-gray-900">Promise Graph</h3>
+              <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-600">The MRI</p>
+              <p className="mt-3 text-sm text-gray-600">
+                Reveals structural relationships, dependency pathways, and downstream effects.
+                Tells you <strong>what will break next</strong> and why.
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
+              <h3 className="font-serif text-lg font-semibold text-gray-900">Simulation Engine</h3>
+              <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-600">The Surgical Sim</p>
+              <p className="mt-3 text-sm text-gray-600">
+                Models interventions on the full structural scan before anyone operates.
+                Shows you <strong>what happens if</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Primitive */}
+      <section className="px-4 py-16">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="font-serif text-3xl font-bold text-gray-900">
+            A Trust Primitive
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-gray-600 leading-relaxed">
+            Credit scores reduce trust to a number. Reputation systems reduce it to aggregate opinion.
+            Blockchain eliminates it entirely. None of these model the <em>structure</em> of trust
+            itself — the interdependencies, the cascades, the gap between what was promised and what
+            was delivered. The promise graph does.
+          </p>
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-gray-500">
+            This is infrastructure, not advocacy. The data says what it says.
+          </p>
         </div>
       </section>
 

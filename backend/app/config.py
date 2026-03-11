@@ -22,12 +22,16 @@ class Config:
 
     # JWT
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", SECRET_KEY)
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(
-        hours=int(os.getenv("JWT_ACCESS_TOKEN_HOURS", "24"))
-    )
-    JWT_REFRESH_TOKEN_EXPIRES = timedelta(
-        days=int(os.getenv("JWT_REFRESH_TOKEN_DAYS", "30"))
-    )
+    try:
+        _jwt_hours = int(os.getenv("JWT_ACCESS_TOKEN_HOURS", "24"))
+    except ValueError:
+        _jwt_hours = 24
+    try:
+        _jwt_days = int(os.getenv("JWT_REFRESH_TOKEN_DAYS", "30"))
+    except ValueError:
+        _jwt_days = 30
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=_jwt_hours)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=_jwt_days)
 
     # Stripe
     STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")

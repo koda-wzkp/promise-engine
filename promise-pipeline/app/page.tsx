@@ -13,6 +13,12 @@ const USE_CASES = [
     tag: "Live Demo",
   },
   {
+    title: "Affordable Care Act",
+    description: "Analyze ACA promises across federal agencies, insurers, and courts with legal challenge tracking.",
+    href: "/demo/aca",
+    tag: "Live Demo",
+  },
+  {
     title: "AI Governance",
     description: "Track AI safety promises from labs, auditors, and oversight bodies.",
     href: "/demo/ai",
@@ -90,10 +96,16 @@ export default function LandingPage() {
         </p>
         <div className="mt-8 flex justify-center gap-4">
           <Link
-            href="/demo/hb2021"
+            href="/demo/aca"
             className="rounded-lg bg-gray-900 px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
           >
-            Try the HB 2021 Simulation
+            Try the ACA Demo
+          </Link>
+          <Link
+            href="/demo/hb2021"
+            className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            HB 2021 Demo
           </Link>
           <Link
             href="/about"

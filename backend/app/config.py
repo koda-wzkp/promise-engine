@@ -17,7 +17,8 @@ class Config:
     SQL_ECHO = os.getenv("SQL_ECHO", "False").lower() == "true"
 
     # CORS
-    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+    _cors_raw = os.getenv("CORS_ORIGINS", "*")
+    CORS_ORIGINS = _cors_raw if _cors_raw == "*" else [o.strip() for o in _cors_raw.split(",")]
 
     # JWT
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", SECRET_KEY)
@@ -35,7 +36,7 @@ class Config:
 
     # SendGrid
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-    FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@promise.pleco.dev")
+    FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@promisepipeline.com")
 
     # Application
     APP_NAME = os.getenv("APP_NAME", "Promise Engine")

@@ -15,6 +15,7 @@ from app.database import Base
 from app.models import User, BetaSignup
 from app.promise_engine.storage.models import (
     PromiseSchemaDB,
+    PromiseSchemaVersionDB,
     PromiseEventDB,
     IntegrityScoreDB,
     AgentDB,

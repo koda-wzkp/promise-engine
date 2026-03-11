@@ -116,6 +116,9 @@ class PromiseEvent:
     touchpoint_id: Optional[str] = None
     journey_id: Optional[str] = None
 
+    # Deadline tracking
+    due_by: Optional[datetime] = None
+
     # ML training metadata
     training_eligible: bool = True
     exported_at: Optional[datetime] = None

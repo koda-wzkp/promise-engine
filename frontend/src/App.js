@@ -7,6 +7,7 @@ import Register from './pages/Register';
 import IntegrityPage from './pages/IntegrityPage';
 import PromisesPage from './pages/PromisesPage';
 import LivingRoomWines from './pages/LivingRoomWines';
+import HB2021Dashboard from './pages/HB2021Dashboard';
 
 function App() {
   // Auth state (for future use)
@@ -78,6 +79,9 @@ function App() {
 
         {/* CODEC Demos */}
         <Route path="/demo/livingroom-wines" element={<LivingRoomWines />} />
+
+        {/* HB 2021 Civic Pilot */}
+        <Route path="/hb2021" element={<HB2021Dashboard />} />
 
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />

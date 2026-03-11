@@ -366,14 +366,19 @@ class PromiseEngine:
     def get_overdue(self, promiser: Agent) -> List[PromiseEvent]:
         """Get overdue promises for an agent.
 
+        Returns pending promises whose due_by date has passed.
+
         Args:
             promiser: Agent who made the promises
 
         Returns:
-            List of overdue PromiseEvents
+            List of overdue PromiseEvents, oldest first
         """
-        # TODO: Implement once we add due_by to schemas
-        return []
+        with get_db() as db:
+            repo = self._get_repo(db)
+            db_events = repo.get_overdue(promiser)
+
+            return [self._db_event_to_model(e) for e in db_events]
 
     # ============================================================
     # HELPER METHODS
@@ -410,6 +415,7 @@ class PromiseEngine:
             signal_strength=SignalStrength(db_event.signal_strength),
             touchpoint_id=db_event.touchpoint_id,
             journey_id=db_event.journey_id,
+            due_by=db_event.due_by,
             training_eligible=db_event.training_eligible,
             exported_at=db_event.exported_at,
         )

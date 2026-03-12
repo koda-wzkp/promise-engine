@@ -165,10 +165,12 @@ export default function ServicesPage() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <a
-              href="#start"
+              href="https://cal.com/pleco/promise-pipeline-discovery-call"
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-lg bg-gray-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800"
             >
-              Start a project
+              Schedule a Discovery Call
             </a>
             <Link
               href="/demo/hb2021"
@@ -350,10 +352,12 @@ export default function ServicesPage() {
                   Best for: single law, policy, or contract
                 </p>
                 <a
-                  href="#start"
+                  href="https://cal.com/pleco/promise-pipeline-discovery-call"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="mt-6 block rounded-lg border border-gray-300 py-2.5 text-center text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                 >
-                  Get started
+                  Schedule a Discovery Call
                 </a>
               </div>
 
@@ -399,10 +403,12 @@ export default function ServicesPage() {
                   Best for: complex legislation, org-wide commitments, multi-stakeholder accountability
                 </p>
                 <a
-                  href="#start"
+                  href="https://cal.com/pleco/promise-pipeline-discovery-call"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="mt-6 block rounded-lg bg-gray-900 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-gray-800"
                 >
-                  Get started
+                  Schedule a Discovery Call
                 </a>
               </div>
 
@@ -438,10 +444,12 @@ export default function ServicesPage() {
                   Best for: foundations, government agencies, enterprise accountability
                 </p>
                 <a
-                  href="#start"
+                  href="https://cal.com/pleco/promise-pipeline-discovery-call"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="mt-6 block rounded-lg border border-gray-300 py-2.5 text-center text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                 >
-                  Contact us
+                  Schedule a Discovery Call
                 </a>
               </div>
             </div>

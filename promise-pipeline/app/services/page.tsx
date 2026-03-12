@@ -201,6 +201,110 @@ export default function ServicesPage() {
           </div>
         </section>
 
+        {/* What This Replaces */}
+        <section className="px-4 py-16" aria-labelledby="what-this-replaces">
+          <div className="mx-auto max-w-5xl">
+            <h2 id="what-this-replaces" className="text-center font-serif text-3xl font-bold text-gray-900">
+              Keep the Expertise In-House
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-gray-500">
+              Most organizations outsource this work for six figures a year and get static reports
+              their teams can&apos;t build on. Promise Pipeline is a tool your people own.
+            </p>
+
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
+              {/* vs. Outside Compliance Audits */}
+              <div className="flex flex-col rounded-lg border border-gray-200 border-t-4 border-t-gray-300 bg-white p-6">
+                <h3 className="font-serif text-lg font-semibold text-gray-900">
+                  vs. Outside Compliance Audits
+                </h3>
+                <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  What you pay now
+                </p>
+                <p className="mt-1 text-2xl font-bold text-[#4b5563]">
+                  $50,000–200,000<span className="text-base font-medium">/year</span>
+                </p>
+                <p className="mt-3 text-sm text-gray-600">
+                  An outside firm produces a static PDF on an annual cycle. Your team waits months
+                  for results they can&apos;t interact with, update, or explore.
+                </p>
+                <div className="mt-6 border-t border-gray-100 pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    With Promise Pipeline
+                  </p>
+                  <p className="mt-1 text-2xl font-bold text-[#1a5f4a]">
+                    $7,500 once <span className="text-base font-medium">+ $149/mo</span>
+                  </p>
+                  <p className="mt-3 text-sm text-gray-600">
+                    Your team owns the dashboard. They update statuses as things change. They run
+                    simulations when decisions need to be made. The expertise stays in-house.
+                  </p>
+                </div>
+              </div>
+
+              {/* vs. External Legal Analysis */}
+              <div className="flex flex-col rounded-lg border border-gray-200 border-t-4 border-t-gray-300 bg-white p-6">
+                <h3 className="font-serif text-lg font-semibold text-gray-900">
+                  vs. External Legal Analysis
+                </h3>
+                <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  What you pay now
+                </p>
+                <p className="mt-1 text-2xl font-bold text-[#4b5563]">
+                  $300–600<span className="text-base font-medium">/hour (outside counsel)</span>
+                </p>
+                <p className="mt-3 text-sm text-gray-600">
+                  Attorneys reconstruct commitment structures from scratch for every filing. Hours of
+                  billable time building what a graph shows in seconds.
+                </p>
+                <div className="mt-6 border-t border-gray-100 pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    With Promise Pipeline
+                  </p>
+                  <p className="mt-1 text-2xl font-bold text-[#1a5f4a]">
+                    $2,500–7,500 <span className="text-base font-medium">once</span>
+                  </p>
+                  <p className="mt-3 text-sm text-gray-600">
+                    We build the graph once. Your team maintains it. When legal needs arise, the
+                    structure is already mapped — your people walk in prepared instead of paying
+                    someone to catch up.
+                  </p>
+                </div>
+              </div>
+
+              {/* vs. Outsourced Research */}
+              <div className="flex flex-col rounded-lg border border-gray-200 border-t-4 border-t-gray-300 bg-white p-6">
+                <h3 className="font-serif text-lg font-semibold text-gray-900">
+                  vs. Outsourced Research
+                </h3>
+                <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  What you pay now
+                </p>
+                <p className="mt-1 text-2xl font-bold text-[#4b5563]">
+                  $5,000–15,000 <span className="text-base font-medium">per report</span>
+                </p>
+                <p className="mt-3 text-sm text-gray-600">
+                  Contract researchers produce one-time analyses that go stale immediately. No
+                  interactivity. No dependency modeling. No way for your team to build on the work.
+                </p>
+                <div className="mt-6 border-t border-gray-100 pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    With Promise Pipeline
+                  </p>
+                  <p className="mt-1 text-2xl font-bold text-[#1a5f4a]">
+                    $7,500 once <span className="text-base font-medium">+ $149/mo</span>
+                  </p>
+                  <p className="mt-3 text-sm text-gray-600">
+                    A living tool your team actually uses — not a deliverable they file away. They
+                    add new commitments, track changes, and run What If scenarios as the landscape
+                    shifts.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Pricing */}
         <section className="px-4 py-16" aria-labelledby="pricing">
           <div className="mx-auto max-w-5xl">

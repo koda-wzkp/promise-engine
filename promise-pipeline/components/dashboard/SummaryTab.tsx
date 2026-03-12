@@ -4,8 +4,24 @@ import { DashboardData } from "@/lib/types/promise";
 import { NetworkHealthScore } from "@/lib/types/simulation";
 import StatusBadge from "../promise/StatusBadge";
 import NetworkHealthBar from "../simulation/NetworkHealthBar";
-import { statusColors } from "@/lib/utils/colors";
+import { statusColors, statusBgColors } from "@/lib/utils/colors";
 import { computeGrade } from "@/lib/utils/formatting";
+import { PromiseStatus } from "@/lib/types/promise";
+
+const statusDefinitions: Record<PromiseStatus, string> = {
+  verified: "Evidence confirms the promise is being met. Metrics, audits, or sensors validate compliance with the stated commitment.",
+  declared: "The promise has been publicly announced or committed to, but there is not yet enough data or time elapsed to verify it.",
+  degraded: "The promise is partially failing or falling behind its target. Performance has slipped but has not fully breached the commitment.",
+  violated: "The promise has been clearly broken. Evidence shows the commitment is not being met and no remediation is underway.",
+  unverifiable: "No independent verification mechanism exists for this promise. The claim cannot be confirmed or denied with available evidence.",
+  kept: "The promise has been fulfilled with measurable evidence demonstrating the commitment was met.",
+  broken: "The promise was clearly not met. Outcome data confirms failure to deliver on the commitment.",
+  partial: "The promise was partially fulfilled. Some aspects were delivered, but the full scope of the commitment was not achieved.",
+  delayed: "The promise was implemented late or is still pending past its original deadline.",
+  modified: "The promise was changed from its original commitment, altering scope, timeline, or terms.",
+  legally_challenged: "The promise is subject to legal challenge that affects its implementation or enforcement.",
+  repealed: "The promise was legislatively or administratively reversed and is no longer in effect.",
+};
 
 interface SummaryTabProps {
   data: DashboardData;
@@ -151,8 +167,45 @@ export default function SummaryTab({ data, health, onDomainClick, onPromiseClick
           </div>
         </div>
       )}
+
+      {/* State Definitions */}
+      <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <p className="mb-4 text-[10px] font-semibold uppercase tracking-wider text-gray-400">State Definitions</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {activeStatuses(data).map((status) => (
+            <div key={status} className="flex gap-3 rounded-lg p-3" style={{ backgroundColor: statusBgColors[status] }}>
+              <span
+                className="mt-1.5 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: statusColors[status] }}
+                aria-hidden="true"
+              />
+              <div>
+                <p className="text-sm font-medium capitalize" style={{ color: statusColors[status] }}>
+                  {status.replace("_", " ")}
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-gray-600">
+                  {statusDefinitions[status]}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
+}
+
+function activeStatuses(data: DashboardData): PromiseStatus[] {
+  const seen = new Set<PromiseStatus>();
+  for (const p of data.promises) {
+    seen.add(p.status);
+  }
+  // Return in a logical order: positive → neutral → negative
+  const order: PromiseStatus[] = [
+    "verified", "kept", "declared", "partial", "modified", "delayed",
+    "degraded", "legally_challenged", "violated", "broken", "repealed", "unverifiable",
+  ];
+  return order.filter((s) => seen.has(s));
 }
 
 function getGradeHint(data: DashboardData, health: NetworkHealthScore): string | null {

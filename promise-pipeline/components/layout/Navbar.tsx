@@ -12,6 +12,7 @@ const NAV_LINKS = [
   { href: "/demo/war-on-drugs", label: "War on Drugs" },
   { href: "/personal", label: "Personal" },
   { href: "/team", label: "Teams" },
+  { href: "/services", label: "Services" },
   { href: "/blog", label: "Blog" },
   { href: "/about", label: "About" },
 ];

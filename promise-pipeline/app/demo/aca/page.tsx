@@ -24,6 +24,7 @@ import PromiseGraph from "@/components/network/PromiseGraph";
 import WhatIfPanel from "@/components/simulation/WhatIfPanel";
 import CascadeResults from "@/components/simulation/CascadeResults";
 import PromiseDetailPanel from "@/components/promise/PromiseDetailPanel";
+import InlineServiceCTA from "@/components/cta/InlineServiceCTA";
 
 // ─── SIMULATION STATE ───
 type SimState = {
@@ -373,6 +374,8 @@ export default function ACADashboard() {
 
           {activeTab === "About" && <AboutTab />}
         </div>
+
+        <InlineServiceCTA variant="analysis" />
       </main>
 
       <Footer />

@@ -10,6 +10,7 @@ import SummaryTab from "@/components/dashboard/SummaryTab";
 import PromiseList from "@/components/promise/PromiseList";
 import InsightsTab from "@/components/dashboard/InsightsTab";
 import TrajectoryTab from "@/components/dashboard/TrajectoryTab";
+import InlineServiceCTA from "@/components/cta/InlineServiceCTA";
 
 interface DemoVerticalPageProps {
   data: DashboardData;
@@ -90,6 +91,8 @@ export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVer
           <InsightsTab insights={data.insights} promises={data.promises} />
         )}
         </div>
+
+        <InlineServiceCTA variant="analysis" />
       </main>
 
       <Footer />

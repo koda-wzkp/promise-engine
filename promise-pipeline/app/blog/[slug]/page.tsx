@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import InlineServiceCTA from "@/components/cta/InlineServiceCTA";
 
 export default function BlogPostPage() {
   const params = useParams();
@@ -32,6 +33,8 @@ export default function BlogPostPage() {
             </p>
           </div>
         </article>
+
+        <InlineServiceCTA variant="blog" />
       </main>
 
       <Footer />

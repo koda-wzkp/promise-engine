@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -63,23 +62,6 @@ const HOW_IT_WORKS = [
 ];
 
 export default function LandingPage() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  async function handleBetaSignup(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.includes("@")) return;
-    try {
-      await fetch("/api/beta", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      setSubmitted(true);
-    } catch {
-      // Silently fail for now
-    }
-  }
 
   return (
     <div className="min-h-screen bg-[#faf9f6]">
@@ -226,41 +208,30 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Beta Signup */}
+      {/* Services CTA */}
       <section className="border-t border-gray-200 bg-white px-4 py-16">
         <div className="mx-auto max-w-md text-center">
           <h2 className="font-serif text-2xl font-bold text-gray-900">
-            Join the Beta
+            Get Your Promises Mapped
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Get early access to custom promise networks, team dashboards, and API access.
+            We build interactive promise graphs for laws, policies, contracts, and organizational
+            commitments. Tell us what you need mapped and we&apos;ll send a proposal.
           </p>
-
-          {submitted ? (
-            <p className="mt-6 text-sm font-medium text-green-700">
-              Thanks! We&apos;ll be in touch.
-            </p>
-          ) : (
-            <form onSubmit={handleBetaSignup} className="mt-6 flex gap-2">
-              <label htmlFor="beta-email" className="sr-only">Email address</label>
-              <input
-                id="beta-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                required
-                autoComplete="email"
-              />
-              <button
-                type="submit"
-                className="rounded-lg bg-gray-900 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800"
-              >
-                Sign Up
-              </button>
-            </form>
-          )}
+          <div className="mt-6 flex justify-center gap-3">
+            <Link
+              href="/services#start"
+              className="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+            >
+              Start a project
+            </Link>
+            <Link
+              href="/services"
+              className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+            >
+              Learn more
+            </Link>
+          </div>
         </div>
       </section>
 

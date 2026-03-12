@@ -1,0 +1,456 @@
+import { Agent, Promise, Insight, Trajectory, DashboardData } from "../types/promise";
+
+// ─── AGENTS ───
+// 12 agents representing the key promisers and promisees in federal drug policy
+export const WOD_AGENTS: Agent[] = [
+  { id: "congress", name: "U.S. Congress", type: "legislator", short: "CON" },
+  { id: "dea", name: "Drug Enforcement Administration", type: "federal", short: "DEA" },
+  { id: "ondcp", name: "Office of National Drug Control Policy", type: "federal", short: "OND" },
+  { id: "doj", name: "Department of Justice", type: "federal", short: "DOJ" },
+  { id: "hhs", name: "Department of Health & Human Services", type: "federal", short: "HHS" },
+  { id: "samhsa", name: "Substance Abuse & Mental Health Services Admin", type: "federal", short: "SAM" },
+  { id: "bop", name: "Federal Bureau of Prisons", type: "federal", short: "BOP" },
+  { id: "ussc", name: "U.S. Sentencing Commission", type: "judiciary", short: "USC" },
+  { id: "public", name: "General Public", type: "community", short: "PUB" },
+  { id: "communities-of-color", name: "Communities of Color", type: "community", short: "COC" },
+  { id: "gao", name: "Government Accountability Office", type: "auditor", short: "GAO" },
+  { id: "states", name: "State Governments", type: "regulator", short: "STA" },
+];
+
+// ─── PROMISES ───
+// 20 promises extracted from major federal drug policy legislation and commitments.
+// Each maps a specific, attributable commitment to a falsifiable outcome.
+export const WOD_PROMISES: Promise[] = [
+  // ── Controlled Substances Act (1970) ──
+  {
+    id: "WOD-001",
+    promiser: "congress",
+    promisee: "public",
+    body: "Establish a rational drug scheduling system based on medical and scientific findings",
+    domain: "Scheduling",
+    status: "degraded",
+    note: "The CSA (P.L. 91-513, Title II of the Comprehensive Drug Abuse Prevention and Control Act) consolidated prior patchwork statutes into five schedules based on abuse potential, accepted medical use, and safety profile. However, cannabis remains Schedule I despite FDA-acknowledged medical applications and 38 states legalizing medical use. DEA proposed rescheduling to Schedule III in 2024 but has not finalized the rule. The system also failed to anticipate synthetic analogs — the Federal Analogue Act (1986) was a partial fix that proved inadequate against fentanyl variants. Source: CRS R44782; DEA docket DEA-2024-0059.",
+    verification: { method: "filing", source: "DEA Scheduling Actions" },
+    depends_on: [],
+  },
+  {
+    id: "WOD-002",
+    promiser: "dea",
+    promisee: "public",
+    body: "Reduce drug availability through enforcement of controlled substance laws",
+    domain: "Enforcement",
+    status: "violated",
+    note: "DEA's core mission per CSA §201. Illicit drug supply has not decreased. Cocaine purity-adjusted price fell ~80% from 1981-2012. Heroin price per pure gram dropped from $3,260 (1981) to $465 (2012), adjusted for inflation, while purity increased. Source: ONDCP STRIDE data via RAND OP-369-ONDCP (2014). DEA budget grew from $65.2M (1972) to $3.3B (2024) without measurable supply reduction.",
+    verification: { method: "data", source: "ONDCP STRIDE data; RAND drug price studies" },
+    depends_on: ["WOD-001"],
+  },
+
+  // ── Nixon's "War on Drugs" (1971) ──
+  {
+    id: "WOD-003",
+    promiser: "ondcp",
+    promisee: "public",
+    body: "Eradicate drug abuse as 'public enemy number one'",
+    domain: "Prevention",
+    status: "violated",
+    note: "Nixon Special Message to Congress, June 17, 1971. Created the Special Action Office for Drug Abuse Prevention (SAODAP) with $155M initial funding (~$1.1B adjusted). Past-month illicit drug use peaked at 14.1% (1979), fell to a low of 5.8% (1992), then rose to 16.7% (2024 NSDUH) — now exceeding the 1979 peak. Drug overdose deaths: ~6,500 (1970) → 107,941 (2022 peak, CDC WONDER). The stated goal of eradication was not achieved over 50+ years.",
+    verification: { method: "data", source: "SAMHSA NSDUH; CDC WONDER" },
+    depends_on: ["WOD-002", "WOD-007"],
+  },
+  {
+    id: "WOD-004",
+    promiser: "ondcp",
+    promisee: "public",
+    body: "Invest in drug treatment and rehabilitation as primary response",
+    domain: "Treatment",
+    status: "degraded",
+    note: "Nixon initially allocated two-thirds of $155M to treatment, expanding federally funded treatment slots from ~20,000 (1971) to 100,000+ (1973). By FY2022, treatment/prevention received ~45% ($20.7B) vs supply reduction ~55% ($24.5B) of the $45.2B federal drug control budget. The original 2:1 treatment-to-enforcement ratio inverted by the mid-1980s under Reagan. Source: ONDCP FY2022 National Drug Control Budget; SAODAP records.",
+    verification: { method: "filing", source: "ONDCP National Drug Control Budget" },
+    depends_on: [],
+  },
+
+  // ── Anti-Drug Abuse Act (1986) — Mandatory Minimums ──
+  {
+    id: "WOD-005",
+    promiser: "congress",
+    promisee: "public",
+    body: "Deter drug trafficking through mandatory minimum sentences",
+    domain: "Sentencing",
+    status: "violated",
+    note: "P.L. 99-570 established mandatory minimums (5g crack = 5 years; 500g powder cocaine = 5 years, a 100:1 disparity). The House proposed 50:1; no clear rationale exists in the record for 100:1. A BMC International Health and Human Rights study (2018) analyzing NSDUH data from 1985-2013 found 'no evidence to support mandatory minimums as a causal explanation for changes in drug use behavior.' RAND found mandatory minimums not cost-effective at reducing cocaine consumption. Federal prison population grew from 36,042 (1986) to 183,493 (2018). Source: USSC Mandatory Minimum Reports (2011, 2017); BMC (2018); RAND RB6003.",
+    verification: { method: "data", source: "USSC Reports on Mandatory Minimums" },
+    depends_on: [],
+  },
+  {
+    id: "WOD-006",
+    promiser: "doj",
+    promisee: "communities-of-color",
+    body: "Apply drug sentencing equitably regardless of race",
+    domain: "Equity",
+    status: "violated",
+    note: "The 100:1 crack/powder disparity disproportionately impacted Black Americans. In FY2009, 79% of sentenced crack offenders were Black. Yet NSDUH data showed lifetime crack use was higher among whites (16.9%) than Blacks (9.7%). The USSC issued four reports to Congress (1995, 1997, 2002, 2007) calling the disparity unjustified; the 1995 recommendation to equalize was the first USSC recommendation Congress ever rejected. DOJ acknowledged the disparity 'was based on misinformation about the pharmacology of cocaine.' Source: USSC Annual Reports; NSDUH; DOJ statement on crack/powder disparity.",
+    verification: { method: "data", source: "USSC Annual Reports; BJS Prisoners in 2020" },
+    depends_on: ["WOD-005"],
+  },
+
+  // ── Anti-Drug Abuse Act (1988) — ONDCP & "Drug-Free America" ──
+  {
+    id: "WOD-007",
+    promiser: "congress",
+    promisee: "public",
+    body: "Create a 'Drug-Free America' through ONDCP coordination",
+    domain: "Prevention",
+    status: "violated",
+    note: "P.L. 100-690 §1002 stated the goal of 'a Drug-Free America' and created ONDCP. 35 years later, 59.3 million Americans aged 12+ used illicit drugs in the past year (SAMHSA NSDUH 2022). The explicit goal of a drug-free society was not achieved. GAO has repeatedly found ONDCP unable to demonstrate that its national strategy reduced drug use. Source: GAO-03-264; SAMHSA 2022 NSDUH.",
+    verification: { method: "data", source: "SAMHSA NSDUH; GAO-03-264" },
+    depends_on: ["WOD-004", "WOD-002"],
+  },
+  {
+    id: "WOD-008",
+    promiser: "ondcp",
+    promisee: "public",
+    body: "Reduce youth drug use through national media campaign",
+    domain: "Prevention",
+    status: "violated",
+    note: "ONDCP's National Youth Anti-Drug Media Campaign (1998-2006) spent $1.4 billion on anti-drug advertising. A congressionally mandated Westat/Annenberg evaluation found no evidence the campaign reduced youth drug use and some evidence it increased pro-drug attitudes among exposed youth. OMB rated the campaign 'results not demonstrated.' The campaign was defunded. Source: GAO-06-818; Hornik et al. (2008) AJPH; OMB PART assessment.",
+    verification: { method: "audit", source: "GAO-06-818; Westat/Annenberg evaluation" },
+    depends_on: ["WOD-007"],
+  },
+
+  // ── DARE Program ──
+  {
+    id: "WOD-009",
+    promiser: "doj",
+    promisee: "public",
+    body: "Prevent youth drug use through school-based DARE education program",
+    domain: "Prevention",
+    status: "violated",
+    note: "DARE (Drug Abuse Resistance Education) operated from 1983 to present, reaching 75% of U.S. school districts at its peak. Meta-analysis found effect size of .06 — essentially negligible (West & O'Neal, AJPH). A 10-year follow-up study was titled 'Project DARE: No Effects at 10-Year Follow-Up' (Lynam et al.). GAO (GAO-03-172R, 2003) found 'no significant differences in illicit drug use between DARE and control groups.' Source: GAO-03-172R; West & O'Neal (2004) AJPH; Lynam et al. 10-year follow-up.",
+    verification: { method: "audit", source: "GAO-03-172R; peer-reviewed meta-analyses" },
+    depends_on: [],
+  },
+
+  // ── Clinton Crime Bill (1994) ──
+  {
+    id: "WOD-010",
+    promiser: "congress",
+    promisee: "public",
+    body: "Reduce drug-related crime through expanded enforcement and drug courts",
+    domain: "Enforcement",
+    status: "degraded",
+    note: "Violent Crime Control and Law Enforcement Act (P.L. 103-322) provided $30.2B — roughly $23B for enforcement/prisons vs $6-7B for prevention (3.5:1 ratio). Drug courts grew from 14 programs to 3,400+ by 2015. However, truth-in-sentencing provisions increased state prison population 57% (BJS). GAO (GAO-05-219) found drug court 'mixed results for other outcomes.' Crime was already declining before the bill passed; GAO estimated the COPS program contributed ~5% of the decline. Source: BJS; GAO-05-219; Brennan Center analysis.",
+    verification: { method: "data", source: "BJS Federal Justice Statistics; NADCP" },
+    depends_on: ["WOD-005"],
+  },
+
+  // ── Incarceration Promises ──
+  {
+    id: "WOD-011",
+    promiser: "bop",
+    promisee: "public",
+    body: "House drug offenders safely and prepare them for reentry",
+    domain: "Incarceration",
+    status: "degraded",
+    note: "People incarcerated for drug offenses grew 12-fold from ~23,900 (1980) to ~334,000 combined state/federal (2010). Drug offenders went from 6% of state prison population (1980) to 16% by 2000s; in federal prisons, they peaked at ~53% of inmates. Average federal drug sentence lengthened from 22 months (1986) to 62 months (2004). Recidivism: 46.9% rearrested within 5 years. Source: BJS Prisoners Series; BOP statistics; USSC Recidivism Studies (2022).",
+    verification: { method: "data", source: "BOP Statistics; USSC Recidivism Studies" },
+    depends_on: ["WOD-005", "WOD-010"],
+  },
+  {
+    id: "WOD-012",
+    promiser: "congress",
+    promisee: "communities-of-color",
+    body: "Reduce mass incarceration of nonviolent drug offenders",
+    domain: "Incarceration",
+    status: "degraded",
+    note: "In 2000, Black Americans were imprisoned for drug offenses at 682 per 100,000 vs 45 per 100,000 for whites — a 15:1 ratio — despite near-identical usage rates (~22.5% for both races per NSDUH). The ratio fell to ~4:1 by 2020 due to declining Black imprisonment rates, but the time-served gap widened: from 4 months (2000) to 12 months longer for Black inmates (2019). At peak disparity, Black people comprised 62.7% of all drug offenders admitted to state prison. Source: Council on Criminal Justice; BJS; NSDUH.",
+    verification: { method: "data", source: "BJS Prisoners in 2021; FBI UCR data" },
+    depends_on: ["WOD-006"],
+  },
+
+  // ── Fair Sentencing Act (2010) ──
+  {
+    id: "WOD-013",
+    promiser: "congress",
+    promisee: "communities-of-color",
+    body: "Reduce crack-powder sentencing disparity from 100:1 to 18:1",
+    domain: "Equity",
+    status: "verified",
+    progress: 82,
+    required: 100,
+    note: "Fair Sentencing Act (P.L. 111-220) reduced the disparity from 100:1 to 18:1 and eliminated the 5-year mandatory minimum for simple possession of crack. USSC data confirms the new ratios are being applied. The First Step Act (2018) made changes retroactive, resulting in 3,705+ resentencings and 2,000+ releases. CBO estimated 1,550 person-years of incarceration saved over 2011-2015 ($42M). Bipartisan support: cosponsored by Sens. Durbin (D), Sessions (R), and Hatch (R). Source: USSC 2015 Report; CBO estimate; P.L. 111-220.",
+    verification: { method: "filing", source: "USSC Sourcebook of Federal Sentencing Statistics" },
+    depends_on: ["WOD-005", "WOD-006"],
+  },
+
+  // ── Combat Methamphetamine Epidemic Act (2005) ──
+  {
+    id: "WOD-014",
+    promiser: "congress",
+    promisee: "public",
+    body: "Reduce methamphetamine production by restricting precursor chemicals",
+    domain: "Enforcement",
+    status: "degraded",
+    note: "CMEA (Title VII of P.L. 109-177) restricted pseudoephedrine sales. Domestic meth lab seizures fell 97%+ (DEA: 23,703 in 2004 to <500 by 2010). However, production shifted to Mexican cartel P2P synthesis: by 2019, 99.2% of DEA meth samples used P2P method at 96.7% average purity (DEA Methamphetamine Profiling Program 2024). Border seizures surged from 50 lbs (1998) to ~131,000 lbs (2022). Meth-involved overdose deaths quadrupled 2011-2017. As one U.S. Attorney noted: 'The Mexico cartels will replace the meth supplied by local labs with double the volume, double the purity.' Source: DEA MPP Report 2024; DEA Clandestine Lab Register; CDC WONDER.",
+    verification: { method: "data", source: "DEA Clandestine Lab Register; CDC WONDER" },
+    depends_on: [],
+  },
+
+  // ── 21st Century Cures Act (2016) ──
+  {
+    id: "WOD-015",
+    promiser: "hhs",
+    promisee: "public",
+    body: "Expand opioid treatment and prevention through $1B State Targeted Response grants",
+    domain: "Treatment",
+    status: "degraded",
+    note: "21st Century Cures Act (P.L. 114-255) authorized $1B for opioid State Targeted Response (STR) grants over two years. Grants were distributed to all 50 states. However, the opioid crisis accelerated: overdose deaths rose from 42,249 (2016) to 107,941 (2022), driven by illicit fentanyl. Treatment capacity expanded but did not keep pace with the evolving crisis. Source: SAMHSA STR/SOR grant reports; CDC WONDER.",
+    verification: { method: "filing", source: "SAMHSA grant reports; CDC WONDER" },
+    depends_on: ["WOD-004"],
+  },
+
+  // ── SUPPORT Act (2018) ──
+  {
+    id: "WOD-016",
+    promiser: "congress",
+    promisee: "public",
+    body: "Expand access to medication-assisted treatment (MAT) for opioid use disorder",
+    domain: "Treatment",
+    status: "degraded",
+    note: "SUPPORT for Patients and Communities Act (P.L. 115-271) contained 70+ opioid-related bills. Required state Medicaid programs to cover MAT; increased buprenorphine prescribing caps; the X-waiver was eventually eliminated in 2023. Critical limitation: several provisions stated 'no additional funds are authorized to be appropriated,' relying on existing funding streams. As of 2024, 52.6M Americans needed SUD treatment but only 10.2M received any (19.3%). Source: SAMHSA 2024 NSDUH; P.L. 115-271; KFF Issue Brief.",
+    verification: { method: "data", source: "SAMHSA NSDUH; SAMHSA Treatment Episode Data" },
+    depends_on: ["WOD-015", "WOD-004"],
+  },
+  {
+    id: "WOD-017",
+    promiser: "congress",
+    promisee: "public",
+    body: "Reduce opioid overdose deaths through comprehensive federal response",
+    domain: "Public Health",
+    status: "violated",
+    note: "Multiple federal acts (Cures Act 2016, SUPPORT Act 2018) promised to address the opioid crisis. Total drug overdose deaths: 16,849 (1999) → 52,404 (2015) → 107,941 (2022 peak) → ~79,384 (2024, a 24% decline). Nearly 1.3 million Americans died from drug overdoses since 1999; ~806,000 involved opioids. Three waves: prescription opioids (1990s), heroin (2010+), synthetic fentanyl (2013+). Federal policy did not anticipate the fentanyl transition. Source: CDC WONDER; NIDA; CDC NCHS Data Briefs 522, 549.",
+    verification: { method: "data", source: "CDC WONDER; NIDA" },
+    depends_on: ["WOD-015", "WOD-016", "WOD-002"],
+  },
+
+  // ── Supply Reduction / International ──
+  {
+    id: "WOD-018",
+    promiser: "dea",
+    promisee: "public",
+    body: "Reduce drug supply through international interdiction and source-country programs",
+    domain: "Supply Reduction",
+    status: "violated",
+    note: "Plan Colombia (2000-2015) spent $5B+ in US counter-narcotics aid. Cocaine price per pure gram fell from $600 (1981) to $135 (2007) — the opposite of the intended effect. GAO found South American cocaine production in 2007 was 12% higher than in 2000. After a brief decline (2007-2012), Colombian coca cultivation surged 134% (2013-2016) to the highest levels ever recorded. DHS estimated only ~3% of cocaine crossing US land borders was seized (2021). Source: GAO-09-71; DEA NDTA; RAND RP-942; DHS estimates.",
+    verification: { method: "data", source: "UNODC World Drug Report; DEA NDTA" },
+    depends_on: [],
+  },
+
+  // ── Treatment Gap ──
+  {
+    id: "WOD-019",
+    promiser: "samhsa",
+    promisee: "public",
+    body: "Ensure treatment access for all Americans with substance use disorders",
+    domain: "Treatment",
+    status: "violated",
+    note: "SAMHSA's stated mission includes ensuring substance use treatment access. In 2024, 52.6 million Americans (18.2% of those 12+) needed substance use treatment; only 10.2 million (19.3%) received any — down from 13.1M in 2023. The treatment gap is widening. Of 4.8M with opioid use disorder, only 17% received medications for OUD. RAND found treatment is 7.3x more cost-effective than domestic enforcement and 23x more than source-country control, yet it remains chronically underfunded. Source: SAMHSA 2024 NSDUH; RAND MR-331.",
+    verification: { method: "data", source: "SAMHSA 2022 NSDUH" },
+    depends_on: ["WOD-004", "WOD-016"],
+  },
+
+  // ── Federal Spending Accountability ──
+  {
+    id: "WOD-020",
+    promiser: "ondcp",
+    promisee: "public",
+    body: "Demonstrate measurable outcomes from federal drug control spending",
+    domain: "Accountability",
+    status: "violated",
+    note: "Cumulative federal drug control spending from 1971-2024 exceeds $1 trillion (inflation-adjusted, CRS R44042). GAO found as early as 1976 (GGD-76-33) that treatment effectiveness was undetermined. By 1999 (GGD-99-108), DEA could not demonstrate enforcement had reduced availability. GAO-03-264 and GAO-06-818 found ONDCP unable to link spending to drug use reduction. FY2024 budget: $46.1B. Source: ONDCP budget documents; GAO reports; CRS R44042.",
+    verification: { method: "audit", source: "GAO GGD-76-33; GGD-99-108; GAO-03-264; GAO-06-818" },
+    depends_on: ["WOD-002", "WOD-003", "WOD-007"],
+  },
+];
+
+// ─── INSIGHTS ───
+export const WOD_INSIGHTS: Insight[] = [
+  {
+    severity: "critical",
+    type: "Cascade",
+    title: "Enforcement-first approach cascaded into mass incarceration without reducing supply",
+    body: "The foundational promise — that enforcement would reduce drug availability (WOD-002) — has been consistently violated for 50+ years. Every downstream promise dependent on supply reduction (WOD-003, WOD-007, WOD-017) has also failed. Meanwhile, enforcement spending crowded out treatment funding (WOD-004), and mandatory minimums (WOD-005) drove incarceration of 350,000+ people for drug offenses without measurable deterrence.",
+    promises: ["WOD-002", "WOD-003", "WOD-005", "WOD-011"],
+  },
+  {
+    severity: "critical",
+    type: "Gap",
+    title: "Racial equity was never structurally addressed until 2010",
+    body: "From 1986 to 2010, the 100:1 crack/powder disparity was known to be racially discriminatory, documented by the USSC in four separate reports to Congress (1995, 1997, 2002, 2007). The 1995 recommendation to equalize sentencing was the first USSC recommendation Congress ever rejected. NSDUH data showed lifetime crack use was actually higher among whites (16.9%) than Blacks (9.7%), yet 79% of sentenced crack offenders were Black. Congress took 24 years to act. The Fair Sentencing Act reduced but did not eliminate the disparity.",
+    promises: ["WOD-005", "WOD-006", "WOD-013", "WOD-012"],
+  },
+  {
+    severity: "warning",
+    type: "Drift",
+    title: "Treatment-to-enforcement spending ratio inverted from Nixon's original promise",
+    body: "Nixon's 1971 framework allocated two-thirds of drug control funding to treatment. By FY2022, enforcement/interdiction received 55% of the $45.2B federal drug budget. The policy drifted from a public health frame to a criminal justice frame, and treatment access remains at 24% of those who need it.",
+    promises: ["WOD-004", "WOD-019", "WOD-020"],
+  },
+  {
+    severity: "critical",
+    type: "Conflict",
+    title: "Prevention programs spent billions with no demonstrated effectiveness",
+    body: "Both DARE ($1B+/year at peak) and ONDCP's National Youth Anti-Drug Media Campaign ($1.4B total) were evaluated by independent researchers and the GAO. Neither demonstrated measurable reductions in drug use. The media campaign showed some evidence of iatrogenic effects — increasing pro-drug attitudes among exposed youth.",
+    promises: ["WOD-008", "WOD-009"],
+  },
+  {
+    severity: "warning",
+    type: "Drift",
+    title: "Pseudoephedrine restrictions shifted meth production to more dangerous methods",
+    body: "The Combat Methamphetamine Epidemic Act (2005) eliminated 97%+ of domestic meth labs. However, production shifted entirely to Mexican cartel P2P synthesis — by 2019, 99.2% of DEA samples used P2P method at 96.7% average purity. Border seizures surged from 50 lbs (1998) to 131,000 lbs (2022). Meth-involved overdose deaths quadrupled 2011-2017. The intervention achieved its proximate goal while dramatically worsening the ultimate outcome.",
+    promises: ["WOD-014"],
+  },
+  {
+    severity: "positive",
+    type: "Working",
+    title: "Fair Sentencing Act demonstrates that reform can be implemented",
+    body: "The Fair Sentencing Act (2010) is the clearest example of a kept promise in this network. Congress reduced the crack/powder disparity from 100:1 to 18:1, the USSC applied the new guidelines, and the First Step Act (2018) made the change partially retroactive. This shows the system can self-correct when it has political will and data.",
+    promises: ["WOD-013"],
+  },
+  {
+    severity: "critical",
+    type: "Gap",
+    title: "Federal response failed to anticipate or counter the fentanyl transition",
+    body: "Federal drug policy was designed for plant-based drugs (heroin, cocaine, cannabis). The shift to synthetic fentanyl — which is cheaper, more potent, and harder to interdict — rendered supply-side strategies structurally obsolete. Overdose deaths more than tripled from 2015-2022 despite record enforcement spending.",
+    promises: ["WOD-017", "WOD-018", "WOD-002"],
+  },
+];
+
+// ─── TRAJECTORIES ───
+// Time-series data sourced from CDC WONDER, SAMHSA NSDUH, BJS, and ONDCP budget documents.
+export const WOD_TRAJECTORIES: Trajectory[] = [
+  {
+    agentId: "overdose-deaths",
+    label: "Drug Overdose Deaths per Year",
+    subtitle: "Total drug overdose deaths, all substances. Source: CDC WONDER / NCHS. The stated goal of federal drug policy was to reduce drug-related harm.",
+    yAxisLabel: "Deaths",
+    yDomain: [0, 120000],
+    milestones: [
+      { value: 107941, label: "107,941 (2022 peak)", color: "#991b1b" },
+    ],
+    data: [
+      { year: 1999, actual: 16849 },
+      { year: 2001, actual: 19394 },
+      { year: 2003, actual: 25785 },
+      { year: 2005, actual: 29813 },
+      { year: 2007, actual: 36010 },
+      { year: 2009, actual: 37004 },
+      { year: 2011, actual: 41340 },
+      { year: 2013, actual: 43982 },
+      { year: 2015, actual: 52404 },
+      { year: 2017, actual: 70237 },
+      { year: 2019, actual: 70630 },
+      { year: 2020, actual: 91799 },
+      { year: 2021, actual: 106699 },
+      { year: 2022, actual: 107941 },
+      { year: 2023, actual: 105000 },
+      { year: 2024, actual: 79384 },
+    ],
+  },
+  {
+    agentId: "drug-use-rate",
+    label: "Past-Month Illicit Drug Use Rate",
+    subtitle: "Percentage of Americans aged 12+ reporting past-month illicit drug use. Source: SAMHSA NSDUH / National Household Survey. Note: post-2020 methodology changed (web-based), so figures are not directly comparable to pre-2020.",
+    yAxisLabel: "% of population",
+    yDomain: [0, 20],
+    milestones: [
+      { value: 14.1, label: "14.1% (1979 peak)", color: "#d97706" },
+      { value: 5.8, label: "5.8% (1992 low)", color: "#059669" },
+    ],
+    data: [
+      { year: 1979, actual: 14.1 },
+      { year: 1982, actual: 12.5 },
+      { year: 1985, actual: 12.1 },
+      { year: 1988, actual: 7.3 },
+      { year: 1992, actual: 5.8 },
+      { year: 1995, actual: 6.1 },
+      { year: 1998, actual: 6.2 },
+      { year: 2002, actual: 8.3 },
+      { year: 2006, actual: 8.3 },
+      { year: 2010, actual: 8.9 },
+      { year: 2013, actual: 9.4 },
+      { year: 2016, actual: 10.6 },
+      { year: 2019, actual: 13.0 },
+      { year: 2023, actual: 16.8 },
+      { year: 2024, actual: 16.7 },
+    ],
+  },
+  {
+    agentId: "incarceration",
+    label: "People Incarcerated for Drug Offenses",
+    subtitle: "Combined state and federal prisoners held for drug offenses. Source: BJS Prisoners Series. The stated goal was deterrence — fewer drug offenses, not more prisoners.",
+    yAxisLabel: "People incarcerated",
+    yDomain: [0, 400000],
+    milestones: [
+      { value: 334000, label: "334,000 (2010 peak)", color: "#991b1b" },
+    ],
+    data: [
+      { year: 1980, actual: 23900 },
+      { year: 1985, actual: 57975 },
+      { year: 1990, actual: 179100 },
+      { year: 1995, actual: 279500 },
+      { year: 2000, actual: 325000 },
+      { year: 2005, actual: 332500 },
+      { year: 2010, actual: 334000 },
+      { year: 2015, actual: 289200 },
+      { year: 2020, actual: 238000 },
+    ],
+  },
+  {
+    agentId: "federal-budget",
+    label: "Federal Drug Control Budget",
+    subtitle: "Total annual federal drug control spending in billions (nominal dollars). Source: ONDCP National Drug Control Budget. Note: methodology changed in FY2004 and FY2012, so cross-era comparisons are approximate.",
+    yAxisLabel: "$ Billions",
+    yDomain: [0, 50],
+    data: [
+      { year: 1971, actual: 0.1 },
+      { year: 1975, actual: 0.4 },
+      { year: 1981, actual: 1.5 },
+      { year: 1985, actual: 2.8 },
+      { year: 1989, actual: 6.7 },
+      { year: 1993, actual: 12.1 },
+      { year: 1997, actual: 16.0 },
+      { year: 2000, actual: 18.4 },
+      { year: 2005, actual: 12.4 },
+      { year: 2010, actual: 15.5 },
+      { year: 2013, actual: 25.6 },
+      { year: 2017, actual: 31.1 },
+      { year: 2021, actual: 40.4 },
+      { year: 2023, actual: 44.2 },
+      { year: 2024, actual: 46.1 },
+    ],
+  },
+];
+
+// ─── DASHBOARD ───
+export const WOD_DASHBOARD: DashboardData = {
+  title: "US War on Drugs",
+  subtitle: "Federal Drug Policy Promise Network Analysis (1970–Present)",
+  agents: WOD_AGENTS,
+  promises: WOD_PROMISES,
+  domains: [
+    { name: "Enforcement", color: "#dc2626", promiseCount: 3, healthScore: 10 },
+    { name: "Sentencing", color: "#991b1b", promiseCount: 1, healthScore: 0 },
+    { name: "Equity", color: "#7c3aed", promiseCount: 2, healthScore: 50 },
+    { name: "Prevention", color: "#2563eb", promiseCount: 3, healthScore: 0 },
+    { name: "Treatment", color: "#059669", promiseCount: 4, healthScore: 30 },
+    { name: "Public Health", color: "#0891b2", promiseCount: 1, healthScore: 0 },
+    { name: "Incarceration", color: "#78350f", promiseCount: 2, healthScore: 30 },
+    { name: "Scheduling", color: "#d97706", promiseCount: 1, healthScore: 30 },
+    { name: "Supply Reduction", color: "#b45309", promiseCount: 1, healthScore: 0 },
+    { name: "Accountability", color: "#374151", promiseCount: 1, healthScore: 0 },
+  ],
+  insights: WOD_INSIGHTS,
+  trajectories: WOD_TRAJECTORIES,
+  grade: "F",
+  gradeExplanation: "The federal War on Drugs has violated or degraded the vast majority of its stated commitments over 50+ years. Only the Fair Sentencing Act demonstrates a kept promise. $1T+ in spending has not reduced drug use, drug availability, or overdose deaths. Racial disparities in enforcement persist.",
+};

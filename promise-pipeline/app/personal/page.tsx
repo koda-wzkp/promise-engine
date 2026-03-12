@@ -93,7 +93,7 @@ export default function PersonalPage() {
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
-      <main className="mx-auto max-w-3xl px-4 py-6">
+      <main id="main-content" className="mx-auto max-w-3xl px-4 py-6">
         <div className="mb-6">
           <h1 className="font-serif text-3xl font-bold text-gray-900">Personal Promises</h1>
           <p className="mt-1 text-sm text-gray-500">

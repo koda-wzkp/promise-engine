@@ -89,7 +89,7 @@ export default function TeamPage() {
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main id="main-content" className="mx-auto max-w-6xl px-4 py-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="font-serif text-3xl font-bold text-gray-900">Team Promises</h1>
@@ -107,7 +107,9 @@ export default function TeamPage() {
 
         {showForm && (
           <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <label htmlFor="team-promise-body" className="sr-only">Promise description</label>
             <textarea
+              id="team-promise-body"
               value={newBody}
               onChange={(e) => setNewBody(e.target.value)}
               placeholder="What is this team member committing to?"
@@ -116,7 +118,9 @@ export default function TeamPage() {
               autoFocus
             />
             <div className="flex items-center gap-3">
+              <label htmlFor="team-assignee" className="sr-only">Assignee</label>
               <select
+                id="team-assignee"
                 value={newAssignee}
                 onChange={(e) => setNewAssignee(e.target.value)}
                 className="rounded border border-gray-200 px-2 py-1.5 text-sm"
@@ -125,7 +129,9 @@ export default function TeamPage() {
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
               </select>
+              <label htmlFor="team-priority" className="sr-only">Priority</label>
               <select
+                id="team-priority"
                 value={newPriority}
                 onChange={(e) => setNewPriority(e.target.value as typeof newPriority)}
                 className="rounded border border-gray-200 px-2 py-1.5 text-sm"

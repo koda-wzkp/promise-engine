@@ -6,16 +6,16 @@ interface NetworkHealthBarProps {
 
 function healthColor(score: number): string {
   if (score >= 80) return "#1a5f4a";
-  if (score >= 60) return "#b45309";
-  if (score >= 40) return "#d97706";
-  return "#b91c1c";
+  if (score >= 60) return "#78350f";
+  if (score >= 40) return "#78350f";
+  return "#991b1b";
 }
 
 export default function NetworkHealthBar({ score, label, showLabel = true }: NetworkHealthBarProps) {
   const color = healthColor(score);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1" role="meter" aria-label={`${label ?? "Network Health"} score: ${score} out of 100`} aria-valuenow={score} aria-valuemin={0} aria-valuemax={100}>
       {showLabel && (
         <div className="flex justify-between text-xs">
           <span className="text-gray-500">{label ?? "Network Health"}</span>

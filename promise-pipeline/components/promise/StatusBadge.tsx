@@ -22,6 +22,7 @@ export default function StatusBadge({ status, size = "md", simulated }: StatusBa
       <span
         className={`inline-block h-1.5 w-1.5 rounded-full ${simulated ? "cascade-pulse" : ""}`}
         style={{ backgroundColor: statusColors[status] }}
+        aria-hidden="true"
       />
       {statusLabels[status]}
       {simulated && <span className="text-[10px] text-yellow-600">(sim)</span>}

@@ -36,10 +36,19 @@ export default function PromiseCard({
 
   return (
     <div
-      className={`group rounded-lg border bg-white p-4 transition-all hover:shadow-md ${
+      className={`group rounded-lg border bg-white p-4 transition-all hover:shadow-md promise-card ${
         simulated ? "ring-2 ring-yellow-300" : "border-gray-200"
       } ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
+      aria-label={`Promise ${promise.id}: ${promise.body}. Status: ${promise.status}.`}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">

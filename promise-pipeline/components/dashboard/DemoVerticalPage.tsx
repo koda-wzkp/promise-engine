@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { DashboardData } from "@/lib/types/promise";
 import { calculateNetworkHealth } from "@/lib/simulation/scoring";
 import Navbar from "@/components/layout/Navbar";
@@ -8,7 +9,8 @@ import Footer from "@/components/layout/Footer";
 import SummaryTab from "@/components/dashboard/SummaryTab";
 import PromiseList from "@/components/promise/PromiseList";
 import InsightsTab from "@/components/dashboard/InsightsTab";
-import { useState } from "react";
+import TrajectoryTab from "@/components/dashboard/TrajectoryTab";
+import InlineServiceCTA from "@/components/cta/InlineServiceCTA";
 
 interface DemoVerticalPageProps {
   data: DashboardData;
@@ -16,19 +18,24 @@ interface DemoVerticalPageProps {
   bgColor?: string;
 }
 
-const TABS = ["Summary", "Promises", "Insights"] as const;
+const ALL_TABS = ["Summary", "Trajectory", "Promises", "Insights"] as const;
+type Tab = (typeof ALL_TABS)[number];
 
 export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVerticalPageProps) {
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Summary");
+  const TABS: Tab[] = data.trajectories.length > 0
+    ? ["Summary", "Trajectory", "Promises", "Insights"]
+    : ["Summary", "Promises", "Insights"];
+  const [activeTab, setActiveTab] = useState<Tab>("Summary");
   const health = useMemo(() => calculateNetworkHealth(data.promises), [data.promises]);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: bgColor ?? "#faf9f6" }}>
       <Navbar />
 
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <main id="main-content" className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-2 rounded-lg bg-blue-50 px-4 py-2 text-xs text-blue-700">
-          Simulation coming soon — currently showing static accountability data.
+          <strong>Beta</strong> — Data is illustrative and may contain inaccuracies. Cascade simulation is not yet live.{" "}
+          <Link href="/" className="underline decoration-blue-300 hover:text-blue-900">Learn more</Link>
         </div>
 
         <div className="mb-6">
@@ -39,12 +46,31 @@ export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVer
           </p>
         </div>
 
-        <div className="mb-6 flex gap-1 border-b border-gray-200">
+        <div role="tablist" aria-label="Dashboard sections" className="mb-6 flex gap-1 border-b border-gray-200">
           {TABS.map((tab) => (
             <button
               key={tab}
+              role="tab"
+              id={`demo-tab-${tab.toLowerCase()}`}
+              aria-selected={activeTab === tab}
+              aria-controls={`demo-tabpanel-${tab.toLowerCase()}`}
+              tabIndex={activeTab === tab ? 0 : -1}
               onClick={() => setActiveTab(tab)}
-              className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              onKeyDown={(e) => {
+                const idx = TABS.indexOf(tab);
+                if (e.key === "ArrowRight") {
+                  e.preventDefault();
+                  const next = TABS[(idx + 1) % TABS.length];
+                  setActiveTab(next);
+                  document.getElementById(`demo-tab-${next.toLowerCase()}`)?.focus();
+                } else if (e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  const prev = TABS[(idx - 1 + TABS.length) % TABS.length];
+                  setActiveTab(prev);
+                  document.getElementById(`demo-tab-${prev.toLowerCase()}`)?.focus();
+                }
+              }}
+              className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
                 activeTab === tab
                   ? "border-gray-900 text-gray-900"
                   : "border-transparent text-gray-400 hover:text-gray-600"
@@ -55,13 +81,18 @@ export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVer
           ))}
         </div>
 
+        <div role="tabpanel" id={`demo-tabpanel-${activeTab.toLowerCase()}`} aria-labelledby={`demo-tab-${activeTab.toLowerCase()}`}>
         {activeTab === "Summary" && <SummaryTab data={data} health={health} />}
+        {activeTab === "Trajectory" && <TrajectoryTab trajectories={data.trajectories} />}
         {activeTab === "Promises" && (
           <PromiseList promises={data.promises} agents={data.agents} domains={data.domains} />
         )}
         {activeTab === "Insights" && (
           <InsightsTab insights={data.insights} promises={data.promises} />
         )}
+        </div>
+
+        <InlineServiceCTA variant="analysis" />
       </main>
 
       <Footer />

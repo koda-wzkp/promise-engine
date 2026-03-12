@@ -9,8 +9,10 @@ const NAV_LINKS = [
   { href: "/demo/ai", label: "AI Safety" },
   { href: "/demo/infrastructure", label: "Infrastructure" },
   { href: "/demo/supply-chain", label: "Supply Chain" },
+  { href: "/demo/war-on-drugs", label: "War on Drugs" },
   { href: "/personal", label: "Personal" },
   { href: "/team", label: "Teams" },
+  { href: "/services", label: "Services" },
   { href: "/blog", label: "Blog" },
   { href: "/about", label: "About" },
 ];
@@ -19,11 +21,14 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
+      <nav aria-label="Main navigation" className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
           <span className="font-serif text-xl font-bold text-gray-900">
             Promise Pipeline
+          </span>
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-600">
+            Beta
           </span>
         </Link>
 
@@ -33,7 +38,7 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
+              className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"
             >
               {link.label}
             </Link>
@@ -43,10 +48,12 @@ export default function Navbar() {
         {/* Mobile toggle */}
         <button
           onClick={() => setOpen(!open)}
-          className="md:hidden p-2 text-gray-600"
-          aria-label="Toggle menu"
+          className="md:hidden p-2 text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"
+          aria-label={open ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={open}
+          aria-controls="mobile-nav"
         >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             {open ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             ) : (
@@ -54,23 +61,23 @@ export default function Navbar() {
             )}
           </svg>
         </button>
-      </div>
+      </nav>
 
       {/* Mobile menu */}
       {open && (
-        <div className="border-t border-gray-100 bg-white px-4 py-3 md:hidden">
+        <div id="mobile-nav" className="border-t border-gray-100 bg-white px-4 py-3 md:hidden">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className="block py-2 text-sm font-medium text-gray-600"
+              className="block py-2 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"
             >
               {link.label}
             </Link>
           ))}
         </div>
       )}
-    </nav>
+    </header>
   );
 }

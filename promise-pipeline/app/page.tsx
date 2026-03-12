@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -10,6 +9,12 @@ const USE_CASES = [
     title: "Climate Policy",
     description: "Model HB 2021 emissions commitments across utilities, regulators, and communities.",
     href: "/demo/hb2021",
+    tag: "Live Demo",
+  },
+  {
+    title: "Affordable Care Act",
+    description: "Analyze ACA promises across federal agencies, insurers, and courts with legal challenge tracking.",
+    href: "/demo/aca",
     tag: "Live Demo",
   },
   {
@@ -28,6 +33,12 @@ const USE_CASES = [
     title: "Supply Chain",
     description: "Verify sustainability and labor promises across global supply chains.",
     href: "/demo/supply-chain",
+    tag: "Demo",
+  },
+  {
+    title: "War on Drugs",
+    description: "Audit 50+ years of federal drug policy promises against public data on outcomes.",
+    href: "/demo/war-on-drugs",
     tag: "Demo",
   },
 ];
@@ -51,34 +62,18 @@ const HOW_IT_WORKS = [
 ];
 
 export default function LandingPage() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  async function handleBetaSignup(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.includes("@")) return;
-    try {
-      await fetch("/api/beta", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      setSubmitted(true);
-    } catch {
-      // Silently fail for now
-    }
-  }
 
   return (
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
+      <main id="main-content">
       {/* Hero */}
-      <section className="mx-auto max-w-4xl px-4 py-20 text-center">
+      <section className="mx-auto max-w-4xl px-4 py-20 text-center" aria-labelledby="hero-heading">
         <p className="mb-4 text-sm font-medium uppercase tracking-widest text-gray-400">
           A trust primitive for commitment networks
         </p>
-        <h1 className="font-serif text-5xl font-bold leading-tight text-gray-900 md:text-6xl">
+        <h1 id="hero-heading" className="font-serif text-5xl font-bold leading-tight text-gray-900 md:text-6xl">
           See what happens when
           <br />
           <span className="text-blue-600">promises break</span>
@@ -90,10 +85,16 @@ export default function LandingPage() {
         </p>
         <div className="mt-8 flex justify-center gap-4">
           <Link
-            href="/demo/hb2021"
+            href="/demo/aca"
             className="rounded-lg bg-gray-900 px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
           >
-            Try the HB 2021 Simulation
+            Try the ACA Demo
+          </Link>
+          <Link
+            href="/demo/hb2021"
+            className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            HB 2021 Demo
           </Link>
           <Link
             href="/about"
@@ -207,40 +208,34 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Beta Signup */}
+      {/* Services CTA */}
       <section className="border-t border-gray-200 bg-white px-4 py-16">
         <div className="mx-auto max-w-md text-center">
           <h2 className="font-serif text-2xl font-bold text-gray-900">
-            Join the Beta
+            Get Your Promises Mapped
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Get early access to custom promise networks, team dashboards, and API access.
+            We build interactive promise graphs for laws, policies, contracts, and organizational
+            commitments. Tell us what you need mapped and we&apos;ll send a proposal.
           </p>
-
-          {submitted ? (
-            <p className="mt-6 text-sm font-medium text-green-700">
-              Thanks! We&apos;ll be in touch.
-            </p>
-          ) : (
-            <form onSubmit={handleBetaSignup} className="mt-6 flex gap-2">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none"
-                required
-              />
-              <button
-                type="submit"
-                className="rounded-lg bg-gray-900 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800"
-              >
-                Sign Up
-              </button>
-            </form>
-          )}
+          <div className="mt-6 flex justify-center gap-3">
+            <Link
+              href="/services#start"
+              className="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+            >
+              Start a project
+            </Link>
+            <Link
+              href="/services"
+              className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+            >
+              Learn more
+            </Link>
+          </div>
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

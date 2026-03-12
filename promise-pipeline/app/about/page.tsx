@@ -8,7 +8,7 @@ export default function AboutPage() {
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
-      <main className="mx-auto max-w-3xl px-4 py-12">
+      <main id="main-content" className="mx-auto max-w-3xl px-4 py-12">
         <h1 className="font-serif text-4xl font-bold text-gray-900">About Promise Pipeline</h1>
 
         <div className="mt-8 space-y-6 text-gray-700">

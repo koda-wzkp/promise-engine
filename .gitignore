@@ -23,6 +23,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# Next.js
+.next/
+
 # Node
 node_modules/
 npm-debug.log*

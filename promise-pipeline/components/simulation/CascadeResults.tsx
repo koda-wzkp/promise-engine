@@ -28,7 +28,7 @@ export default function CascadeResults({ result, promises, onReset, onPromiseCli
   const afterWidth = (result.newNetworkHealth / maxHealth) * 100;
 
   return (
-    <div className="space-y-4 rounded-lg border-2 border-yellow-300 bg-yellow-50 p-4">
+    <div className="space-y-4 rounded-lg border-2 border-yellow-300 bg-yellow-50 p-4" aria-live="polite" role="region" aria-label="Cascade simulation results">
       <div className="flex items-start justify-between">
         <h3 className="text-sm font-bold text-gray-900">Cascade Results</h3>
         <button

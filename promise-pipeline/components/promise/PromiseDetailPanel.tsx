@@ -35,12 +35,34 @@ export default function PromiseDetailPanel({
 
   const domainColor = hb2021DomainColors[promise.domain as keyof typeof hb2021DomainColors] ?? "#6b7280";
 
-  // Close on Escape key
+  // Close on Escape key and trap focus
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      // Focus trapping
+      if (e.key === "Tab" && panelRef.current) {
+        const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     }
     document.addEventListener("keydown", handleKey);
+    // Auto-focus the close button on open
+    const closeBtn = panelRef.current?.querySelector<HTMLElement>('button[aria-label="Close detail panel"]');
+    closeBtn?.focus();
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
@@ -66,7 +88,7 @@ export default function PromiseDetailPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/20 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/20 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label={`Promise ${promise.id}: ${promise.body}`}>
       <div
         ref={panelRef}
         className="detail-panel-slide-in h-full w-full max-w-md overflow-y-auto border-l border-gray-200 bg-white shadow-2xl"
@@ -92,9 +114,9 @@ export default function PromiseDetailPanel({
             <button
               onClick={onClose}
               className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-              aria-label="Close"
+              aria-label="Close detail panel"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

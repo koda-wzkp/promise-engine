@@ -18,7 +18,7 @@ export default function MemberLoad({ members }: MemberLoadProps) {
       <div className="space-y-3">
         {sorted.map((m) => {
           const loadColor =
-            m.loadScore >= 80 ? "#b91c1c" : m.loadScore >= 60 ? "#b45309" : "#1a5f4a";
+            m.loadScore >= 80 ? "#991b1b" : m.loadScore >= 60 ? "#78350f" : "#1a5f4a";
           return (
             <div key={m.id}>
               <div className="mb-1 flex items-center justify-between">

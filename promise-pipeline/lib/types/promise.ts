@@ -116,9 +116,19 @@ export interface TrajectoryPoint {
   target?: number;
 }
 
+export interface TrajectoryMilestone {
+  value: number;
+  label: string;
+  color?: string;
+}
+
 export interface Trajectory {
   agentId: string;
   label: string;
+  subtitle?: string;
+  yAxisLabel?: string;
+  yDomain?: [number, number];
+  milestones?: TrajectoryMilestone[];
   data: TrajectoryPoint[];
 }
 

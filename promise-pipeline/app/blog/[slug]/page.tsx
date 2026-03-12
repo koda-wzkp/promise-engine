@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import InlineServiceCTA from "@/components/cta/InlineServiceCTA";
 
 export default function BlogPostPage() {
   const params = useParams();
@@ -13,7 +14,7 @@ export default function BlogPostPage() {
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
-      <main className="mx-auto max-w-3xl px-4 py-12">
+      <main id="main-content" className="mx-auto max-w-3xl px-4 py-12">
         <Link href="/blog" className="text-sm text-blue-600 hover:text-blue-800">
           &larr; Back to Blog
         </Link>
@@ -32,6 +33,8 @@ export default function BlogPostPage() {
             </p>
           </div>
         </article>
+
+        <InlineServiceCTA variant="blog" />
       </main>
 
       <Footer />

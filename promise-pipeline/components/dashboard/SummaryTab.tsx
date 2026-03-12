@@ -4,8 +4,24 @@ import { DashboardData } from "@/lib/types/promise";
 import { NetworkHealthScore } from "@/lib/types/simulation";
 import StatusBadge from "../promise/StatusBadge";
 import NetworkHealthBar from "../simulation/NetworkHealthBar";
-import { statusColors } from "@/lib/utils/colors";
+import { statusColors, statusBgColors, statusLabels } from "@/lib/utils/colors";
 import { computeGrade } from "@/lib/utils/formatting";
+import { PromiseStatus } from "@/lib/types/promise";
+
+const statusDefinitions: Record<PromiseStatus, string> = {
+  verified: "Evidence confirms the promise is being met. Metrics, audits, or sensors validate compliance with the stated commitment.",
+  declared: "The promise has been publicly announced or committed to, but there is not yet enough data or time elapsed to verify it.",
+  degraded: "The promise is partially failing or falling behind its target. Performance has slipped but has not fully breached the commitment.",
+  violated: "The promise has been clearly broken. Evidence shows the commitment is not being met and no remediation is underway.",
+  unverifiable: "No independent verification mechanism exists for this promise. The claim cannot be confirmed or denied with available evidence.",
+  kept: "The promise has been fulfilled with measurable evidence demonstrating the commitment was met.",
+  broken: "The promise was clearly not met. Outcome data confirms failure to deliver on the commitment.",
+  partial: "The promise was partially fulfilled. Some aspects were delivered, but the full scope of the commitment was not achieved.",
+  delayed: "The promise was implemented late or is still pending past its original deadline.",
+  modified: "The promise was changed from its original commitment, altering scope, timeline, or terms.",
+  legally_challenged: "The promise is subject to legal challenge that affects its implementation or enforcement.",
+  repealed: "The promise was legislatively or administratively reversed and is no longer in effect.",
+};
 
 interface SummaryTabProps {
   data: DashboardData;
@@ -15,13 +31,11 @@ interface SummaryTabProps {
 }
 
 export default function SummaryTab({ data, health, onDomainClick, onPromiseClick }: SummaryTabProps) {
-  const statusCounts = {
-    verified: data.promises.filter((p) => p.status === "verified").length,
-    declared: data.promises.filter((p) => p.status === "declared").length,
-    degraded: data.promises.filter((p) => p.status === "degraded").length,
-    violated: data.promises.filter((p) => p.status === "violated").length,
-    unverifiable: data.promises.filter((p) => p.status === "unverifiable").length,
-  };
+  // Dynamically count all statuses present in this demo's data
+  const statusCounts: Partial<Record<PromiseStatus, number>> = {};
+  for (const status of activeStatuses(data)) {
+    statusCounts[status] = data.promises.filter((p) => p.status === status).length;
+  }
 
   const grade = computeGrade(health.overall);
 
@@ -35,7 +49,7 @@ export default function SummaryTab({ data, health, onDomainClick, onPromiseClick
         {/* Grade */}
         <div className="rounded-lg border border-gray-200 bg-white p-6 text-center">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Overall Grade</p>
-          <p className="mt-2 font-serif text-5xl font-bold text-gray-900">{grade}</p>
+          <p className="mt-2 font-serif text-5xl font-bold text-gray-900" aria-label={`Overall grade: ${grade}`}>{grade}</p>
           <p className="mt-2 text-xs text-gray-500">{data.gradeExplanation}</p>
           {gradeHint && (
             <p className="mt-2 rounded bg-blue-50 px-2 py-1 text-[11px] text-blue-700">
@@ -70,29 +84,34 @@ export default function SummaryTab({ data, health, onDomainClick, onPromiseClick
         {/* Status breakdown */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Promise Status</p>
-          <div className="mt-3 space-y-2">
-            {(Object.entries(statusCounts) as [string, number][]).map(([status, count]) => (
+          <p className="mt-1 mb-3 text-[11px] text-gray-400">
+            {data.promises.length} commitments tracked across {data.domains.length} domains
+          </p>
+          <div className="space-y-2">
+            {(Object.entries(statusCounts) as [PromiseStatus, number][]).map(([status, count]) => (
               <div key={status} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: statusColors[status as keyof typeof statusColors] }}
+                    style={{ backgroundColor: statusColors[status] }}
+                    aria-hidden="true"
                   />
-                  <span className="text-xs capitalize text-gray-600">{status}</span>
+                  <span className="text-xs text-gray-600">{statusLabels[status]}</span>
                 </div>
                 <span className="font-mono text-xs font-medium text-gray-900">{count}</span>
               </div>
             ))}
           </div>
-          {/* Mini bar chart */}
-          <div className="mt-3 flex h-3 overflow-hidden rounded-full">
-            {Object.entries(statusCounts).map(([status, count]) => (
+          {/* Mini bar chart with tooltip-style labels */}
+          <div className="mt-3 flex h-3 overflow-hidden rounded-full" role="img" aria-label="Status distribution bar">
+            {(Object.entries(statusCounts) as [PromiseStatus, number][]).map(([status, count]) => (
               count > 0 ? (
                 <div
                   key={status}
+                  title={`${statusLabels[status]}: ${count} (${Math.round((count / data.promises.length) * 100)}%)`}
                   style={{
                     width: `${(count / data.promises.length) * 100}%`,
-                    backgroundColor: statusColors[status as keyof typeof statusColors],
+                    backgroundColor: statusColors[status],
                   }}
                 />
               ) : null
@@ -150,8 +169,45 @@ export default function SummaryTab({ data, health, onDomainClick, onPromiseClick
           </div>
         </div>
       )}
+
+      {/* State Definitions */}
+      <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <p className="mb-4 text-[10px] font-semibold uppercase tracking-wider text-gray-400">State Definitions</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {activeStatuses(data).map((status) => (
+            <div key={status} className="flex gap-3 rounded-lg p-3" style={{ backgroundColor: statusBgColors[status] }}>
+              <span
+                className="mt-1.5 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: statusColors[status] }}
+                aria-hidden="true"
+              />
+              <div>
+                <p className="text-sm font-medium capitalize" style={{ color: statusColors[status] }}>
+                  {status.replace("_", " ")}
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-gray-600">
+                  {statusDefinitions[status]}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
+}
+
+function activeStatuses(data: DashboardData): PromiseStatus[] {
+  const seen = new Set<PromiseStatus>();
+  for (const p of data.promises) {
+    seen.add(p.status);
+  }
+  // Return in a logical order: positive → neutral → negative
+  const order: PromiseStatus[] = [
+    "verified", "kept", "declared", "partial", "modified", "delayed",
+    "degraded", "legally_challenged", "violated", "broken", "repealed", "unverifiable",
+  ];
+  return order.filter((s) => seen.has(s));
 }
 
 function getGradeHint(data: DashboardData, health: NetworkHealthScore): string | null {

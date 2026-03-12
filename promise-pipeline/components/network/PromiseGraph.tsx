@@ -189,7 +189,7 @@ export default function PromiseGraph({
   const hasCascade = cascadeResult != null;
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50" ref={containerRef}>
+    <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50 graph-container" ref={containerRef}>
       {/* Mobile callout */}
       <div className="block border-b border-gray-200 bg-gray-100 px-3 py-2 text-[11px] text-gray-500 sm:hidden">
         For the best simulation experience, view on desktop.
@@ -197,6 +197,8 @@ export default function PromiseGraph({
 
       <svg
         ref={svgRef}
+        role="img"
+        aria-label={`Promise dependency graph showing ${promises.length} promises and their relationships. Click a node to view details or simulate cascades.`}
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
         className={`w-full ${isPanning ? "cursor-grabbing" : "cursor-grab"}`}
         style={{ maxHeight: height }}
@@ -206,6 +208,7 @@ export default function PromiseGraph({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
+        <desc>Interactive network graph visualizing promise dependencies and status across domains. Nodes represent promises sized by downstream dependents; edges show dependency relationships.</desc>
         {/* Background rect for pan target */}
         <rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="transparent" />
 
@@ -372,12 +375,23 @@ export default function PromiseGraph({
               <g
                 key={node.id}
                 className="cursor-pointer"
+                role="button"
+                tabIndex={0}
+                aria-label={`Promise ${promise.id}: ${promise.body}. Status: ${promise.status}. ${depCount} downstream dependents.`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectPromise?.(node.id);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectPromise?.(node.id);
+                  }
+                }}
                 onMouseEnter={() => setHoveredNode(node.id)}
                 onMouseLeave={() => setHoveredNode(null)}
+                onFocus={() => setHoveredNode(node.id)}
+                onBlur={() => setHoveredNode(null)}
                 opacity={nodeOpacity}
               >
                 {/* Source glow ring */}
@@ -517,12 +531,13 @@ export default function PromiseGraph({
       </svg>
 
       {/* Fixed legend — top-right */}
-      <div className="absolute right-2 top-2 flex flex-col gap-1 rounded-md bg-white/90 px-2.5 py-2 text-[10px] text-gray-500 shadow-sm backdrop-blur-sm">
+      <div className="absolute right-2 top-2 flex flex-col gap-1 rounded-md bg-white/90 px-2.5 py-2 text-[10px] text-gray-500 shadow-sm backdrop-blur-sm" role="legend" aria-label="Promise status legend">
         {(["verified", "declared", "degraded", "violated", "unverifiable"] as const).map((status) => (
           <span key={status} className="flex items-center gap-1.5">
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"
               style={{ background: statusColors[status] }}
+              aria-hidden="true"
             />
             <span className="capitalize">{status}</span>
           </span>

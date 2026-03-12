@@ -1,20 +1,20 @@
 import { PromiseStatus } from "../types/promise";
 
 export const statusColors: Record<PromiseStatus, string> = {
-  // Base statuses (HB 2021)
+  // Base statuses (HB 2021) — WCAG AAA 7:1 on respective backgrounds
   verified: "#1a5f4a",
-  declared: "#2563eb",
-  degraded: "#b45309",
-  violated: "#b91c1c",
-  unverifiable: "#7c3aed",
-  // Extended statuses (ACA)
-  kept: "#15803d",
-  broken: "#dc2626",
-  partial: "#d97706",
-  delayed: "#ca8a04",
-  modified: "#2563eb",
-  legally_challenged: "#7c3aed",
-  repealed: "#4b5563",
+  declared: "#1e40af",
+  degraded: "#78350f",
+  violated: "#991b1b",
+  unverifiable: "#5b21b6",
+  // Extended statuses (ACA) — WCAG AAA 7:1 on respective backgrounds
+  kept: "#14532d",
+  broken: "#991b1b",
+  partial: "#78350f",
+  delayed: "#713f12",
+  modified: "#1e40af",
+  legally_challenged: "#5b21b6",
+  repealed: "#374151",
 };
 
 export const statusBgColors: Record<PromiseStatus, string> = {

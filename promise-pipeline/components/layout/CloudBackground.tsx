@@ -2,7 +2,7 @@
 
 export default function CloudBackground() {
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
       <div className="absolute inset-0 bg-gradient-to-b from-[#E0F6FF] via-[#B3E5FC] to-white" />
       <div className="cloud-drift absolute -top-20 left-0 h-64 w-full opacity-30">
         <svg viewBox="0 0 1200 200" className="h-full w-full" preserveAspectRatio="none">

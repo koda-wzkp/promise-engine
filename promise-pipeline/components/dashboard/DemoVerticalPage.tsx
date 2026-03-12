@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { DashboardData } from "@/lib/types/promise";
 import { calculateNetworkHealth } from "@/lib/simulation/scoring";
 import Navbar from "@/components/layout/Navbar";
@@ -32,7 +33,8 @@ export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVer
 
       <main id="main-content" className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-2 rounded-lg bg-blue-50 px-4 py-2 text-xs text-blue-700">
-          Simulation coming soon — currently showing static accountability data.
+          <strong>Beta</strong> — Data is illustrative and may contain inaccuracies. Cascade simulation is not yet live.{" "}
+          <Link href="/" className="underline decoration-blue-300 hover:text-blue-900">Learn more</Link>
         </div>
 
         <div className="mb-6">

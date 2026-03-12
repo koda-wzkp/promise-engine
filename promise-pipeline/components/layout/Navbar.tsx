@@ -26,6 +26,9 @@ export default function Navbar() {
           <span className="font-serif text-xl font-bold text-gray-900">
             Promise Pipeline
           </span>
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-600">
+            Beta
+          </span>
         </Link>
 
         {/* Desktop */}

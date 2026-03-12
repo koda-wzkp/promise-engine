@@ -175,6 +175,10 @@ export default function HB2021Dashboard() {
       <Navbar />
 
       <main id="main-content" className="mx-auto max-w-7xl px-4 py-6">
+        <div className="mb-2 rounded-lg bg-blue-50 px-4 py-2 text-xs text-blue-700">
+          <strong>Beta</strong> — Data is illustrative and may contain inaccuracies. Cascade simulation is experimental.
+        </div>
+
         {/* Header */}
         <div className="mb-6">
           <h1 className="font-serif text-3xl font-bold text-gray-900">

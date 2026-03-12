@@ -10,6 +10,8 @@ const NAV_LINKS = [
   { href: "/demo/infrastructure", label: "Infrastructure" },
   { href: "/demo/supply-chain", label: "Supply Chain" },
   { href: "/demo/war-on-drugs", label: "War on Drugs" },
+  { href: "/demo/personal", label: "Personal Demo" },
+  { href: "/demo/team", label: "Team Demo" },
   { href: "/personal", label: "Personal" },
   { href: "/team", label: "Teams" },
   { href: "/services", label: "Services" },

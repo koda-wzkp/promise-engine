@@ -36,6 +36,12 @@ const USE_CASES = [
     href: "/demo/supply-chain",
     tag: "Demo",
   },
+  {
+    title: "War on Drugs",
+    description: "Audit 50+ years of federal drug policy promises against public data on outcomes.",
+    href: "/demo/war-on-drugs",
+    tag: "Demo",
+  },
 ];
 
 const HOW_IT_WORKS = [

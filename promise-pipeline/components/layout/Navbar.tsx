@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/demo/ai", label: "AI Safety" },
   { href: "/demo/infrastructure", label: "Infrastructure" },
   { href: "/demo/supply-chain", label: "Supply Chain" },
+  { href: "/demo/war-on-drugs", label: "War on Drugs" },
   { href: "/personal", label: "Personal" },
   { href: "/team", label: "Teams" },
   { href: "/blog", label: "Blog" },

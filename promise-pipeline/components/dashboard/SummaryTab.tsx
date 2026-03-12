@@ -4,7 +4,7 @@ import { DashboardData } from "@/lib/types/promise";
 import { NetworkHealthScore } from "@/lib/types/simulation";
 import StatusBadge from "../promise/StatusBadge";
 import NetworkHealthBar from "../simulation/NetworkHealthBar";
-import { statusColors, statusBgColors } from "@/lib/utils/colors";
+import { statusColors, statusBgColors, statusLabels } from "@/lib/utils/colors";
 import { computeGrade } from "@/lib/utils/formatting";
 import { PromiseStatus } from "@/lib/types/promise";
 
@@ -31,13 +31,11 @@ interface SummaryTabProps {
 }
 
 export default function SummaryTab({ data, health, onDomainClick, onPromiseClick }: SummaryTabProps) {
-  const statusCounts = {
-    verified: data.promises.filter((p) => p.status === "verified").length,
-    declared: data.promises.filter((p) => p.status === "declared").length,
-    degraded: data.promises.filter((p) => p.status === "degraded").length,
-    violated: data.promises.filter((p) => p.status === "violated").length,
-    unverifiable: data.promises.filter((p) => p.status === "unverifiable").length,
-  };
+  // Dynamically count all statuses present in this demo's data
+  const statusCounts: Partial<Record<PromiseStatus, number>> = {};
+  for (const status of activeStatuses(data)) {
+    statusCounts[status] = data.promises.filter((p) => p.status === status).length;
+  }
 
   const grade = computeGrade(health.overall);
 
@@ -86,30 +84,34 @@ export default function SummaryTab({ data, health, onDomainClick, onPromiseClick
         {/* Status breakdown */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Promise Status</p>
-          <div className="mt-3 space-y-2">
-            {(Object.entries(statusCounts) as [string, number][]).map(([status, count]) => (
+          <p className="mt-1 mb-3 text-[11px] text-gray-400">
+            {data.promises.length} commitments tracked across {data.domains.length} domains
+          </p>
+          <div className="space-y-2">
+            {(Object.entries(statusCounts) as [PromiseStatus, number][]).map(([status, count]) => (
               <div key={status} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: statusColors[status as keyof typeof statusColors] }}
+                    style={{ backgroundColor: statusColors[status] }}
                     aria-hidden="true"
                   />
-                  <span className="text-xs capitalize text-gray-600">{status}</span>
+                  <span className="text-xs text-gray-600">{statusLabels[status]}</span>
                 </div>
                 <span className="font-mono text-xs font-medium text-gray-900">{count}</span>
               </div>
             ))}
           </div>
-          {/* Mini bar chart */}
-          <div className="mt-3 flex h-3 overflow-hidden rounded-full">
-            {Object.entries(statusCounts).map(([status, count]) => (
+          {/* Mini bar chart with tooltip-style labels */}
+          <div className="mt-3 flex h-3 overflow-hidden rounded-full" role="img" aria-label="Status distribution bar">
+            {(Object.entries(statusCounts) as [PromiseStatus, number][]).map(([status, count]) => (
               count > 0 ? (
                 <div
                   key={status}
+                  title={`${statusLabels[status]}: ${count} (${Math.round((count / data.promises.length) * 100)}%)`}
                   style={{
                     width: `${(count / data.promises.length) * 100}%`,
-                    backgroundColor: statusColors[status as keyof typeof statusColors],
+                    backgroundColor: statusColors[status],
                   }}
                 />
               ) : null

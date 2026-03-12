@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DashboardData } from "@/lib/types/promise";
 import { calculateNetworkHealth } from "@/lib/simulation/scoring";
 import Navbar from "@/components/layout/Navbar";
@@ -8,7 +8,7 @@ import Footer from "@/components/layout/Footer";
 import SummaryTab from "@/components/dashboard/SummaryTab";
 import PromiseList from "@/components/promise/PromiseList";
 import InsightsTab from "@/components/dashboard/InsightsTab";
-import { useState } from "react";
+import TrajectoryTab from "@/components/dashboard/TrajectoryTab";
 
 interface DemoVerticalPageProps {
   data: DashboardData;
@@ -16,10 +16,14 @@ interface DemoVerticalPageProps {
   bgColor?: string;
 }
 
-const TABS = ["Summary", "Promises", "Insights"] as const;
+const ALL_TABS = ["Summary", "Trajectory", "Promises", "Insights"] as const;
+type Tab = (typeof ALL_TABS)[number];
 
 export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVerticalPageProps) {
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Summary");
+  const TABS: Tab[] = data.trajectories.length > 0
+    ? ["Summary", "Trajectory", "Promises", "Insights"]
+    : ["Summary", "Promises", "Insights"];
+  const [activeTab, setActiveTab] = useState<Tab>("Summary");
   const health = useMemo(() => calculateNetworkHealth(data.promises), [data.promises]);
 
   return (
@@ -76,6 +80,7 @@ export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVer
 
         <div role="tabpanel" id={`demo-tabpanel-${activeTab.toLowerCase()}`} aria-labelledby={`demo-tab-${activeTab.toLowerCase()}`}>
         {activeTab === "Summary" && <SummaryTab data={data} health={health} />}
+        {activeTab === "Trajectory" && <TrajectoryTab trajectories={data.trajectories} />}
         {activeTab === "Promises" && (
           <PromiseList promises={data.promises} agents={data.agents} domains={data.domains} />
         )}

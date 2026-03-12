@@ -310,6 +310,14 @@ export const HB2021_TRAJECTORIES: Trajectory[] = [
   {
     agentId: "pge",
     label: "Portland General Electric",
+    subtitle: "Emissions reduction from 2010-2012 baseline (0.428 MTCO2e/MWh)",
+    yAxisLabel: "% Reduction",
+    yDomain: [0, 100],
+    milestones: [
+      { value: 80, label: "80% (2030)", color: "#991b1b" },
+      { value: 90, label: "90% (2035)", color: "#78350f" },
+      { value: 100, label: "100% (2040)", color: "#1a5f4a" },
+    ],
     data: [
       { year: 2012, actual: 0 },
       { year: 2018, actual: 15 },
@@ -324,6 +332,14 @@ export const HB2021_TRAJECTORIES: Trajectory[] = [
   {
     agentId: "pacificorp",
     label: "PacifiCorp / Pacific Power",
+    subtitle: "Emissions reduction from 2010-2012 baseline",
+    yAxisLabel: "% Reduction",
+    yDomain: [0, 100],
+    milestones: [
+      { value: 80, label: "80% (2030)", color: "#991b1b" },
+      { value: 90, label: "90% (2035)", color: "#78350f" },
+      { value: 100, label: "100% (2040)", color: "#1a5f4a" },
+    ],
     data: [
       { year: 2012, actual: 0 },
       { year: 2018, actual: 5 },

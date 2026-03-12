@@ -1,4 +1,4 @@
-import { Agent, Promise, Insight, DashboardData } from "../types/promise";
+import { Agent, Promise, Insight, Trajectory, DashboardData } from "../types/promise";
 
 // ─── AGENTS ───
 // 12 agents representing the key promisers and promisees in federal drug policy
@@ -325,6 +325,112 @@ export const WOD_INSIGHTS: Insight[] = [
   },
 ];
 
+// ─── TRAJECTORIES ───
+// Time-series data sourced from CDC WONDER, SAMHSA NSDUH, BJS, and ONDCP budget documents.
+export const WOD_TRAJECTORIES: Trajectory[] = [
+  {
+    agentId: "overdose-deaths",
+    label: "Drug Overdose Deaths per Year",
+    subtitle: "Total drug overdose deaths, all substances. Source: CDC WONDER / NCHS. The stated goal of federal drug policy was to reduce drug-related harm.",
+    yAxisLabel: "Deaths",
+    yDomain: [0, 120000],
+    milestones: [
+      { value: 107941, label: "107,941 (2022 peak)", color: "#991b1b" },
+    ],
+    data: [
+      { year: 1999, actual: 16849 },
+      { year: 2001, actual: 19394 },
+      { year: 2003, actual: 25785 },
+      { year: 2005, actual: 29813 },
+      { year: 2007, actual: 36010 },
+      { year: 2009, actual: 37004 },
+      { year: 2011, actual: 41340 },
+      { year: 2013, actual: 43982 },
+      { year: 2015, actual: 52404 },
+      { year: 2017, actual: 70237 },
+      { year: 2019, actual: 70630 },
+      { year: 2020, actual: 91799 },
+      { year: 2021, actual: 106699 },
+      { year: 2022, actual: 107941 },
+      { year: 2023, actual: 105000 },
+      { year: 2024, actual: 79384 },
+    ],
+  },
+  {
+    agentId: "drug-use-rate",
+    label: "Past-Month Illicit Drug Use Rate",
+    subtitle: "Percentage of Americans aged 12+ reporting past-month illicit drug use. Source: SAMHSA NSDUH / National Household Survey. Note: post-2020 methodology changed (web-based), so figures are not directly comparable to pre-2020.",
+    yAxisLabel: "% of population",
+    yDomain: [0, 20],
+    milestones: [
+      { value: 14.1, label: "14.1% (1979 peak)", color: "#d97706" },
+      { value: 5.8, label: "5.8% (1992 low)", color: "#059669" },
+    ],
+    data: [
+      { year: 1979, actual: 14.1 },
+      { year: 1982, actual: 12.5 },
+      { year: 1985, actual: 12.1 },
+      { year: 1988, actual: 7.3 },
+      { year: 1992, actual: 5.8 },
+      { year: 1995, actual: 6.1 },
+      { year: 1998, actual: 6.2 },
+      { year: 2002, actual: 8.3 },
+      { year: 2006, actual: 8.3 },
+      { year: 2010, actual: 8.9 },
+      { year: 2013, actual: 9.4 },
+      { year: 2016, actual: 10.6 },
+      { year: 2019, actual: 13.0 },
+      { year: 2023, actual: 16.8 },
+      { year: 2024, actual: 16.7 },
+    ],
+  },
+  {
+    agentId: "incarceration",
+    label: "People Incarcerated for Drug Offenses",
+    subtitle: "Combined state and federal prisoners held for drug offenses. Source: BJS Prisoners Series. The stated goal was deterrence — fewer drug offenses, not more prisoners.",
+    yAxisLabel: "People incarcerated",
+    yDomain: [0, 400000],
+    milestones: [
+      { value: 334000, label: "334,000 (2010 peak)", color: "#991b1b" },
+    ],
+    data: [
+      { year: 1980, actual: 23900 },
+      { year: 1985, actual: 57975 },
+      { year: 1990, actual: 179100 },
+      { year: 1995, actual: 279500 },
+      { year: 2000, actual: 325000 },
+      { year: 2005, actual: 332500 },
+      { year: 2010, actual: 334000 },
+      { year: 2015, actual: 289200 },
+      { year: 2020, actual: 238000 },
+    ],
+  },
+  {
+    agentId: "federal-budget",
+    label: "Federal Drug Control Budget",
+    subtitle: "Total annual federal drug control spending in billions (nominal dollars). Source: ONDCP National Drug Control Budget. Note: methodology changed in FY2004 and FY2012, so cross-era comparisons are approximate.",
+    yAxisLabel: "$ Billions",
+    yDomain: [0, 50],
+    data: [
+      { year: 1971, actual: 0.1 },
+      { year: 1975, actual: 0.4 },
+      { year: 1981, actual: 1.5 },
+      { year: 1985, actual: 2.8 },
+      { year: 1989, actual: 6.7 },
+      { year: 1993, actual: 12.1 },
+      { year: 1997, actual: 16.0 },
+      { year: 2000, actual: 18.4 },
+      { year: 2005, actual: 12.4 },
+      { year: 2010, actual: 15.5 },
+      { year: 2013, actual: 25.6 },
+      { year: 2017, actual: 31.1 },
+      { year: 2021, actual: 40.4 },
+      { year: 2023, actual: 44.2 },
+      { year: 2024, actual: 46.1 },
+    ],
+  },
+];
+
 // ─── DASHBOARD ───
 export const WOD_DASHBOARD: DashboardData = {
   title: "US War on Drugs",
@@ -344,7 +450,7 @@ export const WOD_DASHBOARD: DashboardData = {
     { name: "Accountability", color: "#374151", promiseCount: 1, healthScore: 0 },
   ],
   insights: WOD_INSIGHTS,
-  trajectories: [],
+  trajectories: WOD_TRAJECTORIES,
   grade: "F",
   gradeExplanation: "The federal War on Drugs has violated or degraded the vast majority of its stated commitments over 50+ years. Only the Fair Sentencing Act demonstrates a kept promise. $1T+ in spending has not reduced drug use, drug availability, or overdose deaths. Racial disparities in enforcement persist.",
 };

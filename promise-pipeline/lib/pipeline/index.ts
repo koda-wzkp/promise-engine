@@ -10,6 +10,6 @@ export type { SelectionScore } from "./bill-candidates";
 export { buildInventory, analyzeGaps } from "./dataset-inventory";
 export type { GapAnalysis, TrainingViability } from "./dataset-inventory";
 
-export { HB2021_CONFIG, ACA_CONFIG } from "./configs";
+export { HB2021_CONFIG, ACA_CONFIG, CAA_CONFIG, DF_CONFIG, NCLB_CONFIG } from "./configs";
 
 export { generateTrainingExports } from "./generate-exports";

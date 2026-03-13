@@ -18,6 +18,54 @@ export const HB2021_CONFIG: BillConfig = {
   ],
 };
 
+export const CAA_CONFIG: BillConfig = {
+  id: "US-CAA-1990",
+  jurisdiction: "United States",
+  level: "federal",
+  year_enacted: 1990,
+  year_effective: 1990,
+  domain_primary: "Environment",
+  text_url: "https://www.congress.gov/bill/101st-congress/senate-bill/1630",
+  source_urls: [
+    "https://www.congress.gov/bill/101st-congress/senate-bill/1630",
+    "https://www.epa.gov/clean-air-act-overview",
+    "https://ampd.epa.gov/ampd/",
+    "https://www.epa.gov/green-book",
+  ],
+};
+
+export const DF_CONFIG: BillConfig = {
+  id: "US-DODD-FRANK-2010",
+  jurisdiction: "United States",
+  level: "federal",
+  year_enacted: 2010,
+  year_effective: 2010,
+  domain_primary: "Financial Regulation",
+  text_url: "https://www.congress.gov/bill/111th-congress/house-bill/4173",
+  source_urls: [
+    "https://www.congress.gov/bill/111th-congress/house-bill/4173",
+    "https://www.consumerfinance.gov/",
+    "https://www.sec.gov/whistleblower",
+    "https://www.federalreserve.gov/supervisionreg/stress-tests-capital-planning.htm",
+  ],
+};
+
+export const NCLB_CONFIG: BillConfig = {
+  id: "US-NCLB-ESSA-2001",
+  jurisdiction: "United States",
+  level: "federal",
+  year_enacted: 2001,
+  year_effective: 2002,
+  domain_primary: "Education",
+  text_url: "https://www.congress.gov/bill/107th-congress/house-bill/1",
+  source_urls: [
+    "https://www.congress.gov/bill/107th-congress/house-bill/1",
+    "https://www.congress.gov/bill/114th-congress/senate-bill/1177",
+    "https://nces.ed.gov/nationsreportcard/",
+    "https://nces.ed.gov/",
+  ],
+};
+
 export const ACA_CONFIG: BillConfig = {
   id: "US-ACA-2010",
   jurisdiction: "United States",

@@ -86,6 +86,40 @@ export const acaDomainColors: Record<string, string> = {
   "Political & Legal Challenges": "#dc2626",
 };
 
+export const caaDomainColors: Record<string, string> = {
+  "Acid Rain": "#dc2626",
+  "Air Quality": "#f59e0b",
+  "Mobile Sources": "#2563eb",
+  "Hazardous Pollutants": "#7c3aed",
+  "Permitting": "#6b7280",
+  "Ozone Protection": "#0891b2",
+  "Enforcement": "#991b1b",
+  "Market Mechanisms": "#059669",
+};
+
+export const doddFrankDomainColors: Record<string, string> = {
+  "Systemic Risk": "#dc2626",
+  "Consumer Protection": "#059669",
+  "Derivatives": "#7c3aed",
+  "Banking Regulation": "#2563eb",
+  "Investor Protection": "#0891b2",
+  "Mortgage Reform": "#f59e0b",
+  "Resolution Authority": "#991b1b",
+  "Regulatory Structure": "#6b7280",
+  "Rollbacks": "#374151",
+};
+
+export const nclbEssaDomainColors: Record<string, string> = {
+  "Accountability": "#dc2626",
+  "Assessment": "#2563eb",
+  "Teacher Quality": "#7c3aed",
+  "School Improvement": "#f59e0b",
+  "Equity": "#059669",
+  "Funding": "#0891b2",
+  "State Flexibility": "#6b7280",
+  "Federal Authority": "#991b1b",
+};
+
 export const skyColors = {
   lightest: "#E0F6FF",
   light: "#B3E5FC",
@@ -101,6 +135,9 @@ export const dashboardThemes = {
   infrastructure: { bg: "#0f1419", accent: "#00d4aa" },
   supplyChain: { bg: "#faf9f6", accent: "#2d5016" },
   aca: { bg: "#f8fafc", accent: "#1e40af" },
+  caa: { bg: "#f8fafc", accent: "#059669" },
+  doddFrank: { bg: "#f8fafc", accent: "#2563eb" },
+  nclbEssa: { bg: "#f8fafc", accent: "#7c3aed" },
 };
 
 // Status health weights for network health calculation

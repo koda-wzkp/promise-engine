@@ -118,7 +118,7 @@ export const PRIORITY_BILL_QUEUE: BillCandidate[] = [
     domains: ["Emissions", "Air Quality", "Acid Rain", "Ozone", "Mobile Sources", "Enforcement", "Market Mechanisms"],
     agent_types: ["legislator", "regulator", "utility", "community", "stakeholder"],
     training_value_notes: "30+ years of EPA compliance data. Rich multi-agent network. Known successes (acid rain cap-and-trade) and known struggles (ozone non-attainment). Diverse mechanisms: command-and-control, market-based, technology-forcing.",
-    selection_status: "candidate",
+    selection_status: "extracted",
   },
   {
     title: "Dodd-Frank Wall Street Reform and Consumer Protection Act",
@@ -143,7 +143,7 @@ export const PRIORITY_BILL_QUEUE: BillCandidate[] = [
     domains: ["Financial Regulation", "Consumer Protection", "Systemic Risk", "Derivatives", "Banking", "Enforcement", "Reporting"],
     agent_types: ["legislator", "regulator", "stakeholder", "executive", "judiciary"],
     training_value_notes: "15+ years of implementation data. Many provisions delayed, watered down, or repealed. Good degradation/violation labels. Named agencies with deadlines. Rulemaking completion data available from Davis Polk tracker.",
-    selection_status: "candidate",
+    selection_status: "extracted",
   },
   {
     title: "No Child Left Behind Act / Every Student Succeeds Act",
@@ -166,7 +166,7 @@ export const PRIORITY_BILL_QUEUE: BillCandidate[] = [
     domains: ["Education", "Accountability", "Assessment", "Equity", "Teacher Quality", "Funding", "State Flexibility"],
     agent_types: ["legislator", "regulator", "community", "provider", "executive"],
     training_value_notes: "20+ years of outcome data. Eventually replaced by ESSA (2015) — natural experiment in promise network evolution. Measurable targets at state level. Known failures (AYP impossibility) alongside structural successes.",
-    selection_status: "candidate",
+    selection_status: "extracted",
   },
   {
     title: "California SB 100 — 100% Clean Energy Act of 2018",

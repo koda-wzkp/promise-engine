@@ -1,17 +1,11 @@
 "use client";
 
-import { useState, useMemo, useReducer, useCallback } from "react";
-import { PromiseStatus } from "@/lib/types/promise";
+import { useState, useMemo, useCallback } from "react";
+import { Promise as PromiseType, PromiseStatus, Domain } from "@/lib/types/promise";
 import { WhatIfQuery, CascadeResult } from "@/lib/types/simulation";
-import {
-  HB2021_DASHBOARD,
-  HB2021_PROMISES,
-  HB2021_AGENTS,
-  HB2021_DOMAINS,
-  HB2021_INSIGHTS,
-  HB2021_TRAJECTORIES,
-} from "@/lib/data/hb2021";
-import { simulateCascade, applySimulation } from "@/lib/simulation/cascade";
+import { createHB2021Network, insights, trajectories, dashboard, rawAgents } from "@/lib/data/hb2021-network";
+import { usePromiseNetwork } from "@/lib/hooks/usePromiseNetwork";
+import { applySimulation } from "@/lib/simulation/cascade";
 import { calculateNetworkHealth } from "@/lib/simulation/scoring";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -20,44 +14,14 @@ import TrajectoryTab from "@/components/dashboard/TrajectoryTab";
 import InsightsTab from "@/components/dashboard/InsightsTab";
 import AboutTab from "@/components/dashboard/AboutTab";
 import PromiseList from "@/components/promise/PromiseList";
-import PromiseGraph from "@/components/network/PromiseGraph";
 import NetworkGraphPanel from "@/components/network/NetworkGraphPanel";
 import WhatIfPanel from "@/components/simulation/WhatIfPanel";
 import CascadeResults from "@/components/simulation/CascadeResults";
 import PromiseDetailPanel from "@/components/promise/PromiseDetailPanel";
 import InlineServiceCTA from "@/components/cta/InlineServiceCTA";
 
-// ─── SIMULATION STATE ───
-type SimState = {
-  mode: "actual" | "simulating";
-  activeQuery: WhatIfQuery | null;
-  cascadeResult: CascadeResult | null;
-  selectedPromise: string | null;
-};
-
-type SimAction =
-  | { type: "SELECT_PROMISE"; promiseId: string }
-  | { type: "RUN_SIMULATION"; query: WhatIfQuery; result: CascadeResult }
-  | { type: "CLEAR_SIMULATION" }
-  | { type: "RESET" };
-
-function simReducer(state: SimState, action: SimAction): SimState {
-  switch (action.type) {
-    case "SELECT_PROMISE":
-      return { ...state, selectedPromise: action.promiseId };
-    case "RUN_SIMULATION":
-      return {
-        mode: "simulating",
-        activeQuery: action.query,
-        cascadeResult: action.result,
-        selectedPromise: state.selectedPromise,
-      };
-    case "CLEAR_SIMULATION":
-      return { mode: "actual", activeQuery: null, cascadeResult: null, selectedPromise: null };
-    case "RESET":
-      return { mode: "actual", activeQuery: null, cascadeResult: null, selectedPromise: null };
-  }
-}
+// ─── NETWORK DATA (civic scope — loaded from typed file, not localStorage) ───
+const hb2021Network = createHB2021Network();
 
 // ─── COMPARE MODE ───
 interface CompareScenario {
@@ -70,13 +34,11 @@ const TABS = ["Summary", "Network", "Trajectory", "Promises", "Insights", "About
 type Tab = (typeof TABS)[number];
 
 export default function HB2021Dashboard() {
+  // ─── HOOK: all data flows through usePromiseNetwork ───
+  const network = usePromiseNetwork("net-hb2021", "civic", hb2021Network);
+
   const [activeTab, setActiveTab] = useState<Tab>("Summary");
-  const [sim, dispatch] = useReducer(simReducer, {
-    mode: "actual",
-    activeQuery: null,
-    cascadeResult: null,
-    selectedPromise: null,
-  });
+  const [selectedPromise, setSelectedPromise] = useState<string | null>(null);
 
   // Detail panel state — independent from the What If panel
   const [detailPromiseId, setDetailPromiseId] = useState<string | null>(null);
@@ -88,42 +50,91 @@ export default function HB2021Dashboard() {
   // Domain filter from summary tab
   const [pendingDomainFilter, setPendingDomainFilter] = useState<string | null>(null);
 
-  // Compute promises (actual or simulated)
-  const displayPromises = useMemo(() => {
-    if (sim.mode === "simulating" && sim.activeQuery && sim.cascadeResult) {
-      return applySimulation(HB2021_PROMISES, sim.activeQuery, sim.cascadeResult);
-    }
-    return HB2021_PROMISES;
-  }, [sim]);
+  // ─── CONVERT NETWORK TYPES TO BASE TYPES FOR COMPONENTS ───
+  // Components use base Promise/Agent/Domain types. The hook stores NetworkPromise/NetworkAgent/NetworkDomain.
+  // This conversion bridges the two type systems without changing either.
 
-  const health = useMemo(() => calculateNetworkHealth(displayPromises), [displayPromises]);
+  const basePromises: PromiseType[] = useMemo(
+    () =>
+      network.network.promises.map((p) => ({
+        id: p.id,
+        ref: p.ref,
+        promiser: p.promiser,
+        promisee: p.promisee,
+        body: p.body,
+        domain: p.domain,
+        status: p.status,
+        target: p.target,
+        progress: p.progress,
+        required: p.required,
+        note: p.note ?? "",
+        verification: p.verification,
+        depends_on: p.depends_on,
+      })),
+    [network.network.promises],
+  );
+
+  // Build Domain[] with promiseCount and healthScore from hook's computed data
+  const baseDomains: Domain[] = useMemo(
+    () =>
+      network.network.domains.map((d) => ({
+        name: d.name,
+        color: d.color,
+        promiseCount: network.network.promises.filter((p) => p.domain === d.name).length,
+        healthScore: network.domainHealth.get(d.id) ?? 0,
+      })),
+    [network.network.domains, network.network.promises, network.domainHealth],
+  );
+
+  // Agents: raw base agents for component compatibility (same data, base Agent type)
+  const baseAgents = rawAgents;
+
+  // ─── SIMULATION: use hook's cascade simulation ───
+  const hookSim = network.simulationState;
+
+  // Compute promises (actual or simulated) for display
+  const displayPromises: PromiseType[] = useMemo(() => {
+    if (hookSim.active && hookSim.query && hookSim.result) {
+      return applySimulation(basePromises, hookSim.query, hookSim.result);
+    }
+    return basePromises;
+  }, [hookSim, basePromises]);
+
+  // Use hook's networkHealth when not simulating, recompute for simulated view
+  const health = useMemo(() => {
+    if (hookSim.active && hookSim.result) {
+      return calculateNetworkHealth(displayPromises);
+    }
+    return network.networkHealth;
+  }, [hookSim, displayPromises, network.networkHealth]);
 
   // Set of simulated promise IDs for visual highlighting
   const simulatedIds = useMemo(() => {
-    if (!sim.cascadeResult) return new Set<string>();
-    const ids = new Set(sim.cascadeResult.affectedPromises.map((a) => a.promiseId));
-    if (sim.activeQuery) ids.add(sim.activeQuery.promiseId);
+    if (!hookSim.result) return new Set<string>();
+    const ids = new Set(hookSim.result.affectedPromises.map((a) => a.promiseId));
+    if (hookSim.query) ids.add(hookSim.query.promiseId);
     return ids;
-  }, [sim]);
+  }, [hookSim]);
 
-  // Handlers
+  // ─── HANDLERS ───
+
   function handleSelectPromise(id: string) {
-    dispatch({ type: "SELECT_PROMISE", promiseId: id });
+    setSelectedPromise(id);
   }
 
   function handleSimulate(promiseId: string, newStatus: PromiseStatus) {
     const query: WhatIfQuery = { promiseId, newStatus };
-    const result = simulateCascade(HB2021_PROMISES, query);
-    dispatch({ type: "RUN_SIMULATION", query, result });
+    network.runCascadeSimulation(query);
   }
 
   function handleWhatIf(promiseId: string) {
-    dispatch({ type: "SELECT_PROMISE", promiseId });
+    setSelectedPromise(promiseId);
     setActiveTab("Network");
   }
 
   function handleReset() {
-    dispatch({ type: "RESET" });
+    network.clearSimulation();
+    setSelectedPromise(null);
   }
 
   // Open promise detail panel from anywhere
@@ -134,7 +145,7 @@ export default function HB2021Dashboard() {
   // From detail panel → simulate cascade
   const handleDetailSimulate = useCallback((promiseId: string) => {
     setDetailPromiseId(null);
-    dispatch({ type: "SELECT_PROMISE", promiseId });
+    setSelectedPromise(promiseId);
     setActiveTab("Network");
   }, []);
 
@@ -151,26 +162,38 @@ export default function HB2021Dashboard() {
 
   // Save current scenario for comparison
   function handleSaveScenario() {
-    if (!sim.activeQuery || !sim.cascadeResult) return;
-    const source = HB2021_PROMISES.find((p) => p.id === sim.activeQuery!.promiseId);
+    if (!hookSim.query || !hookSim.result) return;
+    const source = basePromises.find((p) => p.id === hookSim.query!.promiseId);
     const label = source
-      ? `${source.id} → ${sim.activeQuery.newStatus}`
-      : `${sim.activeQuery.promiseId} → ${sim.activeQuery.newStatus}`;
+      ? `${source.id} → ${hookSim.query.newStatus}`
+      : `${hookSim.query.promiseId} → ${hookSim.query.newStatus}`;
 
     setCompareScenarios((prev) => {
       // Max 2 scenarios
-      const next = [...prev, { label, query: sim.activeQuery!, result: sim.cascadeResult! }];
+      const next = [...prev, { label, query: hookSim.query!, result: hookSim.result! }];
       return next.slice(-2);
     });
   }
 
-  const selectedPromiseData = sim.selectedPromise
-    ? HB2021_PROMISES.find((p) => p.id === sim.selectedPromise)
+  const selectedPromiseData = selectedPromise
+    ? basePromises.find((p) => p.id === selectedPromise)
     : null;
 
   const detailPromiseData = detailPromiseId
     ? displayPromises.find((p) => p.id === detailPromiseId)
     : null;
+
+  if (!network.isLoaded) {
+    return (
+      <div className="min-h-screen bg-[#faf9f6]">
+        <Navbar />
+        <main className="mx-auto max-w-7xl px-4 py-12 text-center">
+          <p className="text-gray-400">Loading network data...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#faf9f6]">
@@ -184,23 +207,23 @@ export default function HB2021Dashboard() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="font-serif text-3xl font-bold text-gray-900">
-            {HB2021_DASHBOARD.title}
+            {dashboard.title}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">{HB2021_DASHBOARD.subtitle}</p>
+          <p className="mt-1 text-sm text-gray-500">{dashboard.subtitle}</p>
           <p className="mt-1 font-mono text-xs text-gray-400">
-            {HB2021_PROMISES.length} promises · {HB2021_AGENTS.length} agents · {HB2021_DOMAINS.length} domains
+            {network.network.promises.length} promises · {network.network.agents.length} agents · {network.network.domains.length} domains
           </p>
         </div>
 
         {/* Simulation banner */}
-        {sim.mode === "simulating" && (
+        {hookSim.active && (
           <div className="mb-4 flex items-center justify-between rounded-lg border-2 border-yellow-300 bg-yellow-50 px-4 py-2">
             <p className="text-sm text-yellow-800">
               <span className="font-semibold">Simulating:</span> Showing cascade effects.
               Data below reflects hypothetical state changes.
             </p>
             <div className="flex gap-2">
-              {sim.cascadeResult && compareScenarios.length < 2 && (
+              {hookSim.result && compareScenarios.length < 2 && (
                 <button
                   onClick={handleSaveScenario}
                   className="rounded bg-yellow-200 px-3 py-1 text-xs font-medium text-yellow-800 hover:bg-yellow-300"
@@ -261,7 +284,7 @@ export default function HB2021Dashboard() {
         <div className="tab-content-fade" role="tabpanel" id={`tabpanel-${activeTab.toLowerCase()}`} aria-labelledby={`tab-${activeTab.toLowerCase()}`}>
           {activeTab === "Summary" && (
             <SummaryTab
-              data={{ ...HB2021_DASHBOARD, promises: displayPromises }}
+              data={{ ...dashboard, promises: displayPromises, domains: baseDomains }}
               health={health}
               onDomainClick={handleDomainClick}
               onPromiseClick={handleOpenDetail}
@@ -273,10 +296,10 @@ export default function HB2021Dashboard() {
               <div className="lg:col-span-2">
                 <NetworkGraphPanel
                   promises={displayPromises}
-                  agents={HB2021_AGENTS}
-                  domains={HB2021_DOMAINS}
-                  cascadeResult={sim.cascadeResult}
-                  selectedPromise={sim.selectedPromise}
+                  agents={baseAgents}
+                  domains={baseDomains}
+                  cascadeResult={hookSim.result ?? null}
+                  selectedPromise={selectedPromise}
                   onSelectPromise={(id) => {
                     handleSelectPromise(id);
                     handleOpenDetail(id);
@@ -287,23 +310,23 @@ export default function HB2021Dashboard() {
                 </p>
               </div>
               <div className="space-y-4">
-                {selectedPromiseData && !sim.cascadeResult && (
+                {selectedPromiseData && !hookSim.result && (
                   <WhatIfPanel
                     promise={selectedPromiseData}
-                    agents={HB2021_AGENTS}
+                    agents={baseAgents}
                     onSimulate={handleSimulate}
-                    onClose={() => dispatch({ type: "SELECT_PROMISE", promiseId: "" })}
+                    onClose={() => setSelectedPromise(null)}
                   />
                 )}
-                {sim.cascadeResult && (
+                {hookSim.result && (
                   <CascadeResults
-                    result={sim.cascadeResult}
-                    promises={HB2021_PROMISES}
+                    result={hookSim.result}
+                    promises={basePromises}
                     onReset={handleReset}
                     onPromiseClick={handleOpenDetail}
                   />
                 )}
-                {!selectedPromiseData && !sim.cascadeResult && (
+                {!selectedPromiseData && !hookSim.result && (
                   <div className="rounded-lg border border-gray-200 bg-white p-6 text-center">
                     <p className="text-sm text-gray-500">
                       Click a promise node in the graph to simulate cascade effects.
@@ -359,14 +382,14 @@ export default function HB2021Dashboard() {
           )}
 
           {activeTab === "Trajectory" && (
-            <TrajectoryTab trajectories={HB2021_TRAJECTORIES} />
+            <TrajectoryTab trajectories={trajectories} />
           )}
 
           {activeTab === "Promises" && (
             <PromiseList
               promises={displayPromises}
-              agents={HB2021_AGENTS}
-              domains={HB2021_DOMAINS}
+              agents={baseAgents}
+              domains={baseDomains}
               onWhatIf={handleWhatIf}
               simulatedIds={simulatedIds}
               onPromiseClick={handleOpenDetail}
@@ -376,7 +399,7 @@ export default function HB2021Dashboard() {
 
           {activeTab === "Insights" && (
             <InsightsTab
-              insights={HB2021_INSIGHTS}
+              insights={insights}
               promises={displayPromises}
               onPromiseClick={handleOpenDetail}
             />
@@ -394,7 +417,7 @@ export default function HB2021Dashboard() {
       {detailPromiseData && (
         <PromiseDetailPanel
           promise={detailPromiseData}
-          agents={HB2021_AGENTS}
+          agents={baseAgents}
           allPromises={displayPromises}
           onClose={() => setDetailPromiseId(null)}
           onSimulateCascade={handleDetailSimulate}

@@ -272,6 +272,7 @@ export default function CanopyView({
 }: PromiseGraphViewProps) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const { cascadeResult } = simulationState;
+  const isMobile = width < 640;
 
   const depCounts = useMemo(() => countDependents(promises), [promises]);
   const health = useMemo(() => calculateNetworkHealth(promises), [promises]);
@@ -290,8 +291,9 @@ export default function CanopyView({
   const trees = useMemo(() => {
     const domainNames = Array.from(new Set(promises.map((p) => p.domain)));
     const maxDepCount = Math.max(1, ...Array.from(depCounts.values()));
-    const groundY = height - 50;
-    const padding = { left: 40, right: 40 };
+    const mobile = width < 640;
+    const groundY = height - (mobile ? 35 : 50);
+    const padding = mobile ? { left: 20, right: 20 } : { left: 40, right: 40 };
     const usableW = width - padding.left - padding.right;
 
     // Divide horizontal space by domain
@@ -344,14 +346,15 @@ export default function CanopyView({
   // Domain labels
   const domainLabels = useMemo(() => {
     const domainNames = Array.from(new Set(promises.map((p) => p.domain)));
-    const padding = { left: 40, right: 40 };
+    const mobile = width < 640;
+    const padding = mobile ? { left: 20, right: 20 } : { left: 40, right: 40 };
     const usableW = width - padding.left - padding.right;
     const groveWidth = usableW / Math.max(domainNames.length, 1);
 
     return domainNames.map((name, i) => ({
       name,
       x: padding.left + i * groveWidth + groveWidth / 2,
-      y: height - 20,
+      y: height - (mobile ? 10 : 20),
     }));
   }, [promises, width, height]);
 
@@ -372,7 +375,7 @@ export default function CanopyView({
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="w-full"
+        className="w-full touch-none"
         style={{ maxHeight: height }}
         role="img"
         aria-label={`Forest canopy visualization showing ${promises.length} promises as trees. Network health: ${health.overall}%.`}
@@ -508,7 +511,7 @@ export default function CanopyView({
                   <foreignObject
                     x={tree.x + 15}
                     y={tree.groundY - tree.height - 10}
-                    width={200}
+                    width={isMobile ? 150 : 200}
                     height={60}
                     className="pointer-events-none"
                   >
@@ -535,7 +538,7 @@ export default function CanopyView({
             textAnchor="middle"
             className="pointer-events-none select-none font-sans font-semibold uppercase"
             fill="#374151"
-            fontSize={9}
+            fontSize={isMobile ? 7 : 9}
             letterSpacing="0.05em"
             opacity={0.45}
           >
@@ -568,25 +571,28 @@ export default function CanopyView({
         }
       `}</style>
 
-      {/* Legend */}
-      <div className="absolute left-2 top-2 flex flex-col gap-1 rounded-md bg-white/90 px-2.5 py-2 text-[10px] text-gray-500 shadow-sm backdrop-blur-sm">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-[#16a34a]" />
-          Verified (full canopy)
+      {/* Legend — compact on mobile */}
+      <div className="absolute left-2 top-2 flex flex-col gap-0.5 rounded-md bg-white/90 px-2 py-1.5 text-[9px] text-gray-500 shadow-sm backdrop-blur-sm sm:gap-1 sm:px-2.5 sm:py-2 sm:text-[10px]">
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#16a34a] sm:h-3 sm:w-3" />
+          <span className="hidden sm:inline">Verified (full canopy)</span>
+          <span className="sm:hidden">Verified</span>
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full border border-dashed border-[#16a34a] bg-[#bbf7d0]/30" />
-          Declared (sapling)
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2.5 w-2.5 rounded-full border border-dashed border-[#16a34a] bg-[#bbf7d0]/30 sm:h-3 sm:w-3" />
+          <span className="hidden sm:inline">Declared (sapling)</span>
+          <span className="sm:hidden">Declared</span>
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-[#d97706]" />
-          Degraded (thinning)
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#d97706] sm:h-3 sm:w-3" />
+          <span className="hidden sm:inline">Degraded (thinning)</span>
+          <span className="sm:hidden">Degraded</span>
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="hidden items-center gap-1 sm:flex">
           <span className="inline-block h-3 w-3 rounded-full bg-[#78350f]" />
           Violated (bare)
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="hidden items-center gap-1 sm:flex">
           <span className="inline-block h-3 w-3 rounded-full border border-dashed border-[#7c3aed]" />
           Unverifiable (ghost)
         </span>

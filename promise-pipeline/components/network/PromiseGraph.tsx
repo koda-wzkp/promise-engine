@@ -37,6 +37,13 @@ export default function PromiseGraph({
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
 
+  // Touch state for pinch-to-zoom and touch-pan
+  const touchState = useRef<{
+    lastTouches: { x: number; y: number }[];
+    lastDist: number;
+    lastCenter: { x: number; y: number };
+  }>({ lastTouches: [], lastDist: 0, lastCenter: { x: 0, y: 0 } });
+
   // Reset viewbox when dimensions change
   useEffect(() => {
     setViewBox({ x: 0, y: 0, w: width, h: height });
@@ -147,7 +154,7 @@ export default function PromiseGraph({
     setViewBox({ x: newX, y: newY, w: newW, h: newH });
   }, [viewBox, width, height]);
 
-  // Pan handlers
+  // Pan handlers (mouse)
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     // Only pan if clicking on the background
@@ -169,6 +176,95 @@ export default function PromiseGraph({
 
   const handleMouseUp = useCallback(() => setIsPanning(false), []);
 
+  // Touch handlers for mobile pan + pinch-to-zoom
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      // Single touch: start pan
+      const touch = e.touches[0];
+      setIsPanning(true);
+      panStart.current = { x: touch.clientX, y: touch.clientY, vx: viewBox.x, vy: viewBox.y };
+    } else if (e.touches.length === 2) {
+      // Two-finger: start pinch-zoom
+      e.preventDefault();
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const dx = t1.clientX - t0.clientX;
+      const dy = t1.clientY - t0.clientY;
+      touchState.current = {
+        lastTouches: [
+          { x: t0.clientX, y: t0.clientY },
+          { x: t1.clientX, y: t1.clientY },
+        ],
+        lastDist: Math.sqrt(dx * dx + dy * dy),
+        lastCenter: {
+          x: (t0.clientX + t1.clientX) / 2,
+          y: (t0.clientY + t1.clientY) / 2,
+        },
+      };
+      setIsPanning(false);
+    }
+  }, [viewBox]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+
+    if (e.touches.length === 1 && isPanning) {
+      // Single-finger pan
+      const touch = e.touches[0];
+      const dx = (touch.clientX - panStart.current.x) * (viewBox.w / rect.width);
+      const dy = (touch.clientY - panStart.current.y) * (viewBox.h / rect.height);
+      setViewBox((v) => ({ ...v, x: panStart.current.vx - dx, y: panStart.current.vy - dy }));
+    } else if (e.touches.length === 2) {
+      e.preventDefault();
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const dx = t1.clientX - t0.clientX;
+      const dy = t1.clientY - t0.clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const center = {
+        x: (t0.clientX + t1.clientX) / 2,
+        y: (t0.clientY + t1.clientY) / 2,
+      };
+
+      const prev = touchState.current;
+      if (prev.lastDist > 0) {
+        const scale = prev.lastDist / dist;
+
+        // Convert center to SVG coords
+        const svgCX = viewBox.x + ((center.x - rect.left) / rect.width) * viewBox.w;
+        const svgCY = viewBox.y + ((center.y - rect.top) / rect.height) * viewBox.h;
+
+        const newW = Math.max(200, Math.min(width * 3, viewBox.w * scale));
+        const newH = Math.max(150, Math.min(height * 3, viewBox.h * scale));
+
+        // Also handle two-finger pan
+        const panDX = (center.x - prev.lastCenter.x) * (viewBox.w / rect.width);
+        const panDY = (center.y - prev.lastCenter.y) * (viewBox.h / rect.height);
+
+        const newX = svgCX - ((center.x - rect.left) / rect.width) * newW - panDX;
+        const newY = svgCY - ((center.y - rect.top) / rect.height) * newH - panDY;
+
+        setViewBox({ x: newX, y: newY, w: newW, h: newH });
+      }
+
+      touchState.current = {
+        lastTouches: [
+          { x: t0.clientX, y: t0.clientY },
+          { x: t1.clientX, y: t1.clientY },
+        ],
+        lastDist: dist,
+        lastCenter: center,
+      };
+    }
+  }, [isPanning, viewBox, width, height]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsPanning(false);
+    touchState.current = { lastTouches: [], lastDist: 0, lastCenter: { x: 0, y: 0 } };
+  }, []);
+
   // Quadratic bezier curve for dependency edges
   function getCurvedPath(sx: number, sy: number, tx: number, ty: number) {
     const midX = (sx + tx) / 2;
@@ -187,26 +283,26 @@ export default function PromiseGraph({
   }
 
   const hasCascade = cascadeResult != null;
+  const isMobile = width < 640;
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50 graph-container" ref={containerRef}>
-      {/* Mobile callout */}
-      <div className="block border-b border-gray-200 bg-gray-100 px-3 py-2 text-[11px] text-gray-500 sm:hidden">
-        For the best simulation experience, view on desktop.
-      </div>
-
       <svg
         ref={svgRef}
         role="img"
         aria-label={`Promise dependency graph showing ${promises.length} promises and their relationships. Click a node to view details or simulate cascades.`}
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
-        className={`w-full ${isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+        className={`w-full touch-none ${isPanning ? "cursor-grabbing" : "cursor-grab"}`}
         style={{ maxHeight: height }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
       >
         <desc>Interactive network graph visualizing promise dependencies and status across domains. Nodes represent promises sized by downstream dependents; edges show dependency relationships.</desc>
         {/* Background rect for pan target */}
@@ -357,8 +453,8 @@ export default function PromiseGraph({
 
             // More pronounced size difference for bottleneck nodes
             const depCount = depCounts.get(node.id) ?? 0;
-            const baseRadius = 10;
-            const maxRadius = 28;
+            const baseRadius = isMobile ? 12 : 10;
+            const maxRadius = isMobile ? 32 : 28;
             const radius = maxDepCount > 0
               ? baseRadius + (depCount / maxDepCount) * (maxRadius - baseRadius)
               : baseRadius;
@@ -477,7 +573,7 @@ export default function PromiseGraph({
                   <foreignObject
                     x={node.x + radius + 8}
                     y={node.y - 30}
-                    width={220}
+                    width={isMobile ? 160 : 220}
                     height={70}
                     className="pointer-events-none"
                   >
@@ -530,19 +626,23 @@ export default function PromiseGraph({
           })}
       </svg>
 
-      {/* Fixed legend — top-right */}
-      <div className="absolute right-2 top-2 flex flex-col gap-1 rounded-md bg-white/90 px-2.5 py-2 text-[10px] text-gray-500 shadow-sm backdrop-blur-sm" role="legend" aria-label="Promise status legend">
+      {/* Fixed legend — top-right, collapsible on mobile */}
+      <div
+        className="absolute right-2 top-2 flex flex-col gap-1 rounded-md bg-white/90 px-2 py-1.5 text-[9px] text-gray-500 shadow-sm backdrop-blur-sm sm:px-2.5 sm:py-2 sm:text-[10px]"
+        role="legend"
+        aria-label="Promise status legend"
+      >
         {(["verified", "declared", "degraded", "violated", "unverifiable"] as const).map((status) => (
           <span key={status} className="flex items-center gap-1.5">
             <span
-              className="inline-block h-2.5 w-2.5 rounded-full"
+              className="inline-block h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
               style={{ background: statusColors[status] }}
               aria-hidden="true"
             />
             <span className="capitalize">{status}</span>
           </span>
         ))}
-        <span className="mt-1 flex items-center gap-1.5 border-t border-gray-200 pt-1">
+        <span className="mt-1 hidden items-center gap-1.5 border-t border-gray-200 pt-1 sm:flex">
           <span className="inline-block h-2.5 w-5 rounded bg-gray-400" />
           <span className="italic">Agent</span>
         </span>
@@ -557,7 +657,7 @@ export default function PromiseGraph({
             w: v.w * 0.8,
             h: v.h * 0.8,
           }))}
-          className="rounded bg-white/90 px-2 py-0.5 text-xs font-bold text-gray-600 shadow-sm backdrop-blur-sm hover:bg-white"
+          className="rounded bg-white/90 px-2.5 py-1 text-sm font-bold text-gray-600 shadow-sm backdrop-blur-sm hover:bg-white sm:px-2 sm:py-0.5 sm:text-xs"
           aria-label="Zoom in"
         >
           +
@@ -569,14 +669,14 @@ export default function PromiseGraph({
             w: Math.min(v.w * 1.25, width * 3),
             h: Math.min(v.h * 1.25, height * 3),
           }))}
-          className="rounded bg-white/90 px-2 py-0.5 text-xs font-bold text-gray-600 shadow-sm backdrop-blur-sm hover:bg-white"
+          className="rounded bg-white/90 px-2.5 py-1 text-sm font-bold text-gray-600 shadow-sm backdrop-blur-sm hover:bg-white sm:px-2 sm:py-0.5 sm:text-xs"
           aria-label="Zoom out"
         >
           −
         </button>
         <button
           onClick={() => setViewBox({ x: 0, y: 0, w: width, h: height })}
-          className="rounded bg-white/90 px-1.5 py-0.5 text-[9px] text-gray-500 shadow-sm backdrop-blur-sm hover:bg-white"
+          className="rounded bg-white/90 px-2 py-1 text-[10px] text-gray-500 shadow-sm backdrop-blur-sm hover:bg-white sm:px-1.5 sm:py-0.5 sm:text-[9px]"
           aria-label="Reset zoom"
         >
           Reset

@@ -45,7 +45,7 @@ export default function ViewSwitcher({ active, onChange }: ViewSwitcherProps) {
       ref={groupRef}
       role="radiogroup"
       aria-label="Visualization style"
-      className="inline-flex items-center gap-0.5 rounded-full border border-gray-200 bg-white/80 p-1 shadow-sm backdrop-blur-sm"
+      className="inline-flex items-center gap-0.5 rounded-full border border-gray-200 bg-white/80 p-0.5 shadow-sm backdrop-blur-sm sm:p-1"
       onKeyDown={handleKeyDown}
     >
       {VIEWS.map((v) => {
@@ -58,13 +58,13 @@ export default function ViewSwitcher({ active, onChange }: ViewSwitcherProps) {
             aria-label={v.label}
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(v.key)}
-            className={`rounded-full p-2 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
+            className={`rounded-full p-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:p-2 ${
               isActive
                 ? "bg-[#1a1a2e] text-white"
                 : "text-gray-400 hover:text-gray-600"
             }`}
           >
-            <v.Icon size={16} strokeWidth={2} />
+            <v.Icon size={14} strokeWidth={2} className="sm:h-4 sm:w-4" />
           </button>
         );
       })}

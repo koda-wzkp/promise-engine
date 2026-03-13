@@ -67,6 +67,7 @@ export default function WatershedView({
 }: PromiseGraphViewProps) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const { cascadeResult } = simulationState;
+  const isMobile = width < 640;
 
   const depCounts = useMemo(() => countDependents(promises), [promises]);
 
@@ -129,7 +130,10 @@ export default function WatershedView({
       byDepth.set(d, group);
     }
 
-    const padding = { top: 60, bottom: 40, left: 60, right: 60 };
+    const mobile = width < 640;
+    const padding = mobile
+      ? { top: 40, bottom: 30, left: 30, right: 30 }
+      : { top: 60, bottom: 40, left: 60, right: 60 };
     const usableW = width - padding.left - padding.right;
     const usableH = height - padding.top - padding.bottom;
 
@@ -151,9 +155,9 @@ export default function WatershedView({
       const jitter = noise(hashSeed(p.id) * 0.1, depth * 0.3) * 20;
       const x = Math.max(padding.left, Math.min(width - padding.right, baseX + jitter));
 
-      // Radius scales with dependent count
-      const baseRadius = 8;
-      const maxRadius = 24;
+      // Radius scales with dependent count (larger on mobile for easier tapping)
+      const baseRadius = mobile ? 10 : 8;
+      const maxRadius = mobile ? 28 : 24;
       const radius = baseRadius + (depCount / maxDepCount) * (maxRadius - baseRadius);
 
       nodes.push({
@@ -231,7 +235,7 @@ export default function WatershedView({
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="w-full"
+        className="w-full touch-none"
         style={{ maxHeight: height }}
         role="img"
         aria-label={`Watershed visualization showing ${promises.length} promises as a river system. Healthy flow is green, failure cascades are red.`}
@@ -467,7 +471,7 @@ export default function WatershedView({
                 <foreignObject
                   x={node.x + r + 8}
                   y={node.y - 28}
-                  width={200}
+                  width={isMobile ? 150 : 200}
                   height={60}
                   className="pointer-events-none"
                 >
@@ -485,8 +489,8 @@ export default function WatershedView({
           );
         })}
 
-        {/* Depth labels (left side) */}
-        {Array.from({ length: layout.maxDepth + 1 }, (_, i) => {
+        {/* Depth labels (left side) — hidden on mobile to save space */}
+        {!isMobile && Array.from({ length: layout.maxDepth + 1 }, (_, i) => {
           const y = 60 + (i / layout.maxDepth) * (height - 100);
           return (
             <text
@@ -504,23 +508,26 @@ export default function WatershedView({
         })}
       </svg>
 
-      {/* Legend */}
-      <div className="absolute right-2 top-2 flex flex-col gap-1 rounded-md bg-white/90 px-2.5 py-2 text-[10px] text-gray-500 shadow-sm backdrop-blur-sm">
+      {/* Legend — compact on mobile */}
+      <div className="absolute right-2 top-2 flex flex-col gap-0.5 rounded-md bg-white/90 px-2 py-1.5 text-[9px] text-gray-500 shadow-sm backdrop-blur-sm sm:gap-1 sm:px-2.5 sm:py-2 sm:text-[10px]">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-1 w-4 rounded-full bg-[#059669]" />
-          Healthy flow
+          <span className="inline-block h-1 w-3 rounded-full bg-[#059669] sm:w-4" />
+          <span className="hidden sm:inline">Healthy flow</span>
+          <span className="sm:hidden">Healthy</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-1 w-4 rounded-full bg-[#dc2626]" />
-          Failure cascade
+          <span className="inline-block h-1 w-3 rounded-full bg-[#dc2626] sm:w-4" />
+          <span className="hidden sm:inline">Failure cascade</span>
+          <span className="sm:hidden">Failure</span>
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="hidden items-center gap-1.5 sm:flex">
           <span className="inline-block h-1 w-4 rounded-full border border-dashed border-[#d97706] bg-transparent" />
           Degraded tributary
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-1 w-4 rounded-full bg-[#eab308]" />
-          Cascade path
+          <span className="inline-block h-1 w-3 rounded-full bg-[#eab308] sm:w-4" />
+          <span className="hidden sm:inline">Cascade path</span>
+          <span className="sm:hidden">Cascade</span>
         </span>
       </div>
     </div>

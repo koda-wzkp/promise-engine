@@ -9,6 +9,7 @@ import WatershedView from "./WatershedView";
 import CanopyView from "./CanopyView";
 import StrataView from "./StrataView";
 import { SimulationState } from "./types";
+import { useContainerSize } from "@/lib/utils/useContainerSize";
 
 interface NetworkGraphPanelProps {
   promises: PromiseType[];
@@ -25,13 +26,21 @@ export default function NetworkGraphPanel({
   promises,
   agents,
   domains,
-  width = 900,
-  height = 700,
+  width: propWidth,
+  height: propHeight = 700,
   cascadeResult = null,
   selectedPromise = null,
   onSelectPromise,
 }: NetworkGraphPanelProps) {
   const [view, setView] = useState<GraphView>("watershed");
+  const { ref: containerRef, width: measuredW, height: measuredH } = useContainerSize(
+    propWidth ?? 900,
+    propHeight,
+  );
+
+  // Use measured dimensions (responsive) unless explicit width/height props are given
+  const width = propWidth ?? measuredW;
+  const height = propWidth ? propHeight : measuredH;
 
   const simulationState: SimulationState = useMemo(
     () => ({ cascadeResult, selectedPromise }),
@@ -43,9 +52,9 @@ export default function NetworkGraphPanel({
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       {/* View switcher — top right, overlaid */}
-      <div className="absolute right-3 top-3 z-10">
+      <div className="absolute right-2 top-2 z-10 sm:right-3 sm:top-3">
         <ViewSwitcher active={view} onChange={setView} />
       </div>
 

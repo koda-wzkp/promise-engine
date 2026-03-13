@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     await resend.emails.send({
-      from: "Promise Pipeline <hello@promisepipeline.com>",
+      from: process.env.RESEND_FROM_EMAIL || "Promise Pipeline <onboarding@resend.dev>",
       to: "conor@pleco.dev",
       replyTo: email,
       subject: `New inquiry: ${organization} — ${category}`,

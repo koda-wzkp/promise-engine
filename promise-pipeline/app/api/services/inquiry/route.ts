@@ -1,67 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { Resend } from "resend";
 
-interface InquiryPayload {
-  name?: string;
-  organization?: string;
-  email?: string;
-  category?: string;
-  description?: string;
-  scope?: string;
-  referral?: string;
-}
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const INQUIRIES_FILE = path.join(DATA_DIR, "inquiries.json");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as InquiryPayload;
+    const data = await req.json();
+    const { name, organization, email, category, description, scope, referral } = data;
 
-    // Validate required fields
-    if (!body.name || !body.organization || !body.email || !body.category || !body.description) {
+    if (!name || !organization || !email || !category || !description) {
       return NextResponse.json(
-        { error: "Name, organization, email, category, and description are required." },
-        { status: 400 },
+        { error: "Missing required fields" },
+        { status: 400 }
       );
     }
 
-    if (!body.email.includes("@") || !body.email.includes(".")) {
-      return NextResponse.json({ error: "Valid email required." }, { status: 400 });
-    }
-
-    const inquiry = {
-      ...body,
-      submittedAt: new Date().toISOString(),
-    };
-
-    // Store to local JSON file
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-
-      let existing: unknown[] = [];
-      try {
-        const raw = await fs.readFile(INQUIRIES_FILE, "utf-8");
-        existing = JSON.parse(raw);
-      } catch {
-        // File doesn't exist yet
-      }
-
-      existing.push(inquiry);
-      await fs.writeFile(INQUIRIES_FILE, JSON.stringify(existing, null, 2));
-    } catch (fsErr) {
-      console.error("Failed to write inquiry to disk:", fsErr);
-      // Don't fail the request — log it and continue
-    }
-
-    console.log("New service inquiry:", inquiry);
-
-    return NextResponse.json({
-      success: true,
-      message: `Thanks, ${body.name}. We'll be in touch within 2 business days.`,
+    await resend.emails.send({
+      from: "Promise Pipeline <hello@promisepipeline.com>",
+      to: "conor@pleco.dev",
+      replyTo: email,
+      subject: `New inquiry: ${organization} — ${category}`,
+      html: `
+        <h2>New Promise Pipeline Inquiry</h2>
+        <table style="border-collapse: collapse; width: 100%; max-width: 600px; font-family: sans-serif;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 8px 12px; font-weight: bold; color: #4b5563;">Name</td>
+            <td style="padding: 8px 12px;">${name}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 8px 12px; font-weight: bold; color: #4b5563;">Organization</td>
+            <td style="padding: 8px 12px;">${organization}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 8px 12px; font-weight: bold; color: #4b5563;">Email</td>
+            <td style="padding: 8px 12px;"><a href="mailto:${email}">${email}</a></td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 8px 12px; font-weight: bold; color: #4b5563;">Category</td>
+            <td style="padding: 8px 12px;">${category}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 8px 12px; font-weight: bold; color: #4b5563;">Description</td>
+            <td style="padding: 8px 12px;">${description}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 8px 12px; font-weight: bold; color: #4b5563;">Estimated Scope</td>
+            <td style="padding: 8px 12px;">${scope || "Not specified"}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; font-weight: bold; color: #4b5563;">Referral</td>
+            <td style="padding: 8px 12px;">${referral || "Not specified"}</td>
+          </tr>
+        </table>
+      `,
     });
-  } catch {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Inquiry submission error:", error);
+    return NextResponse.json(
+      { error: "Failed to send inquiry" },
+      { status: 500 }
+    );
   }
 }

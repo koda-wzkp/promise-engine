@@ -10,6 +10,7 @@ import SummaryTab from "@/components/dashboard/SummaryTab";
 import PromiseList from "@/components/promise/PromiseList";
 import InsightsTab from "@/components/dashboard/InsightsTab";
 import TrajectoryTab from "@/components/dashboard/TrajectoryTab";
+import NetworkGraphPanel from "@/components/network/NetworkGraphPanel";
 import InlineServiceCTA from "@/components/cta/InlineServiceCTA";
 
 interface DemoVerticalPageProps {
@@ -18,13 +19,13 @@ interface DemoVerticalPageProps {
   bgColor?: string;
 }
 
-const ALL_TABS = ["Summary", "Trajectory", "Promises", "Insights"] as const;
+const ALL_TABS = ["Summary", "Network", "Trajectory", "Promises", "Insights"] as const;
 type Tab = (typeof ALL_TABS)[number];
 
 export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVerticalPageProps) {
   const TABS: Tab[] = data.trajectories.length > 0
-    ? ["Summary", "Trajectory", "Promises", "Insights"]
-    : ["Summary", "Promises", "Insights"];
+    ? ["Summary", "Network", "Trajectory", "Promises", "Insights"]
+    : ["Summary", "Network", "Promises", "Insights"];
   const [activeTab, setActiveTab] = useState<Tab>("Summary");
   const health = useMemo(() => calculateNetworkHealth(data.promises), [data.promises]);
 
@@ -83,6 +84,18 @@ export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVer
 
         <div role="tabpanel" id={`demo-tabpanel-${activeTab.toLowerCase()}`} aria-labelledby={`demo-tab-${activeTab.toLowerCase()}`}>
         {activeTab === "Summary" && <SummaryTab data={data} health={health} />}
+        {activeTab === "Network" && (
+          <div>
+            <NetworkGraphPanel
+              promises={data.promises}
+              agents={data.agents}
+              domains={data.domains}
+            />
+            <p className="mt-2 text-xs text-gray-400">
+              Click any promise node to view details. Use the view switcher (top-right) to explore Watershed, Canopy, or Strata visualizations.
+            </p>
+          </div>
+        )}
         {activeTab === "Trajectory" && <TrajectoryTab trajectories={data.trajectories} />}
         {activeTab === "Promises" && (
           <PromiseList promises={data.promises} agents={data.agents} domains={data.domains} />

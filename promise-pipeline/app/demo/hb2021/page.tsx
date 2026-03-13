@@ -21,6 +21,7 @@ import InsightsTab from "@/components/dashboard/InsightsTab";
 import AboutTab from "@/components/dashboard/AboutTab";
 import PromiseList from "@/components/promise/PromiseList";
 import PromiseGraph from "@/components/network/PromiseGraph";
+import NetworkGraphPanel from "@/components/network/NetworkGraphPanel";
 import WhatIfPanel from "@/components/simulation/WhatIfPanel";
 import CascadeResults from "@/components/simulation/CascadeResults";
 import PromiseDetailPanel from "@/components/promise/PromiseDetailPanel";
@@ -270,9 +271,10 @@ export default function HB2021Dashboard() {
           {activeTab === "Network" && (
             <div className="grid gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <PromiseGraph
+                <NetworkGraphPanel
                   promises={displayPromises}
                   agents={HB2021_AGENTS}
+                  domains={HB2021_DOMAINS}
                   cascadeResult={sim.cascadeResult}
                   selectedPromise={sim.selectedPromise}
                   onSelectPromise={(id) => {
@@ -281,7 +283,7 @@ export default function HB2021Dashboard() {
                   }}
                 />
                 <p className="mt-2 text-xs text-gray-400">
-                  Click any promise node to view details. Scroll to zoom, drag to pan. Node size = downstream dependents.
+                  Click any promise node to view details. Use the view switcher (top-right) to explore Watershed, Canopy, or Strata visualizations.
                 </p>
               </div>
               <div className="space-y-4">

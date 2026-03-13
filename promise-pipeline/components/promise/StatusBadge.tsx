@@ -3,12 +3,14 @@ import { statusColors, statusBgColors, statusLabels } from "@/lib/utils/colors";
 
 interface StatusBadgeProps {
   status: PromiseStatus;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   simulated?: boolean;
+  labels?: Record<string, string>;
 }
 
-export default function StatusBadge({ status, size = "md", simulated }: StatusBadgeProps) {
-  const sizeClasses = size === "sm" ? "px-1.5 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs";
+export default function StatusBadge({ status, size = "md", simulated, labels }: StatusBadgeProps) {
+  const sizeClasses = size === "sm" ? "px-1.5 py-0.5 text-[10px]" : size === "lg" ? "px-3 py-1.5 text-sm" : "px-2.5 py-1 text-xs";
+  const label = labels?.[status] ?? statusLabels[status];
 
   return (
     <span
@@ -24,7 +26,7 @@ export default function StatusBadge({ status, size = "md", simulated }: StatusBa
         style={{ backgroundColor: statusColors[status] }}
         aria-hidden="true"
       />
-      {statusLabels[status]}
+      {label}
       {simulated && <span className="text-[10px] text-yellow-600">(sim)</span>}
     </span>
   );

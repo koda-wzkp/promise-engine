@@ -71,7 +71,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="mx-auto max-w-4xl px-4 py-20 text-center" aria-labelledby="hero-heading">
         <p className="mb-4 text-sm font-medium uppercase tracking-widest text-gray-400">
-          A trust primitive for commitment networks
+          A trust primitive for accountability
         </p>
         <h1 id="hero-heading" className="font-serif text-5xl font-bold leading-tight text-gray-900 md:text-6xl">
           See what happens when

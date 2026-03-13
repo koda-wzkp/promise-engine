@@ -21,6 +21,7 @@ import InsightsTab from "@/components/dashboard/InsightsTab";
 import AboutTab from "@/components/dashboard/AboutTab";
 import PromiseList from "@/components/promise/PromiseList";
 import PromiseGraph from "@/components/network/PromiseGraph";
+import NetworkGraphPanel from "@/components/network/NetworkGraphPanel";
 import WhatIfPanel from "@/components/simulation/WhatIfPanel";
 import CascadeResults from "@/components/simulation/CascadeResults";
 import PromiseDetailPanel from "@/components/promise/PromiseDetailPanel";
@@ -258,9 +259,10 @@ export default function ACADashboard() {
           {activeTab === "Network" && (
             <div className="grid gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <PromiseGraph
+                <NetworkGraphPanel
                   promises={displayPromises}
                   agents={ACA_AGENTS}
+                  domains={ACA_DOMAINS}
                   width={900}
                   height={700}
                   cascadeResult={sim.cascadeResult}
@@ -271,8 +273,8 @@ export default function ACADashboard() {
                   }}
                 />
                 <p className="mt-2 text-xs text-gray-400">
-                  Click any promise node to view details. Scroll to zoom, drag to pan.
-                  Diamond nodes (◆) are legal modifier nodes. Node size = downstream dependents.
+                  Click any promise node to view details. Use the view switcher (top-right) to explore Watershed, Canopy, or Strata visualizations.
+                  Diamond nodes (◆) in the default graph are legal modifier nodes.
                 </p>
               </div>
               <div className="space-y-4">

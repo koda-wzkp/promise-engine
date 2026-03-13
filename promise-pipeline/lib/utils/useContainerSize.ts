@@ -15,8 +15,8 @@ interface ContainerSize {
 export function useContainerSize(
   defaultWidth = 900,
   defaultHeight = 700,
-): { ref: React.RefObject<HTMLDivElement | null>; width: number; height: number } {
-  const ref = useRef<HTMLDivElement | null>(null);
+): { ref: React.RefObject<HTMLDivElement>; width: number; height: number } {
+  const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<ContainerSize>({
     width: defaultWidth,
     height: defaultHeight,

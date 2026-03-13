@@ -1,125 +1,385 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import PromiseCreator from "@/components/personal/PromiseCreator";
-import PromiseTimeline from "@/components/personal/PromiseTimeline";
-import ReliabilityScore from "@/components/personal/ReliabilityScore";
-import DomainBreakdown from "@/components/personal/DomainBreakdown";
-import { PersonalPromise, PersonalStats } from "@/lib/types/personal";
+import PromiseForm from "@/components/network/PromiseForm";
+import PromiseCard from "@/components/network/PromiseCard";
+import NetworkHealth from "@/components/network/NetworkHealth";
+import DataExportImport from "@/components/network/DataExportImport";
+import { usePromiseNetwork } from "@/lib/hooks/usePromiseNetwork";
 import { PromiseStatus } from "@/lib/types/promise";
-import { loadFromStorage, saveToStorage } from "@/lib/utils/storage";
+import { NetworkPromise, StatusChangeContext } from "@/lib/types/network";
 
-const STORAGE_KEY = "promise-pipeline-personal";
+const PERSONAL_NETWORK_ID = "net-personal-default";
 
-function computeStats(promises: PersonalPromise[]): PersonalStats {
-  const completed = promises.filter((p) => p.status === "verified" || p.status === "violated");
-  const kept = completed.filter((p) => p.status === "verified");
-  const active = promises.filter((p) => p.status === "declared" || p.status === "degraded");
-
-  const byDomain: PersonalStats["byDomain"] = {};
-  for (const p of promises) {
-    if (!byDomain[p.domain]) {
-      byDomain[p.domain] = { total: 0, kept: 0, broken: 0, active: 0, keptRate: 0 };
-    }
-    byDomain[p.domain].total++;
-    if (p.status === "verified") byDomain[p.domain].kept++;
-    if (p.status === "violated") byDomain[p.domain].broken++;
-    if (p.status === "declared" || p.status === "degraded") byDomain[p.domain].active++;
-  }
-  for (const d of Object.values(byDomain)) {
-    const domainCompleted = d.kept + d.broken;
-    d.keptRate = domainCompleted > 0 ? (d.kept / domainCompleted) * 100 : 0;
-  }
-
-  return {
-    totalPromises: promises.length,
-    activePromises: active.length,
-    keptRate: completed.length > 0 ? (kept.length / completed.length) * 100 : 0,
-    averageDaysToComplete: 0,
-    byDomain,
-    trend: [],
-  };
-}
+type TabId = "active" | "timeline" | "insights" | "settings";
 
 export default function PersonalPage() {
-  const [promises, setPromises] = useState<PersonalPromise[]>([]);
+  const {
+    network,
+    isLoaded,
+    createPromise,
+    updateStatus,
+    renegotiatePromise,
+    deletePromise,
+    networkHealth,
+    agentStats,
+    domainHealth,
+    updateConfig,
+    exportNetwork,
+    importNetwork,
+  } = usePromiseNetwork(PERSONAL_NETWORK_ID, "personal");
 
-  useEffect(() => {
-    setPromises(loadFromStorage<PersonalPromise[]>(STORAGE_KEY, []));
-  }, []);
+  const [activeTab, setActiveTab] = useState<TabId>("active");
+  const [showForm, setShowForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<PromiseStatus | "all">("all");
+  const [domainFilter, setDomainFilter] = useState<string>("all");
 
-  const persist = useCallback((updated: PersonalPromise[]) => {
-    setPromises(updated);
-    saveToStorage(STORAGE_KEY, updated);
-  }, []);
+  const myAgent = network.agents[0];
+  const myStats = myAgent ? agentStats.get(myAgent.id) : null;
 
-  const handleAdd = useCallback(
-    (p: PersonalPromise) => persist([p, ...promises]),
-    [promises, persist]
-  );
+  // Filtered promises
+  const filteredPromises = useMemo(() => {
+    let result = network.promises;
+    if (statusFilter !== "all") {
+      result = result.filter((p) => p.status === statusFilter);
+    }
+    if (domainFilter !== "all") {
+      result = result.filter((p) => p.domain === domainFilter);
+    }
+    // Sort: active first, then by creation date
+    return [...result].sort((a, b) => {
+      const activeStatuses = ["declared", "degraded"];
+      const aActive = activeStatuses.includes(a.status) ? 0 : 1;
+      const bActive = activeStatuses.includes(b.status) ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+  }, [network.promises, statusFilter, domainFilter]);
 
-  const handleUpdateStatus = useCallback(
-    (id: string, status: PromiseStatus) => {
-      persist(
-        promises.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                status,
-                completedAt:
-                  status === "verified" || status === "violated"
-                    ? new Date().toISOString()
-                    : p.completedAt,
-              }
-            : p
-        )
-      );
-    },
-    [promises, persist]
-  );
+  const activeCount = network.promises.filter((p) => p.status === "declared" || p.status === "degraded").length;
 
-  const handleReflect = useCallback(
-    (id: string, reflection: string) => {
-      persist(promises.map((p) => (p.id === id ? { ...p, reflection } : p)));
-    },
-    [promises, persist]
-  );
+  // Compute personal stats from network data
+  const personalStats = useMemo(() => {
+    const promises = network.promises;
+    const completed = promises.filter((p) => p.status === "verified" || p.status === "violated");
+    const kept = completed.filter((p) => p.status === "verified");
+    const keptRate = completed.length > 0 ? (kept.length / completed.length) * 100 : 0;
 
-  const stats = useMemo(() => computeStats(promises), [promises]);
+    const byDomain: Record<string, { total: number; kept: number; broken: number; active: number }> = {};
+    for (const p of promises) {
+      const domainName = network.domains.find((d) => d.id === p.domain)?.name ?? p.domain;
+      if (!byDomain[domainName]) byDomain[domainName] = { total: 0, kept: 0, broken: 0, active: 0 };
+      byDomain[domainName].total++;
+      if (p.status === "verified") byDomain[domainName].kept++;
+      if (p.status === "violated") byDomain[domainName].broken++;
+      if (p.status === "declared" || p.status === "degraded") byDomain[domainName].active++;
+    }
+
+    return { total: promises.length, active: activeCount, keptRate, byDomain, streak: myStats?.currentStreak ?? 0 };
+  }, [network.promises, network.domains, activeCount, myStats]);
+
+  const handleStatusChange = useCallback((id: string) => (newStatus: PromiseStatus, context?: StatusChangeContext) => {
+    updateStatus(id, newStatus, context);
+  }, [updateStatus]);
+
+  const handleRenegotiate = useCallback((id: string) => (newBody: string, newTarget?: string) => {
+    renegotiatePromise(id, newBody, newTarget);
+  }, [renegotiatePromise]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-[#faf9f6]">
+        <Navbar />
+        <main id="main-content" className="mx-auto max-w-3xl px-4 py-6">
+          <p className="text-center text-gray-400 py-12">Loading...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "active", label: `Active (${activeCount})` },
+    { id: "timeline", label: "All Promises" },
+    { id: "insights", label: "Insights" },
+    { id: "settings", label: "Settings" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
       <main id="main-content" className="mx-auto max-w-3xl px-4 py-6">
+        {/* Header */}
         <div className="mb-6">
-          <h1 className="font-serif text-3xl font-bold text-gray-900">Personal Promises</h1>
+          <h1 className="font-serif text-3xl font-bold text-gray-900">{network.name}</h1>
           <p className="mt-1 text-sm text-gray-500">
             Track your commitments. Build reliability over time.
           </p>
         </div>
 
+        {/* Stats row */}
         <div className="grid gap-4 md:grid-cols-3 mb-6">
-          <div className="md:col-span-2">
-            <ReliabilityScore stats={stats} />
+          <div className="md:col-span-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Reliability Score
+            </h3>
+            <div className="flex items-end gap-3">
+              <span className="font-serif text-4xl font-bold text-gray-900">
+                {personalStats.total > 0 ? `${Math.round(personalStats.keptRate)}%` : "\u2014"}
+              </span>
+              <span className="mb-1 text-lg font-medium text-gray-400">{getGrade(personalStats.keptRate)}</span>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-lg font-semibold text-gray-900">{personalStats.total}</p>
+                <p className="text-xs text-gray-500">Total</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-green-700">{personalStats.active}</p>
+                <p className="text-xs text-gray-500">Active</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-gray-900">{personalStats.streak > 0 ? personalStats.streak : "\u2014"}</p>
+                <p className="text-xs text-gray-500">Streak</p>
+              </div>
+            </div>
           </div>
-          <DomainBreakdown stats={stats} />
+
+          {/* Domain breakdown */}
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              By Domain
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(personalStats.byDomain).sort((a, b) => b[1].total - a[1].total).map(([domain, data]) => (
+                <div key={domain}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">{domain}</span>
+                    <span className="text-xs text-gray-500">
+                      {data.kept}/{data.total} kept
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className="h-full rounded-full bg-green-600 transition-all"
+                      style={{ width: `${data.total > 0 ? (data.kept / data.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {Object.keys(personalStats.byDomain).length === 0 && (
+                <p className="text-xs text-gray-400">No promises yet</p>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="mb-4">
-          <PromiseCreator onAdd={handleAdd} />
+        {/* Tab navigation */}
+        <div className="mb-4 border-b border-gray-200" role="tablist" aria-label="Personal promise views">
+          <div className="flex gap-4">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`tabpanel-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? "border-gray-900 text-gray-900"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <PromiseTimeline
-          promises={promises}
-          onUpdateStatus={handleUpdateStatus}
-          onReflect={handleReflect}
-        />
+        {/* Tab content */}
+        <div role="tabpanel" id={`tabpanel-${activeTab}`}>
+          {(activeTab === "active" || activeTab === "timeline") && (
+            <div>
+              {/* Create button / form */}
+              {!showForm ? (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="mb-4 w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  + Make a new promise
+                </button>
+              ) : (
+                <div className="mb-4">
+                  <PromiseForm
+                    mode="create"
+                    complexity="simple"
+                    agents={network.agents}
+                    domains={network.domains}
+                    existingPromises={network.promises}
+                    config={network.config}
+                    onSubmit={(input) => {
+                      createPromise(input);
+                      setShowForm(false);
+                    }}
+                    onCancel={() => setShowForm(false)}
+                    initialValues={{
+                      promiser: myAgent?.id,
+                      promisee: "self",
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Filters */}
+              {activeTab === "timeline" && network.promises.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as PromiseStatus | "all")}
+                    className="rounded border border-gray-200 px-2 py-1 text-xs"
+                    aria-label="Filter by status"
+                  >
+                    <option value="all">All statuses</option>
+                    {Object.entries(network.config.statusLabels).map(([status, label]) => (
+                      <option key={status} value={status}>{label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={domainFilter}
+                    onChange={(e) => setDomainFilter(e.target.value)}
+                    className="rounded border border-gray-200 px-2 py-1 text-xs"
+                    aria-label="Filter by domain"
+                  >
+                    <option value="all">All domains</option>
+                    {network.domains.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Promise list */}
+              <div className="space-y-3" aria-live="polite">
+                {(activeTab === "active"
+                  ? filteredPromises.filter((p) => p.status === "declared" || p.status === "degraded")
+                  : filteredPromises
+                ).map((p) => (
+                  <PromiseCard
+                    key={p.id}
+                    promise={p}
+                    agents={network.agents}
+                    domains={network.domains}
+                    config={network.config}
+                    variant="timeline"
+                    onStatusChange={handleStatusChange(p.id)}
+                    onRenegotiate={handleRenegotiate(p.id)}
+                    onDelete={() => deletePromise(p.id)}
+                    showDependencies
+                    showActions
+                  />
+                ))}
+                {filteredPromises.length === 0 && (
+                  <p className="py-8 text-center text-sm text-gray-400">
+                    {activeTab === "active" ? "No active promises. Make your first commitment above." : "No promises match your filters."}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "insights" && (
+            <div className="space-y-4">
+              <NetworkHealth
+                health={networkHealth}
+                config={network.config}
+                variant="full"
+              />
+
+              {/* Trend placeholder */}
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Trends</h3>
+                <p className="text-xs text-gray-500">
+                  Trend analysis will appear here as you build a history of promises.
+                </p>
+                {myStats && (
+                  <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {Math.round(myStats.keptRate * 100)}%
+                      </p>
+                      <p className="text-xs text-gray-500">Kept Rate</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900">{myStats.currentStreak}</p>
+                      <p className="text-xs text-gray-500">Streak</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold capitalize text-gray-900">{myStats.trend}</p>
+                      <p className="text-xs text-gray-500">Trend</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "settings" && (
+            <div className="space-y-4">
+              {/* Domain management */}
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Domains</h3>
+                <div className="space-y-2">
+                  {network.domains.map((d) => (
+                    <div key={d.id} className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: d.color }} />
+                      <span className="text-sm text-gray-700">{d.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Data contribution toggle */}
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Help improve Promise Pipeline</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Share anonymized promise patterns from this network. Your promise content is never shared — only the structure (domain, timing, outcome, dependencies). You can withdraw at any time.
+                </p>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={network.config.dataContribution.enabled}
+                    onChange={(e) => updateConfig({
+                      dataContribution: { ...network.config.dataContribution, enabled: e.target.checked },
+                    })}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm text-gray-700">Enable anonymous data sharing</span>
+                </label>
+              </div>
+
+              {/* Export/Import */}
+              <DataExportImport
+                networkName={network.name}
+                onExport={exportNetwork}
+                onImport={importNetwork}
+              />
+            </div>
+          )}
+        </div>
       </main>
 
       <Footer />
     </div>
   );
+}
+
+function getGrade(rate: number): string {
+  if (rate >= 90) return "A";
+  if (rate >= 80) return "B";
+  if (rate >= 70) return "C";
+  if (rate >= 60) return "D";
+  return "F";
 }

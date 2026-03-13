@@ -54,6 +54,7 @@ export default function StrataView({
 }: PromiseGraphViewProps) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const { cascadeResult } = simulationState;
+  const isMobile = width < 640;
 
   const depCounts = useMemo(() => countDependents(promises), [promises]);
 
@@ -70,7 +71,10 @@ export default function StrataView({
   // Layout: horizontal layers by domain, promise blocks embedded within
   const { layers, blocks } = useMemo(() => {
     const domainNames = Array.from(new Set(promises.map((p) => p.domain)));
-    const padding = { top: 30, bottom: 20, left: 30, right: 30 };
+    const mobile = width < 640;
+    const padding = mobile
+      ? { top: 20, bottom: 15, left: 15, right: 15 }
+      : { top: 30, bottom: 20, left: 30, right: 30 };
     const usableH = height - padding.top - padding.bottom;
     const layerH = usableH / Math.max(domainNames.length, 1);
     const usableW = width - padding.left - padding.right;
@@ -96,13 +100,14 @@ export default function StrataView({
       });
 
       // Lay out blocks within the layer
+      const gap = mobile ? 3 : 6;
       const blockW = Math.min(
-        120,
-        (usableW - (domainPromises.length - 1) * 6) / Math.max(domainPromises.length, 1),
+        mobile ? 80 : 120,
+        (usableW - (domainPromises.length - 1) * gap) / Math.max(domainPromises.length, 1),
       );
-      const blockH = layerH * 0.55;
+      const blockH = layerH * (mobile ? 0.6 : 0.55);
       const totalBlocksW =
-        domainPromises.length * blockW + (domainPromises.length - 1) * 6;
+        domainPromises.length * blockW + (domainPromises.length - 1) * gap;
       const startX = padding.left + (usableW - totalBlocksW) / 2;
 
       for (let pi = 0; pi < domainPromises.length; pi++) {
@@ -110,7 +115,7 @@ export default function StrataView({
         const depCount = depCounts.get(p.id) ?? 0;
         blockList.push({
           id: p.id,
-          x: startX + pi * (blockW + 6),
+          x: startX + pi * (blockW + gap),
           y: layerY + (layerH - blockH) / 2,
           w: blockW,
           h: blockH,
@@ -171,7 +176,7 @@ export default function StrataView({
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="w-full"
+        className="w-full touch-none"
         style={{ maxHeight: height }}
         role="img"
         aria-label={`Geological strata visualization showing ${promises.length} promises in ${layers.length} domain layers.`}
@@ -232,11 +237,11 @@ export default function StrataView({
 
               {/* Domain label */}
               <text
-                x={8}
-                y={layer.y + 14}
+                x={isMobile ? 4 : 8}
+                y={layer.y + (isMobile ? 10 : 14)}
                 className="pointer-events-none select-none font-sans font-semibold uppercase"
                 fill={layer.color}
-                fontSize={9}
+                fontSize={isMobile ? 7 : 9}
                 letterSpacing="0.06em"
                 opacity={0.5}
               >
@@ -445,9 +450,9 @@ export default function StrataView({
               {/* Hover tooltip */}
               {isHovered && (
                 <foreignObject
-                  x={Math.min(block.x, width - 220)}
+                  x={Math.min(block.x, width - (isMobile ? 170 : 220))}
                   y={block.y - 55}
-                  width={210}
+                  width={isMobile ? 160 : 210}
                   height={50}
                   className="pointer-events-none"
                 >
@@ -466,23 +471,24 @@ export default function StrataView({
         })}
       </svg>
 
-      {/* Legend */}
-      <div className="absolute right-2 top-2 flex flex-col gap-1 rounded-md bg-white/90 px-2.5 py-2 text-[10px] text-gray-500 shadow-sm backdrop-blur-sm">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-4 rounded bg-[#1a5f4a]" />
-          Solid block
+      {/* Legend — compact on mobile */}
+      <div className="absolute right-2 top-2 flex flex-col gap-0.5 rounded-md bg-white/90 px-2 py-1.5 text-[9px] text-gray-500 shadow-sm backdrop-blur-sm sm:gap-1 sm:px-2.5 sm:py-2 sm:text-[10px]">
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2 w-3 rounded bg-[#1a5f4a] sm:h-2.5 sm:w-4" />
+          <span className="hidden sm:inline">Solid block</span>
+          <span className="sm:hidden">Solid</span>
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-4 rounded border border-dashed border-[#5b21b6]" />
-          Unverifiable
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2 w-3 rounded border border-dashed border-[#5b21b6] sm:h-2.5 sm:w-4" />
+          <span>Unverifiable</span>
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="hidden items-center gap-1 sm:flex">
           <span className="inline-block h-2.5 w-4 rounded bg-[#991b1b]" style={{
             backgroundImage: "repeating-linear-gradient(30deg, transparent, transparent 2px, rgba(255,255,255,0.3) 2px, rgba(255,255,255,0.3) 3px)"
           }} />
           Cracked (violated)
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="hidden items-center gap-1 sm:flex">
           <span className="inline-block h-0 w-4 border-t border-[#991b1b]" />
           Fracture line
         </span>

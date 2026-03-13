@@ -92,7 +92,7 @@ export default function DemoVerticalPage({ data, accentColor, bgColor }: DemoVer
               domains={data.domains}
             />
             <p className="mt-2 text-xs text-gray-400">
-              Click any promise node to view details. Use the view switcher (top-right) to explore Watershed, Canopy, or Strata visualizations.
+              Tap any promise node to view details. Use the view switcher (top-right) to explore Watershed, Canopy, or Strata visualizations. Pinch to zoom, drag to pan.
             </p>
           </div>
         )}

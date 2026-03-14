@@ -20,8 +20,8 @@ class PromiseResult(Enum):
     KEPT = "kept"
     BROKEN = "broken"
     PENDING = "pending"
-    BLOCKED = "blocked"           # Couldn't even attempt (validation failed)
-    RENEGOTIATED = "renegotiated" # Terms changed before due
+    BLOCKED = "blocked"  # Couldn't even attempt (validation failed)
+    RENEGOTIATED = "renegotiated"  # Terms changed before due
 
 
 class SignalStrength(Enum):

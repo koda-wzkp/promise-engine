@@ -10,7 +10,6 @@ Every training signal originates here.
 
 from typing import Optional, List, Dict
 from datetime import datetime, timedelta
-from uuid import uuid4
 
 from app.database import get_db
 from app.promise_engine.core.models import (
@@ -324,7 +323,9 @@ class PromiseEngine:
                         pending_count=cached.pending_count,
                         trust_capital=cached.trust_capital or 0.0,
                         recovery_rate=cached.recovery_rate or 0.0,
-                        avg_recovery_time=timedelta(hours=cached.avg_recovery_hours) if cached.avg_recovery_hours else None,
+                        avg_recovery_time=(
+                            timedelta(hours=cached.avg_recovery_hours) if cached.avg_recovery_hours else None
+                        ),
                         trend_30d=cached.trend_30d,
                         trend_90d=cached.trend_90d,
                         vouching_strength=cached.vouching_strength or 0.0,

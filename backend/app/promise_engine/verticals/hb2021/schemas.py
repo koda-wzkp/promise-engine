@@ -289,7 +289,10 @@ COMMUNITY_BENEFITS = PromiseSchema(
                 "reason": "Advisory group not convened — statutory requirement unmet"
             },
         ],
-        "note": "Deeper verification of community benefit outcomes requires qualitative assessment beyond automatic verification"
+        "note": (
+            "Deeper verification of community benefit outcomes requires "
+            "qualitative assessment beyond automatic verification"
+        )
     },
     training_eligible=True,
     domain_tags=["climate", "energy", "equity", "environmental_justice", "community"]
@@ -527,7 +530,10 @@ FOSSIL_FUEL_BAN = PromiseSchema(
                 "reason": "New gas capacity permitted in violation of §16 ban"
             },
         ],
-        "note": "Coal-to-gas conversions (e.g. PacifiCorp) may not technically violate the siting ban but undermine emissions targets"
+        "note": (
+            "Coal-to-gas conversions (e.g. PacifiCorp) may not technically "
+            "violate the siting ban but undermine emissions targets"
+        )
     },
     training_eligible=True,
     domain_tags=["climate", "energy", "fossil_fuel", "prohibition", "siting"]

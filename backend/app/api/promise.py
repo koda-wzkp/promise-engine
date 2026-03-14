@@ -8,7 +8,6 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from typing import Optional
 
-from app.database import init_database, get_db
 from app.promise_engine.core.engine import PromiseEngine
 from app.promise_engine.core.models import (
     Agent,
@@ -17,7 +16,6 @@ from app.promise_engine.core.models import (
     PromiseResult,
     SignalStrength,
 )
-from app.config import Config
 
 # Create blueprint
 promise_bp = Blueprint("promise", __name__, url_prefix="/api/v1/promise")
@@ -175,8 +173,10 @@ def log_promise():
         data = request.get_json()
 
         # Validate required fields
-        required = ["vertical", "schema_id", "promiser", "promisee",
-                   "input_context", "result"]
+        required = [
+            "vertical", "schema_id", "promiser", "promisee",
+            "input_context", "result",
+        ]
         missing = [f for f in required if f not in data]
         if missing:
             return jsonify({
@@ -617,7 +617,7 @@ def query_events():
             except ValueError:
                 return jsonify({"success": False, "error": "Invalid 'since' format"}), 400
 
-        from app.database import get_db
+        from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
 
         with get_db() as db:
@@ -687,7 +687,7 @@ def log_recovery():
                 "error": f"Invalid outcome. Must be one of: {', '.join(sorted(valid_outcomes))}"
             }), 400
 
-        from app.database import get_db
+        from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
 
         with get_db() as db:
@@ -749,7 +749,7 @@ def export_training_data():
         limit = min(int(request.args.get("limit", 1000)), 10000)
         mark = request.args.get("mark", "true").lower() == "true"
 
-        from app.database import get_db
+        from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
 
         with get_db() as db:
@@ -801,7 +801,7 @@ def export_stats():
     try:
         vertical = request.args.get("vertical")
 
-        from app.database import get_db
+        from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
 
         with get_db() as db:
@@ -866,7 +866,7 @@ def create_vouch():
                 "error": "Strength must be a number between 0.0 and 1.0"
             }), 400
 
-        from app.database import get_db
+        from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
 
         with get_db() as db:
@@ -921,7 +921,7 @@ def revoke_vouch():
                 "error": f"Invalid agent format: {str(e)}"
             }), 400
 
-        from app.database import get_db
+        from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
 
         with get_db() as db:
@@ -956,7 +956,7 @@ def get_vouching_network(agent_type: str, agent_id: str):
 
         direction = request.args.get("direction")
 
-        from app.database import get_db
+        from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
 
         with get_db() as db:

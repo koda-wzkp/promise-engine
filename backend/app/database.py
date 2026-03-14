@@ -32,7 +32,7 @@ def init_database(database_url: str, echo: bool = False) -> None:
     """
     global _SessionLocal, _engine
 
-    logger.info(f"Initializing database connection...")
+    logger.info("Initializing database connection...")
 
     # Create engine with connection pooling
     _engine = create_engine(

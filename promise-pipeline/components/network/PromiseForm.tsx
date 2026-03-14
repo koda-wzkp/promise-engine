@@ -8,6 +8,8 @@ import {
   NetworkConfig,
   PromiseCreateInput,
 } from "@/lib/types/network";
+import { PromiseQualityEvaluation } from "@/lib/types/quality";
+import PromiseQualityGate from "@/components/personal/PromiseQualityGate";
 
 interface PromiseFormProps {
   mode: "create" | "edit" | "renegotiate";
@@ -44,6 +46,9 @@ export default function PromiseForm({
   const [recurring, setRecurring] = useState<"" | "daily" | "weekly" | "biweekly" | "monthly">(
     initialValues?.recurring?.frequency ?? ""
   );
+  const [qualityEvaluation, setQualityEvaluation] = useState<PromiseQualityEvaluation | undefined>(
+    undefined
+  );
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +65,7 @@ export default function PromiseForm({
       estimatedHours: estimatedHours ? parseFloat(estimatedHours) : undefined,
       tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
       recurring: recurring ? { frequency: recurring } : undefined,
+      quality_evaluation: qualityEvaluation,
     };
 
     onSubmit(input);
@@ -69,7 +75,8 @@ export default function PromiseForm({
     setEstimatedHours("");
     setTags("");
     setDependsOn([]);
-  }, [body, promiser, promisee, domain, target, priority, estimatedHours, tags, dependsOn, recurring, complexity, onSubmit]);
+    setQualityEvaluation(undefined);
+  }, [body, promiser, promisee, domain, target, priority, estimatedHours, tags, dependsOn, recurring, complexity, onSubmit, qualityEvaluation]);
 
   const toggleDependency = useCallback((id: string) => {
     setDependsOn((prev) =>
@@ -241,6 +248,16 @@ export default function PromiseForm({
               <option value="monthly">Monthly</option>
             </select>
           </div>
+        )}
+
+        {/* Quality Gate (personal/simple mode only) */}
+        {complexity === "simple" && mode === "create" && (
+          <PromiseQualityGate
+            promiseText={body}
+            domain={domains.find((d) => d.id === domain)?.name}
+            onTextChange={(newText) => setBody(newText)}
+            onEvaluationComplete={(evaluation) => setQualityEvaluation(evaluation)}
+          />
         )}
 
         {/* Dependencies */}

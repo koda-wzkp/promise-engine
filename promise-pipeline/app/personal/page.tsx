@@ -9,7 +9,9 @@ import NetworkHealth from "@/components/network/NetworkHealth";
 import DataExportImport from "@/components/network/DataExportImport";
 import { usePromiseNetwork } from "@/lib/hooks/usePromiseNetwork";
 import { PromiseStatus } from "@/lib/types/promise";
-import { NetworkPromise, StatusChangeContext } from "@/lib/types/network";
+import { NetworkPromise, StatusChangeContext, PromiseCreateInput } from "@/lib/types/network";
+import TemplatePicker from "@/components/personal/TemplatePicker";
+import { PromiseQualityEvaluation } from "@/lib/types/quality";
 
 const PERSONAL_NETWORK_ID = "net-personal-default";
 
@@ -87,6 +89,20 @@ export default function PersonalPage() {
   const handleRenegotiate = useCallback((id: string) => (newBody: string, newTarget?: string) => {
     renegotiatePromise(id, newBody, newTarget);
   }, [renegotiatePromise]);
+
+  const handleAddTemplates = useCallback((templates: Array<{ body: string; domain: string; quality_evaluation: PromiseQualityEvaluation }>) => {
+    for (const t of templates) {
+      const domainObj = network.domains.find((d) => d.name.toLowerCase() === t.domain.toLowerCase());
+      const input: PromiseCreateInput = {
+        body: t.body,
+        promiser: myAgent?.id ?? "",
+        promisee: "self",
+        domain: domainObj?.id ?? network.domains[0]?.id ?? "",
+        quality_evaluation: t.quality_evaluation,
+      };
+      createPromise(input);
+    }
+  }, [createPromise, network.domains, myAgent]);
 
   if (!isLoaded) {
     return (
@@ -203,6 +219,9 @@ export default function PersonalPage() {
         <div role="tabpanel" id={`tabpanel-${activeTab}`}>
           {(activeTab === "active" || activeTab === "timeline") && (
             <div>
+              {/* Template picker */}
+              <TemplatePicker onAddTemplates={handleAddTemplates} />
+
               {/* Create button / form */}
               {!showForm ? (
                 <button

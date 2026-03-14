@@ -1,4 +1,5 @@
 import { PromiseStatus, VerificationMethod, VerificationSource } from "./promise";
+import { PromiseQualityEvaluation } from "./quality";
 
 // ─── THE COMPOSABLE PRIMITIVE ───
 
@@ -98,6 +99,9 @@ export interface NetworkPromise {
     frequency: "daily" | "weekly" | "biweekly" | "monthly";
     nextDue?: string;
   };
+
+  // ─── QUALITY EVALUATION ───
+  quality_evaluation?: PromiseQualityEvaluation;
 
   // ─── TEAM/ORG SCOPE EXTENSIONS ───
   estimatedHours?: number;
@@ -217,6 +221,7 @@ export interface PromiseCreateInput {
   tags?: string[];
   recurring?: { frequency: "daily" | "weekly" | "biweekly" | "monthly" };
   verification?: Partial<VerificationSource>;
+  quality_evaluation?: PromiseQualityEvaluation;
 }
 
 export interface StatusChangeContext {

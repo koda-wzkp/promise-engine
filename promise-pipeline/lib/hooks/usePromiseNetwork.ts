@@ -274,6 +274,7 @@ export function usePromiseNetwork(
       tags: draft.tags,
       estimatedHours: draft.estimatedHours,
       recurring: draft.recurring,
+      quality_evaluation: draft.quality_evaluation,
     };
 
     persist({

@@ -227,6 +227,8 @@ export function usePromiseNetwork(
     setNetwork(updated);
     if (storageRef.current && !initialNetwork) {
       storageRef.current.saveNetwork(updated);
+      // Track data change for backup reminder
+      try { localStorage.setItem("pp-last-data-change", new Date().toISOString()); } catch { /* ignore */ }
     }
   }, [initialNetwork]);
 

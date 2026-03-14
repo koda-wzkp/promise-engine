@@ -1,17 +1,23 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PromiseForm from "@/components/network/PromiseForm";
 import PromiseCard from "@/components/network/PromiseCard";
 import NetworkHealth from "@/components/network/NetworkHealth";
-import DataExportImport from "@/components/network/DataExportImport";
 import { usePromiseNetwork } from "@/lib/hooks/usePromiseNetwork";
 import { PromiseStatus } from "@/lib/types/promise";
 import { NetworkPromise, StatusChangeContext, PromiseCreateInput } from "@/lib/types/network";
 import TemplatePicker from "@/components/personal/TemplatePicker";
+import BackupReminder from "@/components/personal/BackupReminder";
 import { PromiseQualityEvaluation } from "@/lib/types/quality";
+import {
+  downloadPersonalBackup,
+  parseImportFile,
+  applyImport,
+  PersonalDataExport,
+} from "@/lib/personal/backup";
 
 const PERSONAL_NETWORK_ID = "net-personal-default";
 
@@ -29,8 +35,6 @@ export default function PersonalPage() {
     agentStats,
     domainHealth,
     updateConfig,
-    exportNetwork,
-    importNetwork,
   } = usePromiseNetwork(PERSONAL_NETWORK_ID, "personal");
 
   const [activeTab, setActiveTab] = useState<TabId>("active");
@@ -38,6 +42,11 @@ export default function PersonalPage() {
   const [dataCommitmentOpen, setDataCommitmentOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<PromiseStatus | "all">("all");
   const [domainFilter, setDomainFilter] = useState<string>("all");
+
+  // Import flow state
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [importConfirm, setImportConfirm] = useState<{ data: PersonalDataExport; promiseCount: number; exportedAt: string } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const myAgent = network.agents[0];
   const myStats = myAgent ? agentStats.get(myAgent.id) : null;
@@ -105,6 +114,38 @@ export default function PersonalPage() {
     }
   }, [createPromise, network.domains, myAgent]);
 
+  const handleImportFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportError(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = parseImportFile(event.target?.result as string);
+      if (!result.success || !result.data) {
+        setImportError(result.errorMessage ?? "Import failed.");
+        return;
+      }
+      setImportConfirm({
+        data: result.data,
+        promiseCount: result.promiseCount ?? 0,
+        exportedAt: result.exportedAt ?? "",
+      });
+    };
+    reader.readAsText(file);
+
+    // Reset so the same file can be selected again
+    if (importFileRef.current) importFileRef.current.value = "";
+  }, []);
+
+  const handleImportConfirm = useCallback(() => {
+    if (!importConfirm) return;
+    applyImport(importConfirm.data);
+    setImportConfirm(null);
+    // Reload to pick up the restored data
+    window.location.reload();
+  }, [importConfirm]);
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-[#faf9f6]">
@@ -129,6 +170,9 @@ export default function PersonalPage() {
       <Navbar />
 
       <main id="main-content" className="mx-auto max-w-3xl px-4 py-6">
+        {/* Backup reminder banner */}
+        <BackupReminder />
+
         {/* Header */}
         <div className="mb-6">
           <h1 className="font-serif text-3xl font-bold text-gray-900">{network.name}</h1>
@@ -316,7 +360,7 @@ export default function PersonalPage() {
 
         {/* Tab navigation */}
         <div className="mb-4 border-b border-gray-200" role="tablist" aria-label="Personal promise views">
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -333,6 +377,16 @@ export default function PersonalPage() {
                 {tab.label}
               </button>
             ))}
+            <button
+              onClick={downloadPersonalBackup}
+              className="ml-auto mb-1 rounded p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 transition-colors"
+              title="Download backup"
+              aria-label="Download backup"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -513,12 +567,70 @@ export default function PersonalPage() {
                 </label>
               </div>
 
-              {/* Export/Import */}
-              <DataExportImport
-                networkName={network.name}
-                onExport={exportNetwork}
-                onImport={importNetwork}
-              />
+              {/* Your Data — export/import */}
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Your Data</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  Your promises are stored locally in this browser. They are not sent to any server. Export regularly to protect against data loss.
+                </p>
+
+                <button
+                  onClick={downloadPersonalBackup}
+                  className="w-full rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 transition-colors"
+                >
+                  Download my data
+                </button>
+                <p className="mt-1 text-xs text-gray-400">Save a backup of all your promises as a JSON file.</p>
+
+                <button
+                  onClick={() => importFileRef.current?.click()}
+                  className="mt-3 w-full rounded px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 transition-colors"
+                >
+                  Restore from backup
+                </button>
+                <p className="mt-1 text-xs text-gray-400">Import a previously downloaded backup file. This will replace your current data.</p>
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  aria-label="Select backup file to restore"
+                  onChange={handleImportFileSelect}
+                />
+
+                {importError && (
+                  <div className="mt-3 rounded bg-red-50 p-3 text-xs text-red-700" role="alert">
+                    {importError}
+                  </div>
+                )}
+              </div>
+
+              {/* Import confirmation dialog */}
+              {importConfirm && (
+                <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-4 shadow-sm">
+                  <p className="text-sm font-medium text-gray-900">
+                    This backup contains {importConfirm.promiseCount} promise{importConfirm.promiseCount !== 1 ? "s" : ""} from{" "}
+                    {new Date(importConfirm.exportedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.
+                  </p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Importing will replace your current data. This cannot be undone.
+                  </p>
+                  <div className="mt-3 flex gap-3">
+                    <button
+                      onClick={handleImportConfirm}
+                      className="rounded bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 transition-colors"
+                    >
+                      Replace my data
+                    </button>
+                    <button
+                      onClick={() => setImportConfirm(null)}
+                      className="rounded px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

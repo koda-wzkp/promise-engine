@@ -140,14 +140,26 @@ export default function PersonalPage() {
         <div className="grid gap-4 md:grid-cols-3 mb-6">
           <div className="md:col-span-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              Reliability Score
+              Your Momentum
             </h3>
-            <div className="flex items-end gap-3">
-              <span className="font-serif text-4xl font-bold text-gray-900">
-                {personalStats.total > 0 ? `${Math.round(personalStats.keptRate)}%` : "\u2014"}
-              </span>
-              <span className="mb-1 text-lg font-medium text-gray-400">{getGrade(personalStats.keptRate)}</span>
-            </div>
+            {(() => {
+              const momentum = getMomentum(personalStats.keptRate, personalStats.total, personalStats.streak);
+              return (
+                <>
+                  <div className="flex items-end gap-3">
+                    <span className={`font-serif text-2xl font-bold ${momentum.color}`}>
+                      {momentum.label}
+                    </span>
+                    {personalStats.total > 0 && (
+                      <span className="mb-0.5 text-sm text-gray-400">
+                        {Math.round(personalStats.keptRate)}% kept
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">{momentum.message}</p>
+                </>
+              );
+            })()}
             <div className="mt-3 grid grid-cols-3 gap-3 text-center">
               <div>
                 <p className="text-lg font-semibold text-gray-900">{personalStats.total}</p>
@@ -395,10 +407,67 @@ export default function PersonalPage() {
   );
 }
 
-function getGrade(rate: number): string {
-  if (rate >= 90) return "A";
-  if (rate >= 80) return "B";
-  if (rate >= 70) return "C";
-  if (rate >= 60) return "D";
-  return "F";
+function getMomentum(
+  keptRate: number,
+  totalPromises: number,
+  streak: number,
+): { label: string; message: string; color: string } {
+  // No promises yet — welcome them
+  if (totalPromises === 0) {
+    return {
+      label: "Ready to begin",
+      message: "Your first promise is waiting. Start small.",
+      color: "text-gray-700",
+    };
+  }
+
+  // Too few completed to judge — celebrate showing up
+  const completed = totalPromises - (streak > 0 ? streak : 0); // rough proxy
+  if (totalPromises <= 2) {
+    return {
+      label: "Planting seeds",
+      message: "Early days. Every commitment counts.",
+      color: "text-sky-accent",
+    };
+  }
+
+  // Streak bonus: if they're on a roll, lead with that
+  if (streak >= 5) {
+    return {
+      label: "On fire",
+      message: `${streak} in a row. You're building something real.`,
+      color: "text-green-700",
+    };
+  }
+
+  if (keptRate >= 85) {
+    return {
+      label: "Thriving",
+      message: "Strong follow-through. Your word means something.",
+      color: "text-green-700",
+    };
+  }
+
+  if (keptRate >= 65) {
+    return {
+      label: "Building steady",
+      message: "Consistent progress. Keep showing up.",
+      color: "text-blue-700",
+    };
+  }
+
+  if (keptRate >= 40) {
+    return {
+      label: "Finding your rhythm",
+      message: "Some promises land, some teach you. Both matter.",
+      color: "text-amber-700",
+    };
+  }
+
+  // Low rate — but they're still here
+  return {
+    label: "Still here",
+    message: "Showing up is the hardest part. Try smaller promises.",
+    color: "text-gray-700",
+  };
 }

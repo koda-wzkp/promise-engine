@@ -35,6 +35,7 @@ export default function PersonalPage() {
 
   const [activeTab, setActiveTab] = useState<TabId>("active");
   const [showForm, setShowForm] = useState(false);
+  const [dataCommitmentOpen, setDataCommitmentOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<PromiseStatus | "all">("all");
   const [domainFilter, setDomainFilter] = useState<string>("all");
 
@@ -205,6 +206,114 @@ export default function PersonalPage() {
           </div>
         </div>
 
+        {/* Data Commitment — our promise to you */}
+        <section id="data-commitment" className="mb-6 rounded-lg border border-[#1a5f4a]/20 bg-[#ecfdf5] shadow-sm" aria-labelledby="data-commitment-heading">
+          <button
+            onClick={() => setDataCommitmentOpen(!dataCommitmentOpen)}
+            className="flex w-full items-center gap-3 p-4 text-left"
+            aria-expanded={dataCommitmentOpen}
+            aria-controls="data-commitment-body"
+          >
+            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1a5f4a] text-xs font-bold text-[#ecfdf5]" aria-hidden="true">
+              &#x2713;
+            </span>
+            <h2 id="data-commitment-heading" className="font-serif text-lg font-bold text-gray-900">
+              Our Promise to You
+            </h2>
+            <span className="ml-auto flex items-center gap-2">
+              <span className="rounded-full bg-[#1a5f4a]/10 px-2.5 py-0.5 text-xs font-semibold text-[#1a5f4a]">
+                Verified
+              </span>
+              <svg className={`h-4 w-4 text-gray-500 transition-transform ${dataCommitmentOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            </span>
+          </button>
+
+          {dataCommitmentOpen && (
+            <div id="data-commitment-body" className="border-t border-[#1a5f4a]/10 px-4 pb-5 pt-4">
+              <p className="mb-4 text-sm text-gray-700">
+                Promise Pipeline is built on the idea that commitments should be transparent and verifiable — including ours. Here&apos;s what we commit to as the people who built this tool:
+              </p>
+
+              <div className="space-y-4 text-sm text-gray-800">
+                <div>
+                  <p className="font-semibold text-gray-900">Your promises stay on your device.</p>
+                  <p className="mt-1">
+                    The personal tracker stores your data in your browser&apos;s local storage. Your promise text, your reflections, your check-ins, your domains — none of it is sent to our servers. We don&apos;t have it. We can&apos;t read it. This isn&apos;t a policy decision that could change. It&apos;s how the software works.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-900">We never train on your promise content.</p>
+                  <p className="mt-1">
+                    What you promise, to whom, and what you write in your reflections is yours. Not ours. Not our model&apos;s. Not anonymized, not aggregated, not &ldquo;de-identified.&rdquo; We don&apos;t want it.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-900">The Promise Quality Engine sends your text to Claude for evaluation, then discards it.</p>
+                  <p className="mt-1">
+                    When you click &ldquo;Check my promise,&rdquo; your promise text is sent to Anthropic&apos;s API for evaluation against the four quality criteria. The evaluation result (pass/fail per criterion, suggested reframes) is returned to your browser. We do not store your promise text on our servers. Anthropic&apos;s data retention policy applies to the API call itself — <a href="https://www.anthropic.com/policies/privacy" target="_blank" rel="noopener noreferrer" className="underline text-[#1a5f4a] hover:text-[#1a5f4a]/80">see their policy here</a>.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-900">If we ever offer cloud sync, your data will be encrypted before it leaves your device.</p>
+                  <p className="mt-1">
+                    We&apos;re designing sync so that your promises are encrypted with a key only you hold. Our servers would store ciphertext we cannot decrypt. If our database were breached, your promises would be unreadable.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-900">If we ever ask you to contribute data, it will be a promise you make — visible, voluntary, and revocable.</p>
+                  <p className="mt-1">
+                    We believe aggregate patterns in how people make and keep promises (not the content — the structure) could help everyone make better commitments. If we build this, your participation will show up in your own promise list as a commitment you&apos;ve made, with full control over which domains you share and the ability to revoke at any time. The data relationship is a promise, tracked by the same engine, with the same transparency.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-900">You can verify all of this.</p>
+                  <p className="mt-1">
+                    Open your browser&apos;s developer tools, go to Application &rarr; Local Storage, and you&apos;ll see your data. It&apos;s there, not on our servers. The codebase is open source at{" "}
+                    <a href="https://github.com/koda-wzkp/promise-engine" target="_blank" rel="noopener noreferrer" className="underline text-[#1a5f4a] hover:text-[#1a5f4a]/80">github.com/koda-wzkp/promise-engine</a>.
+                    {" "}You can read exactly what the software does.
+                  </p>
+                </div>
+              </div>
+
+              {/* Schema table */}
+              <div className="mt-6 rounded-lg border border-[#1a5f4a]/15 bg-white p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">As a promise in our own schema</h3>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex gap-2">
+                    <dt className="font-semibold text-gray-600 min-w-[6rem] shrink-0">Promiser</dt>
+                    <dd className="text-gray-800">Promise Pipeline / Pleco</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="font-semibold text-gray-600 min-w-[6rem] shrink-0">Promisee</dt>
+                    <dd className="text-gray-800">You — every personal tracker user</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="font-semibold text-gray-600 min-w-[6rem] shrink-0">Body</dt>
+                    <dd className="text-gray-800">Your promise content never leaves your device unless you explicitly choose to sync it. We never sell, share, or train on your promise content. If you contribute anonymized patterns, you control which domains and can revoke anytime.</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="font-semibold text-gray-600 min-w-[6rem] shrink-0">Domain</dt>
+                    <dd className="text-gray-800">Data Sovereignty</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="font-semibold text-gray-600 min-w-[6rem] shrink-0">Status</dt>
+                    <dd><span className="rounded-full bg-[#1a5f4a]/10 px-2 py-0.5 text-xs font-semibold text-[#1a5f4a]">Verified</span></dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="font-semibold text-gray-600 min-w-[6rem] shrink-0">Verification</dt>
+                    <dd className="text-gray-800">Architecturally enforced (localStorage) + open-source codebase</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Tab navigation */}
         <div className="mb-4 border-b border-gray-200" role="tablist" aria-label="Personal promise views">
           <div className="flex gap-4">
@@ -261,6 +370,19 @@ export default function PersonalPage() {
                       promisee: "self",
                     }}
                   />
+                  <p className="mt-2 text-center">
+                    <a
+                      href="#data-commitment"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setDataCommitmentOpen(true);
+                        document.getElementById("data-commitment")?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                      className="text-xs text-gray-400 underline hover:text-gray-600"
+                    >
+                      How is my data handled?
+                    </a>
+                  </p>
                 </div>
               )}
 

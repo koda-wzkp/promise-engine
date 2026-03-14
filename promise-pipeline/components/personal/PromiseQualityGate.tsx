@@ -209,9 +209,7 @@ export default function PromiseQualityGate({
                   key={key}
                   type="button"
                   onClick={() => toggleCriterion(key)}
-                  role="status"
-                  aria-label={`${CRITERIA_LABELS[key]}: ${pass ? "passing" : "failing"}`}
-                  aria-expanded={isExpanded}
+                  aria-label={`${CRITERIA_LABELS[key]}: ${pass ? "passing" : "failing"}${isExpanded ? ", expanded" : ""}`}
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-mono transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
                     pass
                       ? "bg-[#ecfdf5] text-[#1a5f4a]"

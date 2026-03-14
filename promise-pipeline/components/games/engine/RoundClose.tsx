@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   ScenarioConfig,
   GameState,
@@ -50,7 +50,7 @@ export default function RoundClose({ config, state, dispatch }: RoundCloseProps)
 
   function handleDismissTeaching() {
     if (teachingIdx + 1 < state.pendingTeachingMoments.length) {
-      setTeachingIdx((i) => i + 1);
+      setTeachingIdx((i: number) => i + 1);
     } else {
       setShowTeaching(false);
       dispatch({ type: "DISMISS_TEACHING_MOMENT" });
@@ -119,7 +119,7 @@ export default function RoundClose({ config, state, dispatch }: RoundCloseProps)
                 Cascade Failures
               </div>
               <div className="space-y-1.5">
-                {visibleCascades.map((c, i) => (
+                {visibleCascades.map((c: CascadeEvent, i: number) => (
                   <div
                     key={i}
                     className="font-mono text-xs flex items-center gap-2"
@@ -224,13 +224,14 @@ export default function RoundClose({ config, state, dispatch }: RoundCloseProps)
               Promise Status
             </div>
             {state.promises.map((p) => (
-              <PromiseCard
-                key={p.id}
-                promise={p}
-                allPromises={state.promises}
-                theme={theme}
-                compact
-              />
+              <Fragment key={p.id}>
+                <PromiseCard
+                  promise={p}
+                  allPromises={state.promises}
+                  theme={theme}
+                  compact
+                />
+              </Fragment>
             ))}
           </div>
         </div>

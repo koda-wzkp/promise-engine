@@ -40,7 +40,7 @@ function layoutNodes(
         if (!visited.has(child)) next.push(child);
       }
     }
-    queue = [...new Set(next)];
+    queue = Array.from(new Set(next));
   }
 
   // add any disconnected
@@ -64,8 +64,8 @@ function layoutNodes(
 export default function PromiseGraph({ promises, dependencies, theme }: PromiseGraphProps) {
   const positions = layoutNodes(promises, dependencies);
 
-  const allX = [...positions.values()].map((p) => p.x);
-  const allY = [...positions.values()].map((p) => p.y);
+  const allX = Array.from(positions.values()).map((p) => p.x);
+  const allY = Array.from(positions.values()).map((p) => p.y);
   const minX = Math.min(...allX) - NODE_W / 2 - 10;
   const maxX = Math.max(...allX) + NODE_W / 2 + 10;
   const minY = Math.min(...allY) - NODE_H / 2 - 10;
@@ -112,7 +112,7 @@ export default function PromiseGraph({ promises, dependencies, theme }: PromiseG
           const pos = positions.get(promise.id);
           if (!pos) return null;
           const status = computeStatus(promise);
-          const statusColor = theme.statusColors[status] ?? theme.textMuted;
+          const statusColor = theme.statusColors[status as keyof typeof theme.statusColors] ?? theme.textMuted;
           const domainColor = theme.domainColors[promise.domain] ?? theme.textMuted;
 
           return (

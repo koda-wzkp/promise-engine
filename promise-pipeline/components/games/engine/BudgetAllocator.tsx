@@ -1,5 +1,6 @@
 "use client";
 
+import React, { Fragment } from "react";
 import { RuntimePromise, ScenarioConfig, ScenarioTheme } from "../../../lib/games/types";
 import { computeStatus } from "../../../lib/games/engine";
 
@@ -62,26 +63,28 @@ export default function BudgetAllocator({
         {promises.map((promise) => {
           if (!promise.isFundable) {
             return (
-              <ComputedRow
-                key={promise.id}
-                promise={promise}
-                promises={promises}
-                config={config}
-                fmt={fmt}
-              />
+              <Fragment key={promise.id}>
+                <ComputedRow
+                  promise={promise}
+                  promises={promises}
+                  config={config}
+                  fmt={fmt}
+                />
+              </Fragment>
             );
           }
           return (
-            <PromiseSlider
-              key={promise.id}
-              promise={promise}
-              promises={promises}
-              allocated={allocations[promise.id] ?? 0}
-              maxAllocatable={(allocations[promise.id] ?? 0) + remaining}
-              config={config}
-              fmt={fmt}
-              onAllocate={onAllocate}
-            />
+            <Fragment key={promise.id}>
+              <PromiseSlider
+                promise={promise}
+                promises={promises}
+                allocated={allocations[promise.id] ?? 0}
+                maxAllocatable={(allocations[promise.id] ?? 0) + remaining}
+                config={config}
+                fmt={fmt}
+                onAllocate={onAllocate}
+              />
+            </Fragment>
           );
         })}
       </div>
@@ -108,7 +111,7 @@ function PromiseSlider({
 }) {
   const theme = config.theme;
   const status = computeStatus(promise);
-  const statusColor = theme.statusColors[status] ?? theme.textMuted;
+  const statusColor = theme.statusColors[status as keyof typeof theme.statusColors] ?? theme.textMuted;
   const domainColor = theme.domainColors[promise.domain] ?? theme.textMuted;
   const sliderId = `slider-${promise.id}`;
   const max = Math.max(maxAllocatable, allocated);
@@ -187,7 +190,7 @@ function PromiseSlider({
         max={max}
         step={0.1}
         value={allocated}
-        onChange={(e) => onAllocate(promise.id, parseFloat(e.target.value))}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onAllocate(promise.id, parseFloat(e.target.value))}
         className="w-full h-2 rounded-full appearance-none cursor-pointer"
         style={
           {

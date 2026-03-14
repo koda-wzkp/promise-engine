@@ -157,7 +157,7 @@ export default function VerdictScreen({ config, state, dispatch }: VerdictScreen
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {state.promises.map((p) => {
-              const statusColor = theme.statusColors[p.currentStatus] ?? theme.textMuted;
+              const statusColor = theme.statusColors[p.currentStatus as keyof typeof theme.statusColors] ?? theme.textMuted;
               return (
                 <div
                   key={p.id}

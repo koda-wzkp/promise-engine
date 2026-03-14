@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { ScenarioConfig, GameState, GameAction } from "../../../lib/games/types";
 import BudgetAllocator from "./BudgetAllocator";
 import DualAccountability from "./DualAccountability";
@@ -113,13 +114,14 @@ export default function RoundConsole({ config, state, dispatch }: RoundConsolePr
               Promise Status
             </div>
             {state.promises.map((p) => (
-              <PromiseCard
-                key={p.id}
-                promise={p}
-                allPromises={state.promises}
-                theme={theme}
-                compact
-              />
+              <Fragment key={p.id}>
+                <PromiseCard
+                  promise={p}
+                  allPromises={state.promises}
+                  theme={theme}
+                  compact
+                />
+              </Fragment>
             ))}
           </div>
 

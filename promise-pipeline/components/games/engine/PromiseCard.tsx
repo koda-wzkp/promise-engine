@@ -17,8 +17,8 @@ export default function PromiseCard({
   compact = false,
 }: PromiseCardProps) {
   const status = computeStatus(promise);
-  const statusColor = theme.statusColors[status] ?? theme.textMuted;
-  const statusBg = theme.statusBgColors[status] ?? "transparent";
+  const statusColor = theme.statusColors[status as keyof typeof theme.statusColors] ?? theme.textMuted;
+  const statusBg = theme.statusBgColors[status as keyof typeof theme.statusBgColors] ?? "transparent";
   const domainColor = theme.domainColors[promise.domain] ?? theme.textMuted;
 
   const upstreamWarnings: string[] = [];

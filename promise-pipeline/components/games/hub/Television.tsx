@@ -31,7 +31,7 @@ export default function Television({ selected, isBooting }: TelevisionProps) {
   useEffect(() => {
     if (tvState !== "boot") return;
     const interval = setInterval(() => {
-      setDots((d) => (d.length >= 3 ? "" : d + "."));
+      setDots((d: string) => (d.length >= 3 ? "" : d + "."));
     }, 300);
     return () => clearInterval(interval);
   }, [tvState]);

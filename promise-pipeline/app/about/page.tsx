@@ -2,6 +2,7 @@
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import IndigenousAcknowledgment from "@/components/layout/IndigenousAcknowledgment";
 
 export default function AboutPage() {
   return (
@@ -78,6 +79,10 @@ export default function AboutPage() {
             infrastructure, supply chains, personal goals, and team commitments. Same structure,
             different contexts — because accountability is accountability.
           </p>
+        </div>
+
+        <div className="mt-16 border-t border-gray-200 pt-12">
+          <IndigenousAcknowledgment variant="standalone" />
         </div>
       </main>
 

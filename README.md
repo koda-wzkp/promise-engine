@@ -1,268 +1,198 @@
 # Promise Engine
 
-**Universal Auditing Infrastructure for AI, IoT, and Beyond**
+**Accountability infrastructure for systems that make promises.**
 
-Audit everything that makes promises. Trust, but verify. Automatically.
+Promise Engine turns implicit claims into verifiable commitments. AI models promise not to hallucinate. Utilities promise to cut emissions. Cloud services promise 99.9% uptime. We make those promises auditable.
 
-## Overview
-
-Promise Engine is the accountability layer for systems that make promises. AI models promise not to hallucinate. Smart locks promise to secure your home. Cloud services promise 99.9% uptime. Supply chains promise on-time delivery.
-
-We make those promises auditable.
-
-Built on [Promise Theory](https://en.wikipedia.org/wiki/Promise_theory), Promise Engine turns implicit claims into verifiable commitments. Every promise becomes measurable. Every failure becomes a training signal.
-
-## Use Cases
-
-### 🤖 AI/ML Auditing
-- Track hallucinations, policy violations, and model drift
-- Compliance for EU AI Act, SOC2, ISO 42001
-- Generate training data from failures
-- Prove your AI does what you claim
-
-### 🏠 IoT & Smart Home
-- "Did my lock actually lock at 11pm?"
-- Monitor device reliability over time
-- Home Assistant integration
-- Building management at scale
-
-### ☁️ Infrastructure & SLAs
-- Verify uptime, latency, and performance claims
-- Alert before breaches become incidents
-- Track vendor accountability
-- Automated SLA auditing
-
-### 📦 Supply Chain & Commerce
-- Verify delivery timelines
-- Audit sustainability claims
-- End-to-end shipment tracking
-- CODEC: Coffee subscription management (first vertical)
-
-### 🌱 Land Stewardship (Coming Soon)
-- Track restoration commitments
-- Verify regeneration claims
-- Indigenous data sovereignty
-- Route reparations directly
-
-## How It Works
-
-1. **DEFINE** - Promise schemas for your domain
-2. **MONITOR** - Every event flows through Promise Engine
-3. **VERIFY** - Automatic verification against schema
-4. **IMPROVE** - Integrity scores, alerts, training signal
-
-## Architecture
-
-- **Backend**: Python/Flask + PostgreSQL
-- **Frontend**: React
-- **Deployment**: Vercel (frontend) + Railway (backend)
-- **Database**: PostgreSQL with JSONB for flexible promise storage
-- **Validation**: JSON Schema for promise definitions
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.9+
-- Node.js 18+
-- PostgreSQL 14+
-
-### Backend Setup
-
-```bash
-cd backend
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your credentials
-python run.py
-```
-
-Backend runs on http://localhost:5000
-
-### Frontend Setup
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-Frontend runs on http://localhost:3000
-
-### Database
-
-```bash
-# Create database
-createdb promise_engine_dev
-
-# Migrations run automatically on app startup
-# Or manually: python -m alembic upgrade head
-```
-
-## Promise Schemas
-
-Promise Engine uses JSON Schema to define promise types. Example schemas:
-
-- **ML**: `schemas/ml/hallucination_check.json`, `schemas/ml/policy_adherence.json`
-- **IoT**: `schemas/iot/state_verification.json`, `schemas/iot/schedule_adherence.json`
-- **Infrastructure**: `schemas/infra/uptime_sla.json`, `schemas/infra/latency_sla.json`
-- **Supply Chain**: `schemas/codec/grind_roast_promise.json` (CODEC vertical)
-
-Create custom schemas for your domain. See `/backend/schemas/` for examples.
-
-## API
-
-### Core Endpoints
-
-```bash
-# Create a promise
-POST /api/v1/promise
-{
-  "agent_type": "platform",
-  "agent_id": "my-service",
-  "vertical": "infra",
-  "promise_type": "uptime_sla",
-  "promise_schema": "uptime_sla_v1",
-  "promise_data": { ... }
-}
-
-# Verify a promise
-POST /api/v1/promise/:id/verify
-{
-  "verification_data": { ... }
-}
-
-# Get integrity score
-GET /api/v1/integrity?agent_type=platform&agent_id=my-service
-```
-
-See full API docs at `/backend/README.md`
-
-## Production Deployment
-
-### Frontend (Vercel)
-
-```bash
-cd frontend
-vercel --prod
-```
-
-Live at: https://promise.pleco.dev
-
-### Backend (Railway)
-
-1. Connect Railway to GitHub repo
-2. Set root directory to `backend`
-3. Add PostgreSQL addon
-4. Set environment variables (see `.env.example`)
-5. Railway auto-deploys on push
-
-### Connect Frontend to Backend
-
-```bash
-# Set backend URL in Vercel
-cd frontend
-vercel env add REACT_APP_API_URL production
-# Enter your Railway backend URL
-vercel --prod
-```
-
-## Verticals
-
-Promise Engine supports domain-specific "verticals" with custom schemas:
-
-- **CODEC**: Coffee roaster subscription management (live in production)
-- **ML/AI**: Hallucination tracking, policy compliance
-- **IoT**: Device state verification, schedule adherence
-- **Infrastructure**: SLA monitoring, uptime/latency tracking
-- **Supply Chain**: Delivery promises, sustainability audits
-
-Create custom verticals by defining schemas in `/backend/schemas/[vertical_name]/`
-
-## Roadmap
-
-- [x] Core promise engine (create, verify, query)
-- [x] Integrity scoring system
-- [x] CODEC vertical (coffee roasters)
-- [x] Production deployment (promise.pleco.dev)
-- [x] Universal auditing positioning
-- [x] Multi-domain schemas (ML, IoT, Infrastructure)
-- [ ] Real-time alerting (Slack, webhooks)
-- [ ] Training data export for ML workflows
-- [ ] Home Assistant integration
-- [ ] EU AI Act compliance reporting
-- [ ] Promise Theory whitepaper
-
-## Contributing
-
-Promise Engine is currently in private beta. For access or partnership inquiries:
-
-- Email: hello@pleco.dev
-- Discord: https://discord.gg/pleco
-- Twitter: [@pleco_dev](https://twitter.com/pleco_dev)
-
-## Philosophy
-
-> "The world runs on promises. We make them auditable."
-
-Everything makes promises. Most systems can't prove they keep them. Promise Engine fixes that.
-
-Built on Promise Theory (Burgess, 2004), we believe:
-- Autonomous agents make promises, not demands
-- Verification is continuous, not one-time
-- Failed promises are learning opportunities
-- Accountability scales trust
-
-## Theoretical Foundation
-
-Promise Engine builds on established research in Promise Theory and Promise-Based Management:
-
-### Promise Theory (Burgess, 2004+)
-
-Mark Burgess formalized Promise Theory for distributed systems while developing CFEngine. Key principles:
-
-- **Agents are autonomous** and cannot be coerced into compliance
-- **Cooperation emerges** from voluntary, explicit commitments
-- **"Obligations amounted to wishful thinking"** (Burgess, 2005) - you can't command autonomous systems
-- **Trust is built** through demonstrated promise-keeping over time
-
-**Industry Adoption:**
-- **CFEngine**: 2,700+ companies using promise-based configuration management (2023)
-- **Cisco ACI**: Software-Defined Networking built on promise semantics (2012)
-- **Kubernetes**: Promise-compatible desired-state architecture
-
-### Promise-Based Management (Sull & Spinosa, HBR 2007)
-
-Donald Sull and Charles Spinosa applied promise thinking to organizational execution:
-
-- **"Impositions don't guarantee the outcome"** - commands don't ensure compliance
-- **Promises must be voluntary** and renegotiable
-- **Culture must allow** "I can't do that" - realistic commitments over aspirational ones
-- **Renegotiation is honored**, not penalized
-
-**Citation:** Sull, D. & Spinosa, C. (2007). "Promise-Based Management: The Essence of Execution." *Harvard Business Review*, April 2007.
-
-### Promise Economics (Promise Engine, 2026)
-
-We extend this foundation with:
-
-- **Integrity scores** as verifiable trust metrics
-- **Promise schemas** for machine-readable commitments
-- **POD (Promise-Oriented Development)** for AI training
-- **Multi-vertical application** (AI, IoT, Commerce, Land, Infrastructure)
-- **Automated verification** at scale with continuous monitoring
-
-### References
-
-- Burgess, M. (2015). *Promise Theory: Principles and Applications*. O'Reilly Media.
-- Bergstra, J. A. & Burgess, M. (2019). *Promise Theory: Principles and Applications (Second Edition)*. XtAxis Press.
-- Sull, D. & Spinosa, C. (2007). "Promise-Based Management." *Harvard Business Review*.
-- See `/docs/THEORY.md` for comprehensive theoretical foundation
-
-## License
-
-Proprietary. © 2026 Pleco
+Built on [Promise Theory](https://en.wikipedia.org/wiki/Promise_theory) (Burgess, 2004) — a formal methodology proven in production at 2,700+ companies via CFEngine and adopted by Cisco for software-defined networking.
 
 ---
 
-**Current Status**: Live in production at [promise.pleco.dev](https://promise.pleco.dev)
+## What's Here
+
+This repo contains two main systems:
+
+### Promise Pipeline (`/promise-pipeline`)
+A **Next.js application** for legislative promise extraction and analysis. This is the active development focus — a tool for decomposing laws into structured promise graphs and training ML models to do it automatically.
+
+- **Annotation tool** (`/annotate`) — AI-assisted extraction of promises from legislative text using Claude
+- **Promise network visualization** — interactive force-directed graphs of promise dependency networks
+- **Simulation engine** — cascade failure modeling ("what breaks if this promise fails?")
+- **Bill analysis pipeline** — structured analysis of state clean energy laws (WA CETA, VA VCEA, NM ETA, and more)
+
+**Tech stack:** Next.js 14, TypeScript, Tailwind CSS, Recharts, Claude API (Anthropic)
+
+### Legacy Platform (`/backend` + `/frontend`)
+The original **Flask + React** promise verification platform with:
+- Core promise engine (create, verify, query promises)
+- HB 2021 civic dashboard (Oregon's 100% Clean Electricity law)
+- Integrity scoring system
+- PostgreSQL + JSONB storage
+- 144 passing tests (Promise Theory axioms, API, security)
+
+---
+
+## Quick Start
+
+### Promise Pipeline (Active Development)
+
+```bash
+cd promise-pipeline
+npm install
+
+# Create .env.local with your API keys:
+# ANTHROPIC_API_KEY=sk-ant-...
+# OPENSTATES_API_KEY=... (optional, for legislator data)
+
+npm run dev
+```
+
+Open [localhost:3000](http://localhost:3000). Navigate to `/annotate` for the annotation tool.
+
+### Legacy Platform
+
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+cp .env.example .env  # Edit with your credentials
+createdb promise_engine_dev
+python run.py  # Runs on :5000
+
+# Frontend (separate terminal)
+cd frontend
+npm install
+npm start  # Runs on :3000
+```
+
+---
+
+## The Idea
+
+Everything makes promises. Most systems can't prove they keep them.
+
+A single broken promise rarely matters in isolation. What matters is the **cascade** — how one failure propagates through a network of dependent commitments. A rejected Clean Energy Plan doesn't just mean one utility failed a filing requirement. It means the emissions targets that depend on that plan are now unreachable, the community benefit investments that depend on those targets won't materialize, and the environmental justice communities who were promised protection have no pathway to the outcome the law intended.
+
+Promise Engine makes these cascades visible, queryable, and eventually predictable.
+
+**Three horizons:**
+
+1. **Deterministic simulation** — Model the dependency graph. Toggle a promise to "failed" and propagate effects through the network using graph traversal. No ML required — just making the structure explicit.
+
+2. **Statistical prediction** — Train on historical promise-keeping data. Predict which promises are likely to fail based on actor reliability, structural features, and domain patterns.
+
+3. **Counterfactual reasoning** — "What if this amendment passes?" "What if this actor exits?" "Where should advocacy resources go for maximum leverage?"
+
+---
+
+## Current State (March 2026)
+
+### What Works
+
+| Component | Status |
+|---|---|
+| Promise annotation tool (AI-assisted extraction from bill text) | Working |
+| Promise network visualization (force-directed graphs) | Working |
+| Cascade simulation (toggle promises, see what breaks) | Working |
+| HB 2021 civic dashboard (20 hand-labeled promises, 11 agents) | Working |
+| Core promise engine (verify, log, score, query) | Working |
+| Emissions trajectory verification (linear interpolation) | Working |
+| Training data pipeline (bill text → structured promises) | Working |
+| 144 backend tests (theory axioms + security) | Passing |
+
+### Training Data
+
+- **20 hand-labeled promises** from Oregon HB 2021 (gold standard)
+- **15 bill candidates** cataloged for expansion (see `TRAINING_BILL_CANDIDATES.md`)
+- **Target:** 500+ labeled promises across 3+ domains before ML fine-tuning
+- Bill text collected for WA CETA, VA VCEA, NM ETA
+
+---
+
+## Project Structure
+
+```
+promise-engine/
+├── promise-pipeline/          # Next.js app (active development)
+│   ├── app/                   # Pages and API routes
+│   │   ├── annotate/          # AI annotation tool
+│   │   ├── networks/          # Promise network visualization
+│   │   ├── demo/              # Interactive demos
+│   │   └── api/               # API routes (Claude, simulation, etc.)
+│   ├── components/            # React components
+│   ├── lib/                   # Core logic (simulation, storage, types)
+│   └── data/                  # Training data and bill texts
+│
+├── backend/                   # Flask API (legacy platform)
+│   ├── app/
+│   │   ├── promise_engine/    # Core engine, verticals, storage
+│   │   └── api/               # REST endpoints
+│   ├── schemas/               # JSON Schema definitions
+│   └── tests/                 # 144 tests
+│
+├── frontend/                  # React frontend (legacy platform)
+│   └── src/
+│       ├── pages/             # HB2021, AI, Infra, Supply Chain dashboards
+│       └── components/        # Shared UI
+│
+├── docs/                      # Documentation
+│   ├── THEORY.md              # Promise Theory foundations
+│   ├── HB2021_SPEC.md         # HB 2021 law specification
+│   └── BUILD_REPORT.md        # Technical build report
+│
+├── ROADMAP.md                 # Project roadmap and architecture plan
+├── LABELED_DATA_INVENTORY.md  # ML training data catalog
+├── TRAINING_BILL_CANDIDATES.md # Bills to label next
+└── CONTRIBUTING.md            # Contribution guide
+```
+
+---
+
+## Theoretical Foundation
+
+Promise Engine builds on established research:
+
+**Promise Theory (Burgess, 2004+)** — Autonomous agents cannot be coerced into compliance. Cooperation emerges from voluntary, explicit commitments. "Existing theories based on obligations were unsuitable as they amounted to wishful thinking." Industry adoption: CFEngine (2,700+ companies), Cisco ACI, Kubernetes.
+
+**Promise-Based Management (Sull & Spinosa, HBR 2007)** — "Impositions don't guarantee the outcome." Promises must be voluntary, renegotiable, and verifiable. Culture must allow "I can't do that."
+
+**What Promise Engine adds:**
+- Machine-readable promise schemas (JSON Schema)
+- Automated verification at scale
+- Integrity scores as verifiable trust metrics
+- Dependency graph modeling for cascade analysis
+- ML pipeline for promise extraction from legislative text
+
+### Key References
+
+- Burgess, M. (2015). *Thinking in Promises*. O'Reilly Media.
+- Bergstra, J. A. & Burgess, M. (2019). *Promise Theory: Principles and Applications (2nd ed.)*. XtAxis Press.
+- Sull, D. & Spinosa, C. (2007). "Promise-Based Management." *Harvard Business Review*.
+- See `docs/THEORY.md` for the full theoretical foundation.
+
+---
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the detailed plan. Summary:
+
+- [x] **Phase 1:** Static promise dashboards (HB 2021, demo verticals)
+- [x] **Phase 1.5:** Annotation tool and training data pipeline
+- [ ] **Phase 2:** Dependency graph + cascade simulator
+- [ ] **Phase 3:** ML promise extraction (NLP) + outcome prediction
+- [ ] **Phase 4:** Full simulation engine (GNNs, counterfactual queries)
+- [ ] **Phase 5:** Domain expansion (ESG, supply chain, international climate)
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+The most impactful way to contribute right now is **labeling training data** — extracting structured promises from state clean energy laws. See `TRAINING_BILL_CANDIDATES.md` for the bill queue and `LABELED_DATA_INVENTORY.md` for the labeling schema.
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE).

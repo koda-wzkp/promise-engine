@@ -201,7 +201,6 @@ def _load_utility_data_from_db():
     try:
         from app.database import get_db
         from app.promise_engine.storage.repository import PromiseRepository
-        from app.promise_engine.core.models import Agent, AgentType
 
         with get_db() as db:
             repo = PromiseRepository(db)

@@ -128,7 +128,7 @@ function TimelineCard({
       )}
 
       {promise.reflection && (
-        <p className="mt-2 text-xs italic text-gray-500">"{promise.reflection}"</p>
+        <p className="mt-2 text-xs italic text-gray-500">&ldquo;{promise.reflection}&rdquo;</p>
       )}
     </div>
   );

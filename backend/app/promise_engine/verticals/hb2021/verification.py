@@ -8,7 +8,6 @@ Uses linear interpolation between targets to compute expected trajectory.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Dict, Optional
 
 from app.promise_engine.core.models import VerificationResult, PromiseResult

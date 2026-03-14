@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useCallback, useState, useRef, useEffect } from "react";
+import { useReducer, useCallback, useMemo, useState, useRef, useEffect } from "react";
 import BillSearch from "@/components/annotate/BillSearch";
 import BillTextViewer from "@/components/annotate/BillTextViewer";
 import AnnotationCard from "@/components/annotate/AnnotationCard";
@@ -207,14 +207,14 @@ export default function AnnotatePage() {
   const savingRef = useRef(false);
 
   // Count decisions
-  const stats = {
+  const stats = useMemo(() => ({
     accepted: Object.values(state.decisions).filter((d) => d === "accepted").length,
     edited: Object.entries(state.decisions)
       .filter(([, d]) => d === "accepted")
       .filter(([id]) => state.edits[id] && Object.keys(state.edits[id]).length > 0).length,
     rejected: Object.values(state.decisions).filter((d) => d === "rejected").length,
     skipped: Object.values(state.decisions).filter((d) => d === "skipped").length,
-  };
+  }), [state.decisions, state.edits]);
 
   // Current candidate
   const currentCandidate =

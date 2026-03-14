@@ -36,7 +36,10 @@ GRIND_ROAST_COMPATIBILITY = PromiseSchema(
             },
             "grind": {
                 "type": "string",
-                "enum": ["whole_bean", "extra-fine", "fine", "medium-fine", "medium", "medium-coarse", "coarse", "french_press"]
+                "enum": [
+                    "whole_bean", "extra-fine", "fine", "medium-fine",
+                    "medium", "medium-coarse", "coarse", "french_press",
+                ]
             }
         },
         "required": ["roast", "grind"]

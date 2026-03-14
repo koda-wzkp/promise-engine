@@ -113,7 +113,10 @@ EJ_COMMUNITIES = Agent(
         "name": "Environmental Justice Communities",
         "short": "EJ",
         "hb2021_role": "promisee",
-        "definition": "Communities of color, low-income, tribal, rural, coastal, and limited-infrastructure communities (§2)",
+        "definition": (
+            "Communities of color, low-income, tribal, rural, coastal, "
+            "and limited-infrastructure communities (§2)"
+        ),
     }
 )
 

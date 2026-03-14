@@ -7,9 +7,26 @@ This is the source of truth for POD training data.
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, Index, TypeDecorator
+from sqlalchemy.dialects.postgresql import JSONB
 from app.database import Base
+
+
+class PortableUUID(TypeDecorator):
+    """UUID type that works with both PostgreSQL and SQLite."""
+
+    impl = String(36)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            return str(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            return uuid.UUID(value) if not isinstance(value, uuid.UUID) else value
+        return value
 
 
 class PromiseSchemaDB(Base):
@@ -84,7 +101,7 @@ class PromiseEventDB(Base):
 
     __tablename__ = "promise_events"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(PortableUUID(), primary_key=True, default=uuid.uuid4)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     # Schema reference

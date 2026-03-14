@@ -6,7 +6,7 @@ All database access goes through here. Clean separation of concerns.
 from typing import List, Optional, Dict
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_
 
 from app.promise_engine.core.models import (
     Agent,
@@ -14,7 +14,6 @@ from app.promise_engine.core.models import (
     PromiseResult,
     IntegrityScore,
     PromiseSchema,
-    SignalStrength,
 )
 from app.promise_engine.storage.models import (
     PromiseEventDB,
@@ -22,8 +21,6 @@ from app.promise_engine.storage.models import (
     PromiseSchemaVersionDB,
     IntegrityScoreDB,
     AgentDB,
-    TouchpointDB,
-    JourneyDB,
     VouchingDB,
 )
 
@@ -140,7 +137,7 @@ class PromiseRepository:
             PromiseEventDB.promiser_type == promiser.type.value,
             PromiseEventDB.promiser_id == promiser.id,
             PromiseEventDB.result == PromiseResult.PENDING.value,
-            PromiseEventDB.due_by != None,
+            PromiseEventDB.due_by.isnot(None),
             PromiseEventDB.due_by < now,
         ).order_by(PromiseEventDB.due_by.asc()).all()
 
@@ -255,7 +252,7 @@ class PromiseRepository:
         """Get a promise schema by ID."""
         query = self.db.query(PromiseSchemaDB).filter(
             PromiseSchemaDB.id == schema_id,
-            PromiseSchemaDB.deprecated_at == None
+            PromiseSchemaDB.deprecated_at.is_(None)
         )
 
         if version:
@@ -268,7 +265,7 @@ class PromiseRepository:
     def list_schemas(self, vertical: Optional[str] = None) -> List[PromiseSchemaDB]:
         """List all active schemas."""
         query = self.db.query(PromiseSchemaDB).filter(
-            PromiseSchemaDB.deprecated_at == None
+            PromiseSchemaDB.deprecated_at.is_(None)
         )
 
         if vertical:
@@ -371,8 +368,8 @@ class PromiseRepository:
     ) -> List[PromiseEventDB]:
         """Get training-eligible events that haven't been exported yet."""
         query = self.db.query(PromiseEventDB).filter(
-            PromiseEventDB.training_eligible == True,
-            PromiseEventDB.exported_at == None,
+            PromiseEventDB.training_eligible.is_(True),
+            PromiseEventDB.exported_at.is_(None),
             PromiseEventDB.result != PromiseResult.PENDING.value,
         )
 
@@ -398,15 +395,15 @@ class PromiseRepository:
     def get_export_stats(self, vertical: Optional[str] = None) -> Dict:
         """Get export statistics."""
         base_query = self.db.query(PromiseEventDB).filter(
-            PromiseEventDB.training_eligible == True,
+            PromiseEventDB.training_eligible.is_(True),
         )
         if vertical:
             base_query = base_query.filter(PromiseEventDB.vertical == vertical)
 
         total = base_query.count()
-        exported = base_query.filter(PromiseEventDB.exported_at != None).count()
+        exported = base_query.filter(PromiseEventDB.exported_at.isnot(None)).count()
         pending_export = base_query.filter(
-            PromiseEventDB.exported_at == None,
+            PromiseEventDB.exported_at.is_(None),
             PromiseEventDB.result != PromiseResult.PENDING.value,
         ).count()
 
@@ -637,7 +634,7 @@ class PromiseRepository:
             VouchingDB.voucher_id == voucher.id,
             VouchingDB.vouchee_type == vouchee.type.value,
             VouchingDB.vouchee_id == vouchee.id,
-            VouchingDB.revoked_at == None,
+            VouchingDB.revoked_at.is_(None),
         ).first()
 
         if not existing:
@@ -652,7 +649,7 @@ class PromiseRepository:
         return self.db.query(VouchingDB).filter(
             VouchingDB.vouchee_type == vouchee.type.value,
             VouchingDB.vouchee_id == vouchee.id,
-            VouchingDB.revoked_at == None,
+            VouchingDB.revoked_at.is_(None),
         ).order_by(VouchingDB.strength.desc()).all()
 
     def get_vouches_by(self, voucher: Agent) -> List[VouchingDB]:
@@ -660,7 +657,7 @@ class PromiseRepository:
         return self.db.query(VouchingDB).filter(
             VouchingDB.voucher_type == voucher.type.value,
             VouchingDB.voucher_id == voucher.id,
-            VouchingDB.revoked_at == None,
+            VouchingDB.revoked_at.is_(None),
         ).order_by(VouchingDB.strength.desc()).all()
 
     def compute_vouching_score(self, agent: Agent) -> Dict:

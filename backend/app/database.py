@@ -8,8 +8,7 @@ from contextlib import contextmanager
 from typing import Generator
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.pool import Pool
 
 logger = logging.getLogger(__name__)
@@ -32,7 +31,7 @@ def init_database(database_url: str, echo: bool = False) -> None:
     """
     global _SessionLocal, _engine
 
-    logger.info(f"Initializing database connection...")
+    logger.info("Initializing database connection...")
 
     # Create engine with connection pooling
     _engine = create_engine(

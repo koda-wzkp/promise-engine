@@ -139,6 +139,15 @@ body {
   to { opacity: 0; }
 }
 
+/* ─── Scrollbar hiding for overflow-scroll areas ─── */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* ─── Reduced Motion (WCAG) ─── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

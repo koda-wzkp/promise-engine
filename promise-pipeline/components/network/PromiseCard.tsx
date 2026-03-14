@@ -84,8 +84,8 @@ export default function PromiseCard({
 
   return (
     <div
-      className={`rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md ${
-        isCompact ? "p-3" : "p-4"
+      className={`rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
+        isCompact ? "p-3" : "p-3.5 sm:p-4"
       } border-l-4 ${borderClass} ${isDraggable ? "cursor-grab active:cursor-grabbing" : ""} ${
         onClick ? "cursor-pointer" : ""
       }`}
@@ -169,7 +169,7 @@ export default function PromiseCard({
 
       {/* Actions */}
       {showActions && validTransitions.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2">
           {validTransitions.map((status) => (
             <button
               key={status}
@@ -177,7 +177,7 @@ export default function PromiseCard({
                 e.stopPropagation();
                 handleStatusChange(status as PromiseStatus);
               }}
-              className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
               aria-label={`Change status to ${config.statusLabels[status] ?? status}`}
             >
               {config.statusLabels[status] ?? status}
@@ -189,7 +189,7 @@ export default function PromiseCard({
                 e.stopPropagation();
                 setShowRenegotiate(!showRenegotiate);
               }}
-              className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
             >
               Renegotiate
             </button>
@@ -200,7 +200,7 @@ export default function PromiseCard({
                 e.stopPropagation();
                 onDelete();
               }}
-              className="rounded border border-red-100 px-2 py-1 text-xs text-red-400 hover:bg-red-50 transition-colors ml-auto"
+              className="rounded-lg border border-red-100 px-3 py-1.5 text-xs text-red-400 hover:bg-red-50 active:bg-red-100 transition-colors ml-auto"
               aria-label="Delete promise"
             >
               Delete
@@ -220,11 +220,11 @@ export default function PromiseCard({
             value={reflection}
             onChange={(e) => setReflection(e.target.value)}
             placeholder="What did you learn?"
-            className="w-full rounded border border-gray-200 p-2 text-sm focus:border-blue-400 focus:outline-none"
+            className="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             rows={2}
             autoFocus
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {validTransitions.filter((s) => s === "verified" || s === "violated").map((status) => (
               <button
                 key={status}
@@ -233,14 +233,14 @@ export default function PromiseCard({
                   setReflection("");
                   setShowReflection(false);
                 }}
-                className="rounded bg-gray-900 px-3 py-1 text-xs text-white hover:bg-gray-800"
+                className="rounded-lg bg-gray-900 px-4 py-2 text-xs font-medium text-white hover:bg-gray-800 active:bg-gray-950"
               >
                 Mark as {config.statusLabels[status] ?? status}
               </button>
             ))}
             <button
               onClick={() => setShowReflection(false)}
-              className="text-xs text-gray-500 hover:text-gray-700"
+              className="px-2 py-2 text-xs text-gray-500 hover:text-gray-700"
             >
               Cancel
             </button>
@@ -258,31 +258,35 @@ export default function PromiseCard({
             id={`renegotiate-${promise.id}`}
             value={newBody}
             onChange={(e) => setNewBody(e.target.value)}
-            className="w-full rounded border border-gray-200 p-2 text-sm focus:border-blue-400 focus:outline-none"
+            className="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             rows={2}
             autoFocus
           />
-          <div className="flex items-center gap-2">
-            <label htmlFor={`renegotiate-target-${promise.id}`} className="text-xs text-gray-600">New deadline:</label>
-            <input
-              id={`renegotiate-target-${promise.id}`}
-              type="date"
-              value={newTarget}
-              onChange={(e) => setNewTarget(e.target.value)}
-              className="rounded border border-gray-200 px-2 py-1 text-sm"
-            />
-            <button
-              onClick={handleRenegotiate}
-              className="rounded bg-gray-900 px-3 py-1 text-xs text-white hover:bg-gray-800"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => setShowRenegotiate(false)}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              Cancel
-            </button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2 flex-1">
+              <label htmlFor={`renegotiate-target-${promise.id}`} className="text-xs text-gray-600 whitespace-nowrap">New deadline:</label>
+              <input
+                id={`renegotiate-target-${promise.id}`}
+                type="date"
+                value={newTarget}
+                onChange={(e) => setNewTarget(e.target.value)}
+                className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleRenegotiate}
+                className="rounded-lg bg-gray-900 px-4 py-2 text-xs font-medium text-white hover:bg-gray-800 active:bg-gray-950"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setShowRenegotiate(false)}
+                className="px-2 py-2 text-xs text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

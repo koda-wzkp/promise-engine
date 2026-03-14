@@ -49,11 +49,11 @@ function TeamSetupFlow({ onComplete }: { onComplete: (name: string, members: Omi
   };
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto max-w-lg px-1">
       <h2 className="font-serif text-2xl font-bold text-gray-900 mb-2">Set Up Your Team</h2>
       <p className="text-sm text-gray-500 mb-6">Create a shared promise network for your team.</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label htmlFor="team-name" className="block text-sm font-medium text-gray-700 mb-1">
             Team name
@@ -64,7 +64,7 @@ function TeamSetupFlow({ onComplete }: { onComplete: (name: string, members: Omi
             value={teamName}
             onChange={(e) => setTeamName(e.target.value)}
             placeholder="e.g. Kitchen Team, Engineering"
-            className="w-full rounded border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             required
             autoFocus
           />
@@ -74,15 +74,15 @@ function TeamSetupFlow({ onComplete }: { onComplete: (name: string, members: Omi
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Team members (at least 2)
           </label>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {members.map((m, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={i} className="flex flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
                   value={m.name}
                   onChange={(e) => updateMember(i, "name", e.target.value)}
                   placeholder="Name"
-                  className="flex-1 rounded border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   aria-label={`Member ${i + 1} name`}
                   required={i < 2}
                 />
@@ -91,7 +91,7 @@ function TeamSetupFlow({ onComplete }: { onComplete: (name: string, members: Omi
                   value={m.role}
                   onChange={(e) => updateMember(i, "role", e.target.value)}
                   placeholder="Role (optional)"
-                  className="w-32 rounded border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                  className="sm:w-36 rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   aria-label={`Member ${i + 1} role`}
                 />
               </div>
@@ -100,7 +100,7 @@ function TeamSetupFlow({ onComplete }: { onComplete: (name: string, members: Omi
           <button
             type="button"
             onClick={addMember}
-            className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+            className="mt-3 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-blue-600 hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
           >
             + Add another member
           </button>
@@ -108,7 +108,7 @@ function TeamSetupFlow({ onComplete }: { onComplete: (name: string, members: Omi
 
         <button
           type="submit"
-          className="rounded bg-gray-900 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+          className="w-full sm:w-auto rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition-colors"
         >
           Create Team
         </button>
@@ -156,53 +156,61 @@ function KanbanBoard({
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-4" role="region" aria-label="Kanban board">
-      {columns.map((col) => {
-        const items = promises.filter((p) => p.status === col.status);
-        return (
-          <div
-            key={col.status}
-            className="rounded-lg bg-gray-50 p-3 min-h-[200px]"
-            onDrop={(e) => handleDrop(e, col.status)}
-            onDragOver={handleDragOver}
-            role="list"
-            aria-label={`${col.label} column`}
-          >
-            <div className="mb-3 flex items-center gap-2">
-              <h4 className="text-sm font-semibold text-gray-700">{col.label}</h4>
-              <span className="text-xs text-gray-400">{items.length}</span>
-            </div>
+    <div
+      className="overflow-x-auto -mx-4 px-4 pb-2 sm:mx-0 sm:px-0 sm:pb-0 scrollbar-none"
+      role="region"
+      aria-label="Kanban board"
+    >
+      <div className="flex gap-3 sm:gap-4 min-w-[720px] sm:min-w-0 sm:grid sm:grid-cols-4">
+        {columns.map((col) => {
+          const items = promises.filter((p) => p.status === col.status);
+          return (
+            <div
+              key={col.status}
+              className="flex-1 min-w-[200px] sm:min-w-0 rounded-lg bg-gray-50 p-3 min-h-[200px]"
+              onDrop={(e) => handleDrop(e, col.status)}
+              onDragOver={handleDragOver}
+              role="list"
+              aria-label={`${col.label} column`}
+            >
+              <div className="mb-3 flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-gray-700">{col.label}</h4>
+                <span className="rounded-full bg-gray-200/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                  {items.length}
+                </span>
+              </div>
 
-            <div className="space-y-2">
-              {items.map((p) => (
-                <div
-                  key={p.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, p.id)}
-                  className="cursor-grab active:cursor-grabbing"
-                  role="listitem"
-                >
-                  <PromiseCard
-                    promise={p}
-                    agents={agents}
-                    domains={domains}
-                    config={config}
-                    variant="kanban"
-                    onStatusChange={(newStatus) => onStatusChange(p.id, newStatus)}
-                    showActions={false}
-                  />
-                </div>
-              ))}
-            </div>
+              <div className="space-y-2">
+                {items.map((p) => (
+                  <div
+                    key={p.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, p.id)}
+                    className="cursor-grab active:cursor-grabbing"
+                    role="listitem"
+                  >
+                    <PromiseCard
+                      promise={p}
+                      agents={agents}
+                      domains={domains}
+                      config={config}
+                      variant="kanban"
+                      onStatusChange={(newStatus) => onStatusChange(p.id, newStatus)}
+                      showActions={false}
+                    />
+                  </div>
+                ))}
+              </div>
 
-            {items.length === 0 && (
-              <p className="py-4 text-center text-xs text-gray-300">
-                Drop promises here
-              </p>
-            )}
-          </div>
-        );
-      })}
+              {items.length === 0 && (
+                <p className="py-4 text-center text-xs text-gray-300">
+                  Drop promises here
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -298,15 +306,15 @@ function CapacitySimulator({
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Hypothetical promise..."
-          className="w-full rounded border border-gray-200 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
         />
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <label htmlFor="cap-assignee" className="sr-only">Assignee</label>
           <select
             id="cap-assignee"
             value={assignee}
             onChange={(e) => setAssignee(e.target.value)}
-            className="rounded border border-gray-200 px-2 py-1.5 text-sm"
+            className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm sm:flex-1"
           >
             {network.agents.filter((a: NetworkAgent) => a.active).map((a: NetworkAgent) => (
               <option key={a.id} value={a.id}>{a.name}</option>
@@ -314,7 +322,7 @@ function CapacitySimulator({
           </select>
           <button
             onClick={handleSimulate}
-            className="rounded bg-gray-900 px-4 py-1.5 text-sm text-white hover:bg-gray-800"
+            className="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition-colors"
           >
             Simulate
           </button>
@@ -370,40 +378,54 @@ function AbsenceSimulator({
       <h3 className="text-sm font-semibold text-gray-900 mb-3">Absence Simulator</h3>
       <p className="text-xs text-gray-500 mb-3">What happens if a member is unavailable?</p>
 
-      <div className="flex flex-wrap gap-2 mb-3">
-        <label htmlFor="abs-agent" className="sr-only">Team member</label>
-        <select
-          id="abs-agent"
-          value={agentId}
-          onChange={(e) => setAgentId(e.target.value)}
-          className="rounded border border-gray-200 px-2 py-1.5 text-sm"
-        >
-          {network.agents.filter((a: NetworkAgent) => a.active).map((a: NetworkAgent) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
-        <label htmlFor="abs-start" className="sr-only">Start date</label>
-        <input
-          id="abs-start"
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="rounded border border-gray-200 px-2 py-1.5 text-sm"
-        />
-        <label htmlFor="abs-end" className="sr-only">End date</label>
-        <input
-          id="abs-end"
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="rounded border border-gray-200 px-2 py-1.5 text-sm"
-        />
-        <button
-          onClick={handleSimulate}
-          className="rounded bg-gray-900 px-4 py-1.5 text-sm text-white hover:bg-gray-800"
-        >
-          Simulate
-        </button>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 mb-3">
+        <div>
+          <label htmlFor="abs-agent" className="block text-xs font-medium text-gray-600 mb-1 sm:sr-only">
+            Team member
+          </label>
+          <select
+            id="abs-agent"
+            value={agentId}
+            onChange={(e) => setAgentId(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm"
+          >
+            {network.agents.filter((a: NetworkAgent) => a.active).map((a: NetworkAgent) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="abs-start" className="block text-xs font-medium text-gray-600 mb-1 sm:sr-only">
+            From
+          </label>
+          <input
+            id="abs-start"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm"
+          />
+        </div>
+        <div>
+          <label htmlFor="abs-end" className="block text-xs font-medium text-gray-600 mb-1 sm:sr-only">
+            Until
+          </label>
+          <input
+            id="abs-end"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm"
+          />
+        </div>
+        <div className="flex items-end">
+          <button
+            onClick={handleSimulate}
+            className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition-colors"
+          >
+            Simulate
+          </button>
+        </div>
       </div>
 
       {result && (
@@ -520,23 +542,25 @@ export default function TeamPage() {
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
-      <main id="main-content" className="mx-auto max-w-6xl px-4 py-6">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="font-serif text-3xl font-bold text-gray-900">{network.name}</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              {network.agents.filter((a) => a.active).length} members · {network.promises.length} promises
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <NetworkHealth health={networkHealth} config={network.config} variant="compact" />
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-800"
-            >
-              + New Promise
-            </button>
+      <main id="main-content" className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+        {/* Header — stacks on mobile */}
+        <div className="mb-5 sm:mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900">{network.name}</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                {network.agents.filter((a) => a.active).length} members · {network.promises.length} promises
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <NetworkHealth health={networkHealth} config={network.config} variant="compact" />
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition-colors"
+              >
+                + New Promise
+              </button>
+            </div>
           </div>
         </div>
 
@@ -559,15 +583,13 @@ export default function TeamPage() {
           </div>
         )}
 
-        {/* Health + Load summary */}
-        <div className="mb-6 grid gap-4 md:grid-cols-2">
-          <NetworkHealth health={networkHealth} config={network.config} variant="full" />
-          <MemberLoadView agents={network.agents} stats={agentStats} />
-        </div>
-
-        {/* Tab navigation */}
-        <div className="mb-4 border-b border-gray-200" role="tablist" aria-label="Team views">
-          <div className="flex gap-4">
+        {/* Tab navigation — sticky */}
+        <div
+          className="sticky top-[57px] z-30 -mx-4 mb-4 border-b border-gray-200 bg-[#faf9f6]/95 backdrop-blur-sm px-4"
+          role="tablist"
+          aria-label="Team views"
+        >
+          <div className="flex gap-1 sm:gap-4 overflow-x-auto scrollbar-none">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -575,7 +597,7 @@ export default function TeamPage() {
                 aria-selected={activeTab === tab.id}
                 aria-controls={`tabpanel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
-                className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap border-b-2 px-2 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "border-gray-900 text-gray-900"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -590,13 +612,23 @@ export default function TeamPage() {
         {/* Tab content */}
         <div role="tabpanel" id={`tabpanel-${activeTab}`}>
           {activeTab === "board" && (
-            <KanbanBoard
-              promises={network.promises}
-              agents={network.agents}
-              config={network.config}
-              domains={network.domains}
-              onStatusChange={handleStatusChange}
-            />
+            <div className="space-y-4 sm:space-y-6">
+              {/* Health overview at top of board */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <NetworkHealth health={networkHealth} config={network.config} variant="full" />
+                <div className="hidden sm:block">
+                  <MemberLoadView agents={network.agents} stats={agentStats} />
+                </div>
+              </div>
+
+              <KanbanBoard
+                promises={network.promises}
+                agents={network.agents}
+                config={network.config}
+                domains={network.domains}
+                onStatusChange={handleStatusChange}
+              />
+            </div>
           )}
 
           {activeTab === "members" && (

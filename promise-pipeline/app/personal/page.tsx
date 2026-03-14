@@ -127,17 +127,17 @@ export default function PersonalPage() {
     <div className="min-h-screen bg-[#faf9f6]">
       <Navbar />
 
-      <main id="main-content" className="mx-auto max-w-3xl px-4 py-6">
+      <main id="main-content" className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="font-serif text-3xl font-bold text-gray-900">{network.name}</h1>
+        <div className="mb-5 sm:mb-6">
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900">{network.name}</h1>
           <p className="mt-1 text-sm text-gray-500">
             Track your commitments. Build reliability over time.
           </p>
         </div>
 
         {/* Stats row */}
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-3 mb-5 sm:mb-6">
           <div className="md:col-span-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
               Your Momentum
@@ -205,9 +205,13 @@ export default function PersonalPage() {
           </div>
         </div>
 
-        {/* Tab navigation */}
-        <div className="mb-4 border-b border-gray-200" role="tablist" aria-label="Personal promise views">
-          <div className="flex gap-4">
+        {/* Tab navigation — sticky on scroll */}
+        <div
+          className="sticky top-[57px] z-30 -mx-4 mb-4 border-b border-gray-200 bg-[#faf9f6]/95 backdrop-blur-sm px-4"
+          role="tablist"
+          aria-label="Personal promise views"
+        >
+          <div className="flex gap-1 sm:gap-4 overflow-x-auto scrollbar-none">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -215,7 +219,7 @@ export default function PersonalPage() {
                 aria-selected={activeTab === tab.id}
                 aria-controls={`tabpanel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
-                className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap border-b-2 px-2 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "border-gray-900 text-gray-900"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -238,7 +242,7 @@ export default function PersonalPage() {
               {!showForm ? (
                 <button
                   onClick={() => setShowForm(true)}
-                  className="mb-4 w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+                  className="mb-4 w-full rounded-xl border-2 border-dashed border-gray-300 px-4 py-5 text-sm font-medium text-gray-500 hover:border-gray-400 hover:bg-white/60 hover:text-gray-700 active:bg-white transition-colors"
                 >
                   + Make a new promise
                 </button>
@@ -293,7 +297,7 @@ export default function PersonalPage() {
               )}
 
               {/* Promise list */}
-              <div className="space-y-3" aria-live="polite">
+              <div className="space-y-3 sm:space-y-4" aria-live="polite">
                 {(activeTab === "active"
                   ? filteredPromises.filter((p) => p.status === "declared" || p.status === "degraded")
                   : filteredPromises
@@ -313,9 +317,16 @@ export default function PersonalPage() {
                   />
                 ))}
                 {filteredPromises.length === 0 && (
-                  <p className="py-8 text-center text-sm text-gray-400">
-                    {activeTab === "active" ? "No active promises. Make your first commitment above." : "No promises match your filters."}
-                  </p>
+                  <div className="py-12 text-center">
+                    <p className="text-base text-gray-400">
+                      {activeTab === "active" ? "No active promises yet" : "No promises match your filters"}
+                    </p>
+                    {activeTab === "active" && (
+                      <p className="mt-1 text-sm text-gray-400">
+                        Tap the button above to make your first commitment.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

@@ -86,12 +86,14 @@ export default function PromiseForm({
 
   const activePromises = existingPromises.filter((p) => p.status === "declared" || p.status === "degraded");
 
+  const inputClass = "w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400";
+
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="space-y-3">
+    <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm">
+      <div className="space-y-4">
         {/* Body */}
         <div>
-          <label htmlFor="promise-body" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="promise-body" className="block text-sm font-medium text-gray-700 mb-1.5">
             {mode === "renegotiate" ? "Updated commitment" : "What are you committing to?"}
           </label>
           <textarea
@@ -99,17 +101,17 @@ export default function PromiseForm({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder={complexity === "simple" ? "I promise to..." : "Describe the commitment..."}
-            className="w-full rounded border border-gray-200 p-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className={`${inputClass} min-h-[80px]`}
             rows={2}
             autoFocus
             required
           />
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Promiser (team/detailed only) */}
           {complexity === "detailed" && agents.length > 1 && (
-            <div className="flex-1 min-w-[140px]">
+            <div>
               <label htmlFor="promise-promiser" className="block text-xs font-medium text-gray-600 mb-1">
                 Who is making this promise?
               </label>
@@ -117,7 +119,7 @@ export default function PromiseForm({
                 id="promise-promiser"
                 value={promiser}
                 onChange={(e) => setPromiser(e.target.value)}
-                className="w-full rounded border border-gray-200 px-2 py-1.5 text-sm"
+                className={inputClass}
               >
                 {agents.filter((a) => a.active).map((a) => (
                   <option key={a.id} value={a.id}>{a.name}{a.role ? ` (${a.role})` : ""}</option>
@@ -127,7 +129,7 @@ export default function PromiseForm({
           )}
 
           {/* Promisee */}
-          <div className="flex-1 min-w-[140px]">
+          <div>
             <label htmlFor="promise-promisee" className="block text-xs font-medium text-gray-600 mb-1">
               To whom?
             </label>
@@ -135,7 +137,7 @@ export default function PromiseForm({
               id="promise-promisee"
               value={promisee}
               onChange={(e) => setPromisee(e.target.value)}
-              className="w-full rounded border border-gray-200 px-2 py-1.5 text-sm"
+              className={inputClass}
             >
               {complexity === "simple" && <option value="self">Myself</option>}
               <option value="network">{complexity === "simple" ? "Someone else" : "The team"}</option>
@@ -146,7 +148,7 @@ export default function PromiseForm({
           </div>
 
           {/* Domain */}
-          <div className="flex-1 min-w-[120px]">
+          <div>
             <label htmlFor="promise-domain" className="block text-xs font-medium text-gray-600 mb-1">
               Domain
             </label>
@@ -154,7 +156,7 @@ export default function PromiseForm({
               id="promise-domain"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
-              className="w-full rounded border border-gray-200 px-2 py-1.5 text-sm"
+              className={inputClass}
             >
               {domains.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
@@ -163,7 +165,7 @@ export default function PromiseForm({
           </div>
 
           {/* Deadline */}
-          <div className="flex-1 min-w-[140px]">
+          <div>
             <label htmlFor="promise-target" className="block text-xs font-medium text-gray-600 mb-1">
               Deadline
             </label>
@@ -172,15 +174,15 @@ export default function PromiseForm({
               type="date"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              className="w-full rounded border border-gray-200 px-2 py-1.5 text-sm"
+              className={inputClass}
             />
           </div>
         </div>
 
         {/* Team-specific fields */}
         {complexity === "detailed" && (
-          <div className="flex flex-wrap gap-3">
-            <div className="flex-1 min-w-[120px]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
               <label htmlFor="promise-priority" className="block text-xs font-medium text-gray-600 mb-1">
                 Priority
               </label>
@@ -188,7 +190,7 @@ export default function PromiseForm({
                 id="promise-priority"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as typeof priority)}
-                className="w-full rounded border border-gray-200 px-2 py-1.5 text-sm"
+                className={inputClass}
               >
                 <option value="critical">Critical</option>
                 <option value="high">High</option>
@@ -197,7 +199,7 @@ export default function PromiseForm({
               </select>
             </div>
 
-            <div className="flex-1 min-w-[120px]">
+            <div>
               <label htmlFor="promise-hours" className="block text-xs font-medium text-gray-600 mb-1">
                 Estimated hours
               </label>
@@ -208,12 +210,12 @@ export default function PromiseForm({
                 step="0.5"
                 value={estimatedHours}
                 onChange={(e) => setEstimatedHours(e.target.value)}
-                className="w-full rounded border border-gray-200 px-2 py-1.5 text-sm"
+                className={inputClass}
                 placeholder="0"
               />
             </div>
 
-            <div className="flex-1 min-w-[160px]">
+            <div>
               <label htmlFor="promise-tags" className="block text-xs font-medium text-gray-600 mb-1">
                 Tags (comma-separated)
               </label>
@@ -222,7 +224,7 @@ export default function PromiseForm({
                 type="text"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                className="w-full rounded border border-gray-200 px-2 py-1.5 text-sm"
+                className={inputClass}
                 placeholder="e.g. sprint-3, frontend"
               />
             </div>
@@ -239,7 +241,7 @@ export default function PromiseForm({
               id="promise-recurring"
               value={recurring}
               onChange={(e) => setRecurring(e.target.value as typeof recurring)}
-              className="rounded border border-gray-200 px-2 py-1.5 text-sm"
+              className={inputClass}
             >
               <option value="">One-time</option>
               <option value="daily">Daily</option>
@@ -266,9 +268,9 @@ export default function PromiseForm({
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Depends on (optional)
             </label>
-            <div className="max-h-32 overflow-y-auto rounded border border-gray-100 p-2 space-y-1">
+            <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-100 p-2 space-y-0.5">
               {activePromises.map((p) => (
-                <label key={p.id} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer hover:bg-gray-50 rounded px-1">
+                <label key={p.id} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer hover:bg-gray-50 rounded-lg px-2 py-1.5">
                   <input
                     type="checkbox"
                     checked={dependsOn.includes(p.id)}
@@ -283,10 +285,10 @@ export default function PromiseForm({
         )}
 
         {/* Actions */}
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-3 pt-2">
           <button
             type="submit"
-            className="rounded bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+            className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition-colors"
           >
             {mode === "create" ? (complexity === "simple" ? "Make Promise" : "Add Promise") : mode === "edit" ? "Save" : "Renegotiate"}
           </button>
@@ -294,7 +296,7 @@ export default function PromiseForm({
             <button
               type="button"
               onClick={onCancel}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              className="px-2 py-2.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
               Cancel
             </button>

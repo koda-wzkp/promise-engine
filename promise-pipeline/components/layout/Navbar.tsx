@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Rocket } from "lucide-react";
+import { Gamepad2 } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/demo/hb2021", label: "HB 2021" },
@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { href: "/personal", label: "Personal" },
   { href: "/team", label: "Teams" },
   { href: "/services", label: "Services" },
-  { href: "/games/mars", label: "Play", icon: "rocket" },
+  { href: "/games", label: "Play", icon: "gamepad" },
   { href: "/blog", label: "Blog" },
   { href: "/about", label: "About" },
 ];
@@ -42,10 +42,10 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center gap-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded ${link.icon === "rocket" ? "text-orange-600 hover:text-orange-800" : "text-gray-600 hover:text-gray-900"}`}
+              className={`flex items-center gap-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded ${link.icon === "gamepad" ? "text-orange-600 hover:text-orange-800" : "text-gray-600 hover:text-gray-900"}`}
             >
-              {link.icon === "rocket" && (
-                <Rocket className="h-3.5 w-3.5" aria-hidden="true" />
+              {link.icon === "gamepad" && (
+                <Gamepad2 className="h-3.5 w-3.5" aria-hidden="true" />
               )}
               {link.label}
             </Link>
@@ -78,10 +78,10 @@ export default function Navbar() {
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className={`flex items-center gap-1.5 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded ${link.icon === "rocket" ? "text-orange-600 hover:text-orange-800" : "text-gray-600"}`}
+              className={`flex items-center gap-1.5 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded ${link.icon === "gamepad" ? "text-orange-600 hover:text-orange-800" : "text-gray-600"}`}
             >
-              {link.icon === "rocket" && (
-                <Rocket className="h-3.5 w-3.5" aria-hidden="true" />
+              {link.icon === "gamepad" && (
+                <Gamepad2 className="h-3.5 w-3.5" aria-hidden="true" />
               )}
               {link.label}
             </Link>

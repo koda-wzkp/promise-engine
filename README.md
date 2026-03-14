@@ -6,6 +6,8 @@ Promise Engine turns implicit claims into verifiable commitments. AI models prom
 
 Built on [Promise Theory](https://en.wikipedia.org/wiki/Promise_theory) (Burgess, 2004) — a formal methodology proven in production at 2,700+ companies via CFEngine and adopted by Cisco for software-defined networking.
 
+> **Promise Engine** is the open-source core — the schema, simulation engine, graph utilities, and annotation pipeline. **Promise Pipeline** is the product and platform built on Promise Engine, including the hosted dashboards, services, and client-facing tools at [promisepipeline.com](https://promisepipeline.com).
+
 ---
 
 ## What's Here
@@ -195,4 +197,4 @@ The most impactful way to contribute right now is **labeling training data** —
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+AGPL-3.0 License. See [LICENSE](LICENSE) for details.

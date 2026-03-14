@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { createStorageEngine, StorageEngine } from "@/lib/storage/local";
 import { PromiseNetwork, NetworkScope } from "@/lib/types/network";
+import { createHB2021Network } from "@/lib/data/hb2021-network";
 import Link from "next/link";
 
 interface NetworkSummary {
@@ -50,6 +51,17 @@ export default function NetworkBrowserPage() {
       }
     }
 
+    // Add the HB 2021 civic network (file-based, not in localStorage)
+    const hb2021 = createHB2021Network();
+    summaries.push({
+      id: hb2021.id,
+      name: hb2021.name,
+      scope: hb2021.scope,
+      promiseCount: hb2021.promises.length,
+      agentCount: hb2021.agents.filter((a) => a.active).length,
+      updatedAt: hb2021.updatedAt,
+    });
+
     // Sort by most recently updated
     summaries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     setNetworks(summaries);
@@ -59,6 +71,7 @@ export default function NetworkBrowserPage() {
   const getNetworkLink = (net: NetworkSummary): string => {
     if (net.scope === "personal") return "/personal";
     if (net.scope === "team") return "/team";
+    if (net.id === "net-hb2021") return "/demo/hb2021";
     return `/networks/${net.id}`;
   };
 

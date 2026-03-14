@@ -1,4 +1,5 @@
 import Link from "next/link";
+import IndigenousAcknowledgment from "./IndigenousAcknowledgment";
 
 export default function Footer() {
   return (
@@ -33,6 +34,9 @@ export default function Footer() {
         <p className="mt-4 text-center text-xs text-gray-400">
           &copy; {new Date().getFullYear()} Pleco. Open-source infrastructure for commitment accountability.
         </p>
+        <div className="mt-4 text-center">
+          <IndigenousAcknowledgment variant="footer" />
+        </div>
       </div>
     </footer>
   );

@@ -377,7 +377,7 @@ Promise Engine is not inventing promise-based thinking. It is:
 4. **Adding infrastructure** (schemas, verification APIs, integrity scoring)
 5. **Training AI on it** (Promise-Oriented Development)
 
-This is **evolution, not invention**. Which is stronger positioning.
+This is **evolution, not invention**.
 
 **What's new:**
 - Machine-readable promise schemas (JSON Schema)
@@ -394,6 +394,5 @@ This is **evolution, not invention**. Which is stronger positioning.
 
 ---
 
-**Document Status:** Comprehensive theoretical foundation
-**Last Updated:** 2026-01-26
-**See Also:** PROMISE_THEORY_FOUNDATIONS.md, ROADMAP.md, README.md
+**Last Updated:** 2026-03-14
+**See Also:** [ROADMAP.md](../ROADMAP.md), [README.md](../README.md)

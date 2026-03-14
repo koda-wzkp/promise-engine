@@ -205,6 +205,51 @@ export default function PersonalPage() {
           </div>
         </div>
 
+        {/* Data Commitment — our promise to you */}
+        <section className="mb-6 rounded-lg border-2 border-green-200 bg-green-50/50 p-5 shadow-sm" aria-labelledby="data-commitment-heading">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white" aria-hidden="true">
+              &#x2713;
+            </span>
+            <h2 id="data-commitment-heading" className="font-serif text-lg font-bold text-gray-900">
+              Our Data Promise to You
+            </h2>
+            <span className="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">
+              Verified
+            </span>
+          </div>
+
+          <dl className="space-y-2 text-sm">
+            <div className="flex gap-2">
+              <dt className="font-semibold text-gray-600 min-w-[5.5rem]">Promiser:</dt>
+              <dd className="text-gray-800">Promise Pipeline / Pleco</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="font-semibold text-gray-600 min-w-[5.5rem]">Promisee:</dt>
+              <dd className="text-gray-800">Every personal tracker user</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="font-semibold text-gray-600 min-w-[5.5rem]">Promise:</dt>
+              <dd className="text-gray-800">
+                Your promise content — what you promised, to whom, your reflections — never leaves your device unless you explicitly choose to sync it.
+                If you sync, it&apos;s encrypted so we can&apos;t read it.
+                We never sell, share, or train on your promise content.
+                If you choose to contribute anonymized patterns, you control which domains, and you can revoke anytime.
+              </dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="font-semibold text-gray-600 min-w-[5.5rem]">Verification:</dt>
+              <dd className="text-gray-800">
+                The personal tracker runs on localStorage. You can verify this by checking your browser&apos;s developer tools — your data is there, not on our server. When sync ships, the encryption is open-source and auditable.
+              </dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="font-semibold text-gray-600 min-w-[5.5rem]">Status:</dt>
+              <dd className="font-semibold text-green-700">Verified — architecturally enforced</dd>
+            </div>
+          </dl>
+        </section>
+
         {/* Tab navigation */}
         <div className="mb-4 border-b border-gray-200" role="tablist" aria-label="Personal promise views">
           <div className="flex gap-4">

@@ -1,4 +1,4 @@
-import { supabase } from "./client";
+import { supabase, isSupabaseConfigured } from "./client";
 import type { Session, User } from "@supabase/supabase-js";
 
 export async function signInWithMagicLink(email: string): Promise<{ error: Error | null }> {
@@ -32,15 +32,18 @@ export async function signInWithApple(): Promise<{ error: Error | null }> {
 }
 
 export async function signOut(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
   await supabase.auth.signOut();
 }
 
 export async function getSession(): Promise<Session | null> {
+  if (!isSupabaseConfigured()) return null;
   const { data } = await supabase.auth.getSession();
   return data.session;
 }
 
 export async function getUser(): Promise<User | null> {
+  if (!isSupabaseConfigured()) return null;
   const { data } = await supabase.auth.getUser();
   return data.user;
 }

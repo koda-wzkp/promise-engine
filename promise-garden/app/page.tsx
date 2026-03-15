@@ -54,17 +54,23 @@ export default function GardenPage() {
   // Auth check
   useEffect(() => {
     async function init() {
-      const session = await getSession();
-      if (!session) {
-        // Check if onboarding was completed locally
-        if (typeof window !== "undefined" && !localStorage.getItem("pg_onboarded")) {
-          router.push("/onboarding");
+      try {
+        const session = await getSession();
+        if (!session) {
+          // Check if onboarding was completed locally
+          if (typeof window !== "undefined" && !localStorage.getItem("pg_onboarded")) {
+            router.push("/onboarding");
+            return;
+          }
+          // No session — show empty garden (demo mode)
+          setLoading(false);
           return;
         }
-        router.push("/auth/login");
-        return;
+        setUserId(session.user.id);
+      } catch {
+        // Supabase not configured — show empty garden
+        setLoading(false);
       }
-      setUserId(session.user.id);
     }
     init();
   }, [router]);

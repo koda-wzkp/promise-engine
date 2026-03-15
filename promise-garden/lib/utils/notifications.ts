@@ -11,8 +11,15 @@ interface NotificationSchedule {
 
 let LocalNotifications: typeof import("@capacitor/local-notifications").LocalNotifications | null = null;
 
+function isNativePlatform(): boolean {
+  if (typeof window === "undefined") return false;
+  // Capacitor injects this on native platforms
+  return !!(window as unknown as Record<string, unknown>).Capacitor;
+}
+
 async function getPlugin() {
   if (LocalNotifications) return LocalNotifications;
+  if (!isNativePlatform()) return null;
   try {
     const mod = await import("@capacitor/local-notifications");
     LocalNotifications = mod.LocalNotifications;

@@ -1,242 +1,486 @@
-import { Promise, PromiseStatus } from "../types/promise";
-import { WhatIfQuery, CascadeResult, AffectedPromise, NetworkHealthScore } from "../types/simulation";
-import { calculateNetworkHealth } from "./scoring";
+import { Promise, PromiseStatus, Threat } from "../types/promise";
+import {
+  WhatIfQuery,
+  CascadeResult,
+  AffectedPromise,
+  CertaintyImpact,
+  NetworkHealthScore,
+} from "../types/simulation";
+import { calculateNetworkEntropy } from "./scoring";
+
+const STATUS_WEIGHTS: Record<PromiseStatus, number> = {
+  verified: 100,
+  declared: 60,
+  degraded: 30,
+  violated: 0,
+  unverifiable: 20,
+};
+
+const DEGRADATION_ORDER: PromiseStatus[] = [
+  "verified",
+  "declared",
+  "degraded",
+  "violated",
+];
+
+function degradeStatus(current: PromiseStatus, levels: number = 1): PromiseStatus {
+  if (current === "unverifiable") return "unverifiable";
+  const idx = DEGRADATION_ORDER.indexOf(current);
+  if (idx === -1) return current;
+  const newIdx = Math.min(idx + levels, DEGRADATION_ORDER.length - 1);
+  return DEGRADATION_ORDER[newIdx];
+}
+
+const CERTAINTY_WEIGHTS: Record<PromiseStatus, number> = {
+  verified: 1.0,
+  violated: 0.9,
+  degraded: 0.6,
+  declared: 0.3,
+  unverifiable: 0.0,
+};
 
 /**
- * Degrade a status by one level.
- * verified → degraded, declared → degraded, degraded → violated
- * violated and unverifiable stay as-is.
+ * Propagate certainty changes through verification dependency chains.
+ *
+ * When a promise that serves as a verification dependency changes status,
+ * find all promises whose verification depends on it and compute certainty impact.
+ * Certainty is capped at the verifier's certainty level.
  */
-function degradeStatus(status: PromiseStatus): PromiseStatus {
-  switch (status) {
-    case "verified": return "degraded";
-    case "declared": return "degraded";
-    case "degraded": return "violated";
-    case "violated": return "violated";
-    case "unverifiable": return "unverifiable";
-    // ACA extended statuses
-    case "kept": return "partial";
-    case "partial": return "broken";
-    case "delayed": return "broken";
-    case "modified": return "partial";
-    case "broken": return "broken";
-    case "legally_challenged": return "broken";
-    case "repealed": return "repealed";
-    default: return status;
+export function propagateCertaintyChange(
+  promises: Promise[],
+  changedPromiseId: string,
+  newStatus: PromiseStatus,
+): CertaintyImpact[] {
+  const impacts: CertaintyImpact[] = [];
+  const changedPromise = promises.find(p => p.id === changedPromiseId);
+  if (!changedPromise) return impacts;
+
+  // Find all promises whose verification depends on the changed promise
+  const verificationDependents = promises.filter(
+    p => p.verification?.dependsOnPromise === changedPromiseId
+  );
+
+  if (verificationDependents.length === 0) return impacts;
+
+  const verifierCertainty = CERTAINTY_WEIGHTS[newStatus];
+
+  for (const dependent of verificationDependents) {
+    const previousCertainty = CERTAINTY_WEIGHTS[dependent.status];
+    const newCertainty = Math.min(previousCertainty, verifierCertainty);
+
+    if (newCertainty < previousCertainty) {
+      impacts.push({
+        promiseId: dependent.id,
+        previousCertainty,
+        newCertainty,
+        reason: `Verification mechanism compromised: ${changedPromise.body.slice(0, 80)} (${changedPromiseId}) ${newStatus}`,
+        verificationChainDepth: 1,
+      });
+
+      // Recursive: if this dependent is itself a verification dependency
+      // for other promises, propagate further
+      const downstream = propagateCertaintyChange(
+        promises,
+        dependent.id,
+        dependent.status,
+      );
+
+      for (const d of downstream) {
+        d.verificationChainDepth += 1;
+        d.newCertainty = Math.min(d.newCertainty, newCertainty);
+        impacts.push(d);
+      }
+    }
   }
+
+  return impacts;
 }
 
 /**
  * Deterministic cascade propagation engine.
- *
- * Given a promise network and a hypothetical state change,
- * propagates effects through the dependency graph using BFS.
- *
- * Rules:
- * 1. If a promise is set to "violated", direct dependents degrade by one level.
- * 2. If a promise is set to "unverifiable", dependents are flagged but don't change.
- * 3. Cascades propagate transitively with diminishing effect:
- *    depth 1 = full degradation, depth 2+ = one additional level at each step.
- * 4. A promise already at "violated" stays violated.
- * 5. Conflicts are flagged in insights, not cascaded.
- *
- * Returns a CascadeResult describing effects without modifying original data.
+ * Uses BFS to propagate effects through the dependency graph.
  */
 export function simulateCascade(
   promises: Promise[],
-  query: WhatIfQuery
+  query: WhatIfQuery,
+  threats: Threat[] = []
 ): CascadeResult {
-  const originalHealth = calculateNetworkHealth(promises);
-  const affected: AffectedPromise[] = [];
+  const promiseMap = new Map(promises.map((p) => [p.id, { ...p }]));
+  const originalStatuses = new Map(promises.map((p) => [p.id, p.status]));
 
   // Build reverse adjacency: for each promise, which promises depend on it?
-  const reverseDeps = new Map<string, string[]>();
+  const dependents = new Map<string, string[]>();
   for (const p of promises) {
     for (const depId of p.depends_on) {
-      if (!reverseDeps.has(depId)) reverseDeps.set(depId, []);
-      reverseDeps.get(depId)!.push(p.id);
+      if (!dependents.has(depId)) dependents.set(depId, []);
+      dependents.get(depId)!.push(p.id);
     }
   }
 
-  // Map promise IDs to their simulated statuses
-  const simulatedStatuses = new Map<string, PromiseStatus>();
-  for (const p of promises) {
-    simulatedStatuses.set(p.id, p.status);
-  }
+  // Calculate original network health
+  const originalHealth = calculateNetworkHealth(promises).overall;
 
-  // Apply the initial query
-  const targetPromise = promises.find((p) => p.id === query.promiseId);
+  // Apply the initial change
+  const affected: AffectedPromise[] = [];
+  const targetPromise = promiseMap.get(query.promiseId);
   if (!targetPromise) {
+    const currentEntropy = calculateNetworkEntropy(promises).overall;
     return {
       query,
-      originalNetworkHealth: originalHealth.overall,
-      newNetworkHealth: originalHealth.overall,
+      originalNetworkHealth: originalHealth,
+      newNetworkHealth: originalHealth,
       affectedPromises: [],
+      triggeredThreats: [],
       cascadeDepth: 0,
       domainsAffected: [],
       summary: "Promise not found.",
+      certaintyImpacts: [],
+      originalNetworkEntropy: currentEntropy,
+      newNetworkEntropy: currentEntropy,
     };
   }
 
-  simulatedStatuses.set(query.promiseId, query.newStatus);
+  targetPromise.status = query.newStatus;
 
-  // BFS cascade propagation
-  // Queue entries: [promiseId, cascadeDepth]
-  const queue: [string, number][] = [[query.promiseId, 0]];
+  // BFS cascade
   const visited = new Set<string>([query.promiseId]);
+  const queue: { id: string; depth: number }[] = [];
+
+  // Add direct dependents to queue
+  const directDeps = dependents.get(query.promiseId) || [];
+  for (const depId of directDeps) {
+    queue.push({ id: depId, depth: 1 });
+  }
+
   let maxDepth = 0;
+  const triggeredThreatIds: string[] = [];
 
   while (queue.length > 0) {
-    const [currentId, depth] = queue.shift()!;
-    const currentStatus = simulatedStatuses.get(currentId)!;
+    const { id, depth } = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
 
-    // Only propagate from negative states
-    const propagatingStatuses: PromiseStatus[] = [
-      "degraded", "violated", "broken", "repealed", "legally_challenged",
-    ];
-    if (!propagatingStatuses.includes(currentStatus)) continue;
+    const promise = promiseMap.get(id);
+    if (!promise) continue;
 
-    const dependents = reverseDeps.get(currentId) ?? [];
-    for (const depId of dependents) {
-      if (visited.has(depId)) continue;
-      visited.add(depId);
+    const originalStatus = originalStatuses.get(id)!;
 
-      const depPromise = promises.find((p) => p.id === depId);
-      if (!depPromise) continue;
+    if (query.newStatus === "violated" || query.newStatus === "degraded") {
+      // Degrade dependents, diminishing with depth
+      const degradeLevels = Math.max(1, 2 - depth + 1);
+      const newStatus = degradeStatus(originalStatus, degradeLevels > 0 ? 1 : 0);
 
-      const originalDepStatus = depPromise.status;
-      const currentSimulatedStatus = simulatedStatuses.get(depId)!;
+      if (newStatus !== originalStatus) {
+        promise.status = newStatus;
+        affected.push({
+          promiseId: id,
+          originalStatus,
+          newStatus,
+          cascadeDepth: depth,
+          reason: `Depends on ${query.promiseId} which changed to ${query.newStatus}`,
+        });
+        maxDepth = Math.max(maxDepth, depth);
 
-      // Non-degradable statuses
-      if (currentSimulatedStatus === "unverifiable" || currentSimulatedStatus === "repealed") continue;
-
-      // Apply degradation
-      let newStatus: PromiseStatus;
-      const hardFailures: PromiseStatus[] = ["violated", "broken", "repealed"];
-      const healthyStatuses: PromiseStatus[] = ["verified", "declared", "kept", "delayed", "modified"];
-
-      if (hardFailures.includes(currentStatus)) {
-        // Hard upstream failure: degrade by one level
-        newStatus = degradeStatus(currentSimulatedStatus);
-      } else {
-        // Soft upstream degradation: degrade only if we're still healthy
-        if (healthyStatuses.includes(currentSimulatedStatus)) {
-          newStatus = degradeStatus(currentSimulatedStatus);
-        } else {
-          newStatus = currentSimulatedStatus; // Already in a negative state
+        // Continue propagation
+        const nextDeps = dependents.get(id) || [];
+        for (const nextId of nextDeps) {
+          if (!visited.has(nextId)) {
+            queue.push({ id: nextId, depth: depth + 1 });
+          }
         }
       }
-
-      if (newStatus !== currentSimulatedStatus) {
-        simulatedStatuses.set(depId, newStatus);
-        const newDepth = depth + 1;
-        maxDepth = Math.max(maxDepth, newDepth);
-
+    } else if (query.newStatus === "unverifiable") {
+      // Flag as at risk but don't change status
+      affected.push({
+        promiseId: id,
+        originalStatus,
+        newStatus: originalStatus,
+        cascadeDepth: depth,
+        reason: `Upstream promise ${query.promiseId} is now unverifiable — this promise is at risk`,
+      });
+      maxDepth = Math.max(maxDepth, depth);
+    } else if (query.newStatus === "verified") {
+      // Reinforcement: if all dependencies are now verified, mark as reinforced
+      const allDepsVerified = promise.depends_on.every(
+        (depId) => promiseMap.get(depId)?.status === "verified"
+      );
+      if (allDepsVerified && originalStatus !== "verified") {
         affected.push({
-          promiseId: depId,
-          originalStatus: originalDepStatus,
-          newStatus,
-          cascadeDepth: newDepth,
-          reason: generateAffectedReason(depPromise, currentId, promises, newStatus),
+          promiseId: id,
+          originalStatus,
+          newStatus: originalStatus,
+          cascadeDepth: depth,
+          reason: `All dependencies now verified — this promise is reinforced`,
         });
-
-        queue.push([depId, newDepth]);
       }
     }
   }
 
-  // Compute new network health with simulated statuses
-  const simulatedPromises = promises.map((p) => ({
-    ...p,
-    status: simulatedStatuses.get(p.id) ?? p.status,
-  }));
-  const newHealth = calculateNetworkHealth(simulatedPromises);
+  // Check threats — lateral cascade
+  for (const threat of threats) {
+    const triggerPromise = promiseMap.get(threat.triggerPromiseId);
+    if (triggerPromise && triggerPromise.status === threat.triggerCondition) {
+      triggeredThreatIds.push(threat.id);
+      for (const affectedId of threat.affectedPromiseIds) {
+        if (!visited.has(affectedId)) {
+          const promise = promiseMap.get(affectedId);
+          if (promise) {
+            const origStatus = originalStatuses.get(affectedId)!;
+            const newStatus = degradeStatus(origStatus, 1);
+            if (newStatus !== origStatus) {
+              promise.status = newStatus;
+              affected.push({
+                promiseId: affectedId,
+                originalStatus: origStatus,
+                newStatus,
+                cascadeDepth: 1,
+                reason: `Threat ${threat.id}: ${threat.body}`,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
 
-  // Domains affected
-  const domainsAffected = Array.from(new Set(affected.map((a) => {
-    const p = promises.find((pr) => pr.id === a.promiseId);
-    return p?.domain ?? "Unknown";
-  })));
+  // Calculate new network health
+  const newPromises = Array.from(promiseMap.values());
+  const newHealth = calculateNetworkHealth(newPromises).overall;
+
+  // Certainty cascade via verification dependency edges
+  const certaintyImpacts = propagateCertaintyChange(
+    promises,
+    query.promiseId,
+    query.newStatus,
+  );
+
+  // Entropy before and after
+  const originalEntropy = calculateNetworkEntropy(promises).overall;
+  const newEntropy = calculateNetworkEntropy(newPromises).overall;
+
+  const domainsAffected = Array.from(
+    new Set(
+      affected
+        .map((a) => promiseMap.get(a.promiseId)?.domain)
+        .filter(Boolean) as string[]
+    )
+  );
+
+  const summary = generateCascadeNarrative(
+    {
+      query,
+      originalNetworkHealth: originalHealth,
+      newNetworkHealth: newHealth,
+      affectedPromises: affected,
+      triggeredThreats: triggeredThreatIds,
+      cascadeDepth: maxDepth,
+      domainsAffected,
+      summary: "",
+      certaintyImpacts,
+      originalNetworkEntropy: originalEntropy,
+      newNetworkEntropy: newEntropy,
+    },
+    promises
+  );
 
   return {
     query,
-    originalNetworkHealth: originalHealth.overall,
-    newNetworkHealth: newHealth.overall,
+    originalNetworkHealth: originalHealth,
+    newNetworkHealth: newHealth,
     affectedPromises: affected,
+    triggeredThreats: triggeredThreatIds,
     cascadeDepth: maxDepth,
     domainsAffected,
-    summary: generateCascadeNarrative(
-      query, affected, originalHealth.overall, newHealth.overall, domainsAffected, promises
-    ),
+    summary,
+    certaintyImpacts,
+    originalNetworkEntropy: originalEntropy,
+    newNetworkEntropy: newEntropy,
   };
 }
 
-function generateAffectedReason(
-  promise: Promise,
-  upstreamId: string,
-  allPromises: Promise[],
-  newStatus: PromiseStatus
-): string {
-  const upstream = allPromises.find((p) => p.id === upstreamId);
-  const upstreamLabel = upstream
-    ? `${upstream.id} ("${upstream.body.slice(0, 50)}...")`
-    : upstreamId;
-  return `Depends on ${upstreamLabel}. Status changes to ${newStatus}.`;
+/**
+ * Calculate network health score.
+ */
+export function calculateNetworkHealth(promises: Promise[]): NetworkHealthScore {
+  if (promises.length === 0) {
+    return {
+      overall: 0,
+      byDomain: {},
+      byAgent: {},
+      bottlenecks: [],
+      atRisk: [],
+    };
+  }
+
+  const overall =
+    promises.reduce((sum, p) => sum + STATUS_WEIGHTS[p.status], 0) /
+    promises.length;
+
+  // By domain
+  const byDomain: Record<string, number> = {};
+  const domainPromises: Record<string, Promise[]> = {};
+  for (const p of promises) {
+    if (!domainPromises[p.domain]) domainPromises[p.domain] = [];
+    domainPromises[p.domain].push(p);
+  }
+  for (const [domain, dps] of Object.entries(domainPromises)) {
+    byDomain[domain] =
+      dps.reduce((sum, p) => sum + STATUS_WEIGHTS[p.status], 0) / dps.length;
+  }
+
+  // By agent (promiser)
+  const byAgent: Record<string, number> = {};
+  const agentPromises: Record<string, Promise[]> = {};
+  for (const p of promises) {
+    if (!agentPromises[p.promiser]) agentPromises[p.promiser] = [];
+    agentPromises[p.promiser].push(p);
+  }
+  for (const [agent, aps] of Object.entries(agentPromises)) {
+    byAgent[agent] =
+      aps.reduce((sum, p) => sum + STATUS_WEIGHTS[p.status], 0) / aps.length;
+  }
+
+  // Bottlenecks: promises with most dependents
+  const dependentCount = new Map<string, number>();
+  for (const p of promises) {
+    for (const depId of p.depends_on) {
+      dependentCount.set(depId, (dependentCount.get(depId) || 0) + 1);
+    }
+  }
+  const bottlenecks = Array.from(dependentCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([id]) => id);
+
+  // At risk: promises whose dependencies include degraded/violated
+  const atRisk: string[] = [];
+  for (const p of promises) {
+    if (p.depends_on.length > 0) {
+      const hasFailingDep = p.depends_on.some((depId) => {
+        const dep = promises.find((dp) => dp.id === depId);
+        return dep && (dep.status === "violated" || dep.status === "degraded");
+      });
+      if (hasFailingDep) atRisk.push(p.id);
+    }
+  }
+
+  return { overall, byDomain, byAgent, bottlenecks, atRisk };
+}
+
+/**
+ * Calculate Mean Time to Keep a Promise (MTKP).
+ */
+export function calculateMTKP(
+  promises: Array<Promise & { createdAt?: string; completedAt?: string }>
+): {
+  overall: number;
+  byDomain: Record<string, number>;
+  byAgent: Record<string, number>;
+} {
+  const completedPromises = promises.filter(
+    (p) => p.createdAt && p.completedAt && p.status === "verified"
+  );
+
+  if (completedPromises.length === 0) {
+    return { overall: 0, byDomain: {}, byAgent: {} };
+  }
+
+  function avgDays(ps: typeof completedPromises): number {
+    if (ps.length === 0) return 0;
+    const totalDays = ps.reduce((sum, p) => {
+      const created = new Date(p.createdAt!).getTime();
+      const completed = new Date(p.completedAt!).getTime();
+      return sum + (completed - created) / (1000 * 60 * 60 * 24);
+    }, 0);
+    return totalDays / ps.length;
+  }
+
+  const overall = avgDays(completedPromises);
+
+  const byDomain: Record<string, number> = {};
+  const domainGroups: Record<string, typeof completedPromises> = {};
+  for (const p of completedPromises) {
+    if (!domainGroups[p.domain]) domainGroups[p.domain] = [];
+    domainGroups[p.domain].push(p);
+  }
+  for (const [domain, dps] of Object.entries(domainGroups)) {
+    byDomain[domain] = avgDays(dps);
+  }
+
+  const byAgent: Record<string, number> = {};
+  const agentGroups: Record<string, typeof completedPromises> = {};
+  for (const p of completedPromises) {
+    if (!agentGroups[p.promiser]) agentGroups[p.promiser] = [];
+    agentGroups[p.promiser].push(p);
+  }
+  for (const [agent, aps] of Object.entries(agentGroups)) {
+    byAgent[agent] = avgDays(aps);
+  }
+
+  return { overall, byDomain, byAgent };
+}
+
+/**
+ * Identify bottleneck promises: promises with the most dependents.
+ */
+export function identifyBottlenecks(promises: Promise[]): string[] {
+  const dependentCount = new Map<string, number>();
+  for (const p of promises) {
+    for (const depId of p.depends_on) {
+      dependentCount.set(depId, (dependentCount.get(depId) || 0) + 1);
+    }
+  }
+  return Array.from(dependentCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => id);
 }
 
 /**
  * Generate a human-readable narrative explaining cascade effects.
  */
-function generateCascadeNarrative(
-  query: WhatIfQuery,
-  affected: AffectedPromise[],
-  originalHealth: number,
-  newHealth: number,
-  domains: string[],
+export function generateCascadeNarrative(
+  result: CascadeResult,
   promises: Promise[]
 ): string {
-  const source = promises.find((p) => p.id === query.promiseId);
-  if (!source) return "No cascade effects.";
+  const promiseMap = new Map(promises.map((p) => [p.id, p]));
+  const sourcePromise = promiseMap.get(result.query.promiseId);
 
-  if (affected.length === 0) {
-    return `Changing "${source.body}" to ${query.newStatus} has no downstream effects. No other promises depend on this commitment.`;
+  if (!sourcePromise) return "Unknown promise.";
+
+  if (result.affectedPromises.length === 0) {
+    return `Changing "${sourcePromise.body}" to ${result.query.newStatus} has no downstream effects. This promise has no dependents in the network.`;
   }
 
-  const healthDelta = newHealth - originalHealth;
-  const violatedCount = affected.filter((a) => a.newStatus === "violated").length;
-  const degradedCount = affected.filter((a) => a.newStatus === "degraded").length;
+  const healthDelta = result.newNetworkHealth - result.originalNetworkHealth;
+  const healthDir = healthDelta < 0 ? "decreases" : "increases";
 
-  let narrative = `Changing "${source.body}" to ${query.newStatus} affects ${affected.length} downstream promise${affected.length === 1 ? "" : "s"}`;
-  narrative += ` across ${domains.length} domain${domains.length === 1 ? "" : "s"} (${domains.join(", ")}).`;
-  narrative += ` Network health drops from ${originalHealth} to ${newHealth} (${healthDelta >= 0 ? "+" : ""}${healthDelta}).`;
+  let narrative = `Changing "${sourcePromise.body}" to ${result.query.newStatus} affects ${result.affectedPromises.length} downstream promise${result.affectedPromises.length !== 1 ? "s" : ""} across ${result.domainsAffected.length} domain${result.domainsAffected.length !== 1 ? "s" : ""} (${result.domainsAffected.join(", ")}). `;
 
-  if (violatedCount > 0) {
-    narrative += ` ${violatedCount} promise${violatedCount === 1 ? " becomes" : "s become"} violated.`;
+  narrative += `Network health ${healthDir} from ${Math.round(result.originalNetworkHealth)} to ${Math.round(result.newNetworkHealth)} (${healthDelta > 0 ? "+" : ""}${Math.round(healthDelta)}). `;
+
+  if (result.cascadeDepth > 1) {
+    narrative += `The cascade reaches ${result.cascadeDepth} levels deep. `;
   }
-  if (degradedCount > 0) {
-    narrative += ` ${degradedCount} promise${degradedCount === 1 ? " degrades" : "s degrade"}.`;
+
+  if (result.triggeredThreats.length > 0) {
+    narrative += `This change triggers ${result.triggeredThreats.length} threat${result.triggeredThreats.length !== 1 ? "s" : ""}, causing lateral cascade effects across domains. `;
+  }
+
+  // Highlight most significant affected promise
+  const worstAffected = result.affectedPromises.find(
+    (a) => a.newStatus === "violated"
+  );
+  if (worstAffected) {
+    const wp = promiseMap.get(worstAffected.promiseId);
+    if (wp) {
+      narrative += `Most critical impact: "${wp.body}" degrades to violated. `;
+    }
+  }
+
+  // Certainty cascade effects
+  if (result.certaintyImpacts && result.certaintyImpacts.length > 0) {
+    narrative += `Additionally, ${result.certaintyImpacts.length} promise${result.certaintyImpacts.length !== 1 ? "s lose" : " loses"} verification certainty through verification dependency chains.`;
   }
 
   return narrative;
-}
-
-/**
- * Apply cascade result to produce a modified promise array for display.
- * Does NOT mutate the original array.
- */
-export function applySimulation(
-  promises: Promise[],
-  query: WhatIfQuery,
-  result: CascadeResult
-): Promise[] {
-  const statusMap = new Map<string, PromiseStatus>();
-  statusMap.set(query.promiseId, query.newStatus);
-  for (const a of result.affectedPromises) {
-    statusMap.set(a.promiseId, a.newStatus);
-  }
-
-  return promises.map((p) => ({
-    ...p,
-    status: statusMap.get(p.id) ?? p.status,
-  }));
 }

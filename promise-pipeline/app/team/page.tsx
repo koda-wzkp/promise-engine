@@ -1,690 +1,552 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import PromiseForm from "@/components/network/PromiseForm";
-import PromiseCard from "@/components/network/PromiseCard";
-import NetworkHealth from "@/components/network/NetworkHealth";
-import DataExportImport from "@/components/network/DataExportImport";
-import { usePromiseNetwork } from "@/lib/hooks/usePromiseNetwork";
-import { PromiseStatus } from "@/lib/types/promise";
-import { NetworkPromise, NetworkAgent, StatusChangeContext, AgentStats } from "@/lib/types/network";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { TeamMember, TeamPromise, TeamDashboardData } from "@/lib/types/team";
+import { PromiseStatus, PromiseOrigin } from "@/lib/types/promise";
+import { CascadeResult } from "@/lib/types/simulation";
+import { simulateCascade, calculateNetworkHealth } from "@/lib/simulation/cascade";
+import { TeamPromiseBoard } from "@/components/team/TeamPromiseBoard";
+import { TeamHealthBarometer } from "@/components/team/TeamHealthBarometer";
+import { MemberLoad } from "@/components/team/MemberLoad";
+import { TeamCascadeView } from "@/components/team/TeamCascadeView";
 
-const TEAM_NETWORK_ID = "net-team-default";
+const STORAGE_KEY = "promise-pipeline-team";
 
-type TabId = "board" | "members" | "simulation" | "settings";
+type View = "board" | "health" | "members" | "cascade";
 
-// ─── SETUP FLOW ───
+function loadTeamData(): TeamDashboardData {
+  if (typeof window === "undefined") return defaultTeamData();
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : defaultTeamData();
+  } catch {
+    return defaultTeamData();
+  }
+}
 
-function TeamSetupFlow({ onComplete }: { onComplete: (name: string, members: Omit<NetworkAgent, "id">[]) => void }) {
-  const [teamName, setTeamName] = useState("");
-  const [members, setMembers] = useState([
-    { name: "", role: "" },
-    { name: "", role: "" },
-  ]);
+function saveTeamData(data: TeamDashboardData) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
 
-  const addMember = () => setMembers([...members, { name: "", role: "" }]);
-
-  const updateMember = (idx: number, field: "name" | "role", value: string) => {
-    const updated = [...members];
-    updated[idx] = { ...updated[idx], [field]: value };
-    setMembers(updated);
+function defaultTeamData(): TeamDashboardData {
+  return {
+    teamName: "My Team",
+    members: [],
+    promises: [],
+    health: {
+      overall: 0,
+      byDomain: {},
+      byAgent: {},
+      bottlenecks: [],
+      atRisk: [],
+    },
+    domains: [],
+    recentActivity: [],
   };
+}
+
+export default function TeamPage() {
+  const [data, setData] = useState<TeamDashboardData>(defaultTeamData());
+  const [view, setView] = useState<View>("board");
+  const [loaded, setLoaded] = useState(false);
+  const [showCreateMember, setShowCreateMember] = useState(false);
+  const [showCreatePromise, setShowCreatePromise] = useState(false);
+
+  useEffect(() => {
+    setData(loadTeamData());
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (loaded) {
+      const health = calculateNetworkHealth(data.promises);
+      const updated = { ...data, health };
+      saveTeamData(updated);
+    }
+  }, [data.promises, data.members, loaded]);
+
+  const addMember = useCallback(
+    (name: string, role: string) => {
+      const member: TeamMember = {
+        id: `TM-${Date.now()}`,
+        name,
+        type: "team-member",
+        short: name.slice(0, 3).toUpperCase(),
+        role,
+        activePromiseCount: 0,
+        keptRate: 0,
+        mtkp: 0,
+        loadScore: 0,
+      };
+      setData((prev) => ({
+        ...prev,
+        members: [...prev.members, member],
+      }));
+      setShowCreateMember(false);
+    },
+    []
+  );
+
+  const addPromise = useCallback(
+    (promise: TeamPromise) => {
+      setData((prev) => ({
+        ...prev,
+        promises: [...prev.promises, promise],
+        recentActivity: [
+          {
+            promiseId: promise.id,
+            action: "created",
+            timestamp: new Date().toISOString(),
+            memberId: promise.promiser,
+          },
+          ...prev.recentActivity,
+        ],
+      }));
+      setShowCreatePromise(false);
+    },
+    []
+  );
+
+  const updatePromiseStatus = useCallback(
+    (id: string, status: PromiseStatus) => {
+      setData((prev) => ({
+        ...prev,
+        promises: prev.promises.map((p) =>
+          p.id === id ? { ...p, status } : p
+        ),
+        recentActivity: [
+          {
+            promiseId: id,
+            action:
+              status === "verified"
+                ? "kept"
+                : status === "violated"
+                ? "broken"
+                : "degraded",
+            timestamp: new Date().toISOString(),
+            memberId:
+              prev.promises.find((p) => p.id === id)?.promiser || "",
+          },
+          ...prev.recentActivity,
+        ],
+      }));
+    },
+    []
+  );
+
+  const views: { id: View; label: string }[] = [
+    { id: "board", label: "Board" },
+    { id: "health", label: "Health" },
+    { id: "members", label: "Members" },
+    { id: "cascade", label: "What If" },
+  ];
+
+  if (!loaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Loading team data...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: "#faf9f6" }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="font-serif text-2xl font-bold text-gray-900">
+              {data.teamName}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {data.members.length} members · {data.promises.length} promises
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowCreateMember(true)}
+              className="px-3 py-1.5 text-sm font-medium border rounded-lg hover:bg-gray-50"
+            >
+              + Member
+            </button>
+            <button
+              onClick={() => setShowCreatePromise(true)}
+              className="px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              + Promise
+            </button>
+          </div>
+        </div>
+
+        {/* View tabs */}
+        <div className="flex gap-2 mb-6">
+          {views.map((v) => (
+            <button
+              key={v.id}
+              onClick={() => setView(v.id)}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                view === v.id
+                  ? "bg-gray-900 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border"
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Add member modal */}
+        {showCreateMember && (
+          <CreateMemberForm
+            onSubmit={addMember}
+            onCancel={() => setShowCreateMember(false)}
+          />
+        )}
+
+        {/* Add promise modal */}
+        {showCreatePromise && (
+          <CreateTeamPromiseForm
+            members={data.members}
+            existingPromises={data.promises}
+            onSubmit={addPromise}
+            onCancel={() => setShowCreatePromise(false)}
+          />
+        )}
+
+        {/* Content */}
+        {view === "board" && (
+          <TeamPromiseBoard
+            promises={data.promises}
+            members={data.members}
+            onUpdateStatus={updatePromiseStatus}
+          />
+        )}
+        {view === "health" && (
+          <TeamHealthBarometer
+            promises={data.promises}
+            members={data.members}
+          />
+        )}
+        {view === "members" && (
+          <MemberLoad
+            promises={data.promises}
+            members={data.members}
+          />
+        )}
+        {view === "cascade" && (
+          <TeamCascadeView
+            promises={data.promises}
+            members={data.members}
+          />
+        )}
+
+        {data.members.length === 0 && !showCreateMember && (
+          <div className="text-center py-16 bg-white rounded-xl border">
+            <h3 className="font-serif text-lg font-semibold text-gray-700 mb-2">
+              Add your first team member
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Start by adding team members, then create promises between them.
+            </p>
+            <button
+              onClick={() => setShowCreateMember(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+            >
+              Add Team Member
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CreateMemberForm({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (name: string, role: string) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+
+  return (
+    <div className="bg-white rounded-xl border p-6 mb-6 max-w-md">
+      <h3 className="font-serif font-semibold mb-3">Add Team Member</h3>
+      <div className="space-y-3">
+        <div>
+          <label htmlFor="member-name" className="block text-sm font-medium text-gray-700 mb-1">
+            Name
+          </label>
+          <input
+            id="member-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+            placeholder="Team member name"
+          />
+        </div>
+        <div>
+          <label htmlFor="member-role" className="block text-sm font-medium text-gray-700 mb-1">
+            Role
+          </label>
+          <input
+            id="member-role"
+            type="text"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+            placeholder="e.g., Designer, Engineer"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => name.trim() && onSubmit(name.trim(), role.trim())}
+            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+            disabled={!name.trim()}
+          >
+            Add
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 border text-sm rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateTeamPromiseForm({
+  members,
+  existingPromises,
+  onSubmit,
+  onCancel,
+}: {
+  members: TeamMember[];
+  existingPromises: TeamPromise[];
+  onSubmit: (promise: TeamPromise) => void;
+  onCancel: () => void;
+}) {
+  const [body, setBody] = useState("");
+  const [promiser, setPromiser] = useState(members[0]?.id || "");
+  const [promisee, setPromisee] = useState(members[0]?.id || "");
+  const [domain, setDomain] = useState("General");
+  const [target, setTarget] = useState("");
+  const [origin, setOrigin] = useState<PromiseOrigin>("negotiated");
+  const [dependsOn, setDependsOn] = useState<string[]>([]);
+  const [estimatedHours, setEstimatedHours] = useState("");
+  const [priority, setPriority] = useState<"normal" | "critical" | "high" | "low">("normal");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const validMembers = members
-      .filter((m) => m.name.trim())
-      .map((m) => ({
-        name: m.name.trim(),
-        type: "member" as const,
-        short: m.name.trim().charAt(0).toUpperCase(),
-        role: m.role.trim() || undefined,
-        active: true,
-      }));
+    if (!body.trim() || !promiser) return;
 
-    if (validMembers.length < 2 || !teamName.trim()) return;
-    onComplete(teamName.trim(), validMembers);
+    const promise: TeamPromise = {
+      id: `TP-${Date.now()}`,
+      isTeam: true,
+      promiser,
+      promisee: promisee || promiser,
+      body: body.trim(),
+      domain,
+      status: "declared",
+      note: "",
+      verification: { method: "self-report" },
+      depends_on: dependsOn,
+      polarity: "give",
+      origin,
+      createdAt: new Date().toISOString(),
+      target: target || undefined,
+      estimatedHours: estimatedHours ? parseFloat(estimatedHours) : undefined,
+      priority,
+    };
+
+    onSubmit(promise);
   };
 
   return (
-    <div className="mx-auto max-w-lg px-1">
-      <h2 className="font-serif text-2xl font-bold text-gray-900 mb-2">Set Up Your Team</h2>
-      <p className="text-sm text-gray-500 mb-6">Create a shared promise network for your team.</p>
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label htmlFor="team-name" className="block text-sm font-medium text-gray-700 mb-1">
-            Team name
-          </label>
-          <input
-            id="team-name"
-            type="text"
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-            placeholder="e.g. Kitchen Team, Engineering"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
-            required
-            autoFocus
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Team members (at least 2)
-          </label>
-          <div className="space-y-2.5">
-            {members.map((m, i) => (
-              <div key={i} className="flex flex-col gap-2 sm:flex-row">
-                <input
-                  type="text"
-                  value={m.name}
-                  onChange={(e) => updateMember(i, "name", e.target.value)}
-                  placeholder="Name"
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                  aria-label={`Member ${i + 1} name`}
-                  required={i < 2}
-                />
-                <input
-                  type="text"
-                  value={m.role}
-                  onChange={(e) => updateMember(i, "role", e.target.value)}
-                  placeholder="Role (optional)"
-                  className="sm:w-36 rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                  aria-label={`Member ${i + 1} role`}
-                />
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={addMember}
-            className="mt-3 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-blue-600 hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
-          >
-            + Add another member
-          </button>
-        </div>
-
-        <button
-          type="submit"
-          className="w-full sm:w-auto rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition-colors"
-        >
-          Create Team
-        </button>
-      </form>
-    </div>
-  );
-}
-
-// ─── KANBAN BOARD ───
-
-function KanbanBoard({
-  promises,
-  agents,
-  config,
-  domains,
-  onStatusChange,
-}: {
-  promises: NetworkPromise[];
-  agents: NetworkAgent[];
-  config: any;
-  domains: any[];
-  onStatusChange: (id: string, status: PromiseStatus) => void;
-}) {
-  const columns: { status: PromiseStatus; label: string }[] = [
-    { status: "declared", label: config.statusLabels?.["declared"] ?? "Committed" },
-    { status: "degraded", label: config.statusLabels?.["degraded"] ?? "At Risk" },
-    { status: "verified", label: config.statusLabels?.["verified"] ?? "Delivered" },
-    { status: "violated", label: config.statusLabels?.["violated"] ?? "Failed" },
-  ];
-
-  const handleDragStart = (e: React.DragEvent, promiseId: string) => {
-    e.dataTransfer.setData("text/plain", promiseId);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetStatus: PromiseStatus) => {
-    e.preventDefault();
-    const promiseId = e.dataTransfer.getData("text/plain");
-    if (promiseId) {
-      onStatusChange(promiseId, targetStatus);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  return (
-    <div
-      className="overflow-x-auto -mx-4 px-4 pb-2 sm:mx-0 sm:px-0 sm:pb-0 scrollbar-none"
-      role="region"
-      aria-label="Kanban board"
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white rounded-xl border p-6 mb-6 max-w-lg"
     >
-      <div className="flex gap-3 sm:gap-4 min-w-[720px] sm:min-w-0 sm:grid sm:grid-cols-4">
-        {columns.map((col) => {
-          const items = promises.filter((p) => p.status === col.status);
-          return (
-            <div
-              key={col.status}
-              className="flex-1 min-w-[200px] sm:min-w-0 rounded-lg bg-gray-50 p-3 min-h-[200px]"
-              onDrop={(e) => handleDrop(e, col.status)}
-              onDragOver={handleDragOver}
-              role="list"
-              aria-label={`${col.label} column`}
+      <h3 className="font-serif font-semibold mb-3">Create Team Promise</h3>
+      <div className="space-y-3">
+        <div>
+          <label htmlFor="tp-body" className="block text-sm font-medium text-gray-700 mb-1">
+            What is being promised?
+          </label>
+          <textarea
+            id="tp-body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
+            rows={2}
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="tp-promiser" className="block text-sm font-medium text-gray-700 mb-1">
+              Who&apos;s promising?
+            </label>
+            <select
+              id="tp-promiser"
+              value={promiser}
+              onChange={(e) => setPromiser(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
             >
-              <div className="mb-3 flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-gray-700">{col.label}</h4>
-                <span className="rounded-full bg-gray-200/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
-                  {items.length}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {items.map((p) => (
-                  <div
-                    key={p.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, p.id)}
-                    className="cursor-grab active:cursor-grabbing"
-                    role="listitem"
-                  >
-                    <PromiseCard
-                      promise={p}
-                      agents={agents}
-                      domains={domains}
-                      config={config}
-                      variant="kanban"
-                      onStatusChange={(newStatus) => onStatusChange(p.id, newStatus)}
-                      showActions={false}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {items.length === 0 && (
-                <p className="py-4 text-center text-xs text-gray-300">
-                  Drop promises here
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── MEMBER LOAD VIEW ───
-
-function MemberLoadView({
-  agents,
-  stats,
-}: {
-  agents: NetworkAgent[];
-  stats: Map<string, AgentStats>;
-}) {
-  const sorted = [...agents]
-    .filter((a) => a.active)
-    .sort((a, b) => (stats.get(b.id)?.loadScore ?? 0) - (stats.get(a.id)?.loadScore ?? 0));
-
-  return (
-    <div className="space-y-4">
-      {sorted.map((agent) => {
-        const s = stats.get(agent.id);
-        if (!s) return null;
-        const loadColor = s.loadScore >= 80 ? "#991b1b" : s.loadScore >= 60 ? "#78350f" : "#1a5f4a";
-
-        return (
-          <div key={agent.id} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <span className="text-sm font-semibold text-gray-900">{agent.name}</span>
-                {agent.role && <span className="ml-2 text-xs text-gray-400">{agent.role}</span>}
-              </div>
-              <div className="flex items-center gap-3 text-xs text-gray-500">
-                <span>{s.activePromiseCount} active</span>
-                <span>{Math.round(s.keptRate * 100)}% kept</span>
-                {s.overloaded && (
-                  <span className="rounded bg-red-50 px-1.5 py-0.5 text-red-600 font-medium">Overloaded</span>
-                )}
-              </div>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${s.loadScore}%`, backgroundColor: loadColor }}
-              />
-            </div>
-            <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
-              <span>Streak: {s.currentStreak}</span>
-              <span className="capitalize">Trend: {s.trend}</span>
-            </div>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
           </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── CAPACITY SIMULATOR ───
-
-function CapacitySimulator({
-  network,
-  runCapacitySimulation,
-}: {
-  network: any;
-  runCapacitySimulation: any;
-}) {
-  const [result, setResult] = useState<any>(null);
-  const [assignee, setAssignee] = useState(network.agents[0]?.id ?? "");
-  const [body, setBody] = useState("");
-
-  const handleSimulate = () => {
-    if (!body.trim()) return;
-    const r = runCapacitySimulation({
-      hypotheticalPromise: {
-        body: body.trim(),
-        promiser: assignee,
-        promisee: "network",
-        domain: network.domains[0]?.id ?? "",
-      },
-    });
-    setResult(r);
-  };
-
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-gray-900 mb-3">Capacity Simulator</h3>
-      <p className="text-xs text-gray-500 mb-3">What happens if we add a new promise?</p>
-
-      <div className="space-y-2 mb-3">
-        <label htmlFor="cap-body" className="sr-only">Promise description</label>
-        <input
-          id="cap-body"
-          type="text"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Hypothetical promise..."
-          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
-        />
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <label htmlFor="cap-assignee" className="sr-only">Assignee</label>
-          <select
-            id="cap-assignee"
-            value={assignee}
-            onChange={(e) => setAssignee(e.target.value)}
-            className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm sm:flex-1"
-          >
-            {network.agents.filter((a: NetworkAgent) => a.active).map((a: NetworkAgent) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-          <button
-            onClick={handleSimulate}
-            className="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition-colors"
-          >
-            Simulate
-          </button>
-        </div>
-      </div>
-
-      {result && (
-        <div className="mt-3 rounded bg-gray-50 p-3 text-sm" role="status" aria-live="polite">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`font-semibold ${result.canAbsorb ? "text-green-700" : "text-red-700"}`}>
-              {result.canAbsorb ? "Can absorb" : "Overloaded"}
-            </span>
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">Load: {result.assigneeCurrentLoad}% → {result.assigneeProjectedLoad}%</span>
-          </div>
-          <p className="text-xs text-gray-600">{result.recommendation}</p>
-          {result.atRiskPromises.length > 0 && (
-            <div className="mt-2">
-              <p className="text-xs font-medium text-orange-600">At-risk promises:</p>
-              {result.atRiskPromises.map((p: any) => (
-                <p key={p.promiseId} className="text-xs text-gray-500 ml-2">{p.reason}</p>
+          <div>
+            <label htmlFor="tp-promisee" className="block text-sm font-medium text-gray-700 mb-1">
+              To whom?
+            </label>
+            <select
+              id="tp-promisee"
+              value={promisee}
+              onChange={(e) => setPromisee(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+            >
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
               ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── ABSENCE SIMULATOR ───
-
-function AbsenceSimulator({
-  network,
-  runAbsenceSimulation,
-}: {
-  network: any;
-  runAbsenceSimulation: any;
-}) {
-  const [result, setResult] = useState<any>(null);
-  const [agentId, setAgentId] = useState(network.agents[0]?.id ?? "");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-
-  const handleSimulate = () => {
-    if (!startDate || !endDate) return;
-    const r = runAbsenceSimulation({ agentId, startDate, endDate });
-    setResult(r);
-  };
-
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-gray-900 mb-3">Absence Simulator</h3>
-      <p className="text-xs text-gray-500 mb-3">What happens if a member is unavailable?</p>
-
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 mb-3">
-        <div>
-          <label htmlFor="abs-agent" className="block text-xs font-medium text-gray-600 mb-1 sm:sr-only">
-            Team member
-          </label>
-          <select
-            id="abs-agent"
-            value={agentId}
-            onChange={(e) => setAgentId(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm"
-          >
-            {network.agents.filter((a: NetworkAgent) => a.active).map((a: NetworkAgent) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="abs-start" className="block text-xs font-medium text-gray-600 mb-1 sm:sr-only">
-            From
-          </label>
-          <input
-            id="abs-start"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm"
-          />
-        </div>
-        <div>
-          <label htmlFor="abs-end" className="block text-xs font-medium text-gray-600 mb-1 sm:sr-only">
-            Until
-          </label>
-          <input
-            id="abs-end"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm"
-          />
-        </div>
-        <div className="flex items-end">
-          <button
-            onClick={handleSimulate}
-            className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition-colors"
-          >
-            Simulate
-          </button>
-        </div>
-      </div>
-
-      {result && (
-        <div className="mt-3 rounded bg-gray-50 p-3 text-sm" role="status" aria-live="polite">
-          <p className="text-xs text-gray-700 mb-2">{result.summary}</p>
-
-          {result.affectedPromises.length > 0 && (
-            <div className="space-y-1">
-              {result.affectedPromises.map((p: any) => (
-                <div key={p.promiseId} className="flex items-center gap-2 text-xs">
-                  <span className={`rounded px-1 py-0.5 font-medium ${
-                    p.risk === "high" ? "bg-red-50 text-red-600" :
-                    p.risk === "medium" ? "bg-orange-50 text-orange-600" :
-                    "bg-gray-50 text-gray-500"
-                  }`}>
-                    {p.risk}
-                  </span>
-                  <span className="text-gray-600 truncate">{p.body}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {result.reassignmentSuggestions.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-gray-200">
-              <p className="text-xs font-medium text-gray-600 mb-1">Reassignment suggestions:</p>
-              {result.reassignmentSuggestions.map((s: any) => (
-                <p key={s.promiseId} className="text-xs text-gray-500">{s.reason} (load: {s.projectedLoad}%)</p>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── MAIN TEAM PAGE ───
-
-export default function TeamPage() {
-  const hook = usePromiseNetwork(TEAM_NETWORK_ID, "team");
-  const {
-    network,
-    isLoaded,
-    createPromise,
-    updateStatus,
-    addAgent,
-    networkHealth,
-    agentStats,
-    runCapacitySimulation,
-    runAbsenceSimulation,
-    updateConfig,
-    exportNetwork,
-    importNetwork,
-  } = hook;
-
-  const [activeTab, setActiveTab] = useState<TabId>("board");
-  const [showForm, setShowForm] = useState(false);
-  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
-
-  // Determine if we need setup
-  useMemo(() => {
-    if (!isLoaded) return;
-    if (network.agents.length <= 1 && network.promises.length === 0 && network.name === "My Team") {
-      setNeedsSetup(true);
-    } else {
-      setNeedsSetup(false);
-    }
-  }, [isLoaded, network.agents.length, network.promises.length, network.name]);
-
-  const handleSetupComplete = useCallback((name: string, members: Omit<NetworkAgent, "id">[]) => {
-    for (const m of members) {
-      addAgent(m);
-    }
-    setNeedsSetup(false);
-  }, [addAgent]);
-
-  const handleStatusChange = useCallback((id: string, newStatus: PromiseStatus) => {
-    updateStatus(id, newStatus);
-  }, [updateStatus]);
-
-  if (!isLoaded || needsSetup === null) {
-    return (
-      <div className="min-h-screen bg-[#faf9f6]">
-        <Navbar />
-        <main id="main-content" className="mx-auto max-w-6xl px-4 py-6">
-          <p className="text-center text-gray-400 py-12">Loading...</p>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (needsSetup) {
-    return (
-      <div className="min-h-screen bg-[#faf9f6]">
-        <Navbar />
-        <main id="main-content" className="mx-auto max-w-6xl px-4 py-6">
-          <TeamSetupFlow onComplete={handleSetupComplete} />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  const tabs: { id: TabId; label: string }[] = [
-    { id: "board", label: "Board" },
-    { id: "members", label: "Members" },
-    { id: "simulation", label: "Simulation" },
-    { id: "settings", label: "Settings" },
-  ];
-
-  return (
-    <div className="min-h-screen bg-[#faf9f6]">
-      <Navbar />
-
-      <main id="main-content" className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-        {/* Header — stacks on mobile */}
-        <div className="mb-5 sm:mb-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900">{network.name}</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                {network.agents.filter((a) => a.active).length} members · {network.promises.length} promises
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <NetworkHealth health={networkHealth} config={network.config} variant="compact" />
-              <button
-                onClick={() => setShowForm(!showForm)}
-                className="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition-colors"
-              >
-                + New Promise
-              </button>
-            </div>
+              <option value="team">The team</option>
+              <option value="client">A client</option>
+            </select>
           </div>
         </div>
 
-        {/* Create form */}
-        {showForm && (
-          <div className="mb-6">
-            <PromiseForm
-              mode="create"
-              complexity="detailed"
-              agents={network.agents}
-              domains={network.domains}
-              existingPromises={network.promises}
-              config={network.config}
-              onSubmit={(input) => {
-                createPromise(input);
-                setShowForm(false);
-              }}
-              onCancel={() => setShowForm(false)}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="tp-origin" className="block text-sm font-medium text-gray-700 mb-1">
+              Origin
+            </label>
+            <select
+              id="tp-origin"
+              value={origin}
+              onChange={(e) => setOrigin(e.target.value as PromiseOrigin)}
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+            >
+              <option value="voluntary">Voluntary (self-committed)</option>
+              <option value="imposed">Imposed (manager assigned)</option>
+              <option value="negotiated">Negotiated (sprint planning)</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="tp-priority" className="block text-sm font-medium text-gray-700 mb-1">
+              Priority
+            </label>
+            <select
+              id="tp-priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as any)}
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+            >
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="normal">Normal</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="tp-domain" className="block text-sm font-medium text-gray-700 mb-1">
+              Domain
+            </label>
+            <input
+              id="tp-domain"
+              type="text"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
             />
+          </div>
+          <div>
+            <label htmlFor="tp-target" className="block text-sm font-medium text-gray-700 mb-1">
+              Deadline
+            </label>
+            <input
+              id="tp-target"
+              type="date"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="tp-hours" className="block text-sm font-medium text-gray-700 mb-1">
+            Estimated hours (optional)
+          </label>
+          <input
+            id="tp-hours"
+            type="number"
+            value={estimatedHours}
+            onChange={(e) => setEstimatedHours(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+            min="0"
+            step="0.5"
+          />
+        </div>
+
+        {existingPromises.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Depends on (select existing promises)
+            </label>
+            <div className="max-h-32 overflow-y-auto border rounded-lg p-2 space-y-1">
+              {existingPromises.map((p) => (
+                <label key={p.id} className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={dependsOn.includes(p.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setDependsOn([...dependsOn, p.id]);
+                      } else {
+                        setDependsOn(dependsOn.filter((d) => d !== p.id));
+                      }
+                    }}
+                  />
+                  <span className="font-mono text-gray-500">{p.id}</span>
+                  <span className="truncate">{p.body}</span>
+                </label>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Tab navigation — sticky */}
-        <div
-          className="sticky top-[57px] z-30 -mx-4 mb-4 border-b border-gray-200 bg-[#faf9f6]/95 backdrop-blur-sm px-4"
-          role="tablist"
-          aria-label="Team views"
-        >
-          <div className="flex gap-1 sm:gap-4 overflow-x-auto scrollbar-none">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                aria-controls={`tabpanel-${tab.id}`}
-                onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap border-b-2 px-2 py-2.5 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "border-gray-900 text-gray-900"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          >
+            Create Promise
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 border text-sm rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
         </div>
-
-        {/* Tab content */}
-        <div role="tabpanel" id={`tabpanel-${activeTab}`}>
-          {activeTab === "board" && (
-            <div className="space-y-4 sm:space-y-6">
-              {/* Health overview at top of board */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <NetworkHealth health={networkHealth} config={network.config} variant="full" />
-                <div className="hidden sm:block">
-                  <MemberLoadView agents={network.agents} stats={agentStats} />
-                </div>
-              </div>
-
-              <KanbanBoard
-                promises={network.promises}
-                agents={network.agents}
-                config={network.config}
-                domains={network.domains}
-                onStatusChange={handleStatusChange}
-              />
-            </div>
-          )}
-
-          {activeTab === "members" && (
-            <MemberLoadView agents={network.agents} stats={agentStats} />
-          )}
-
-          {activeTab === "simulation" && (
-            <div className="space-y-4">
-              <CapacitySimulator network={network} runCapacitySimulation={runCapacitySimulation} />
-              <AbsenceSimulator network={network} runAbsenceSimulation={runAbsenceSimulation} />
-            </div>
-          )}
-
-          {activeTab === "settings" && (
-            <div className="space-y-4">
-              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Domains</h3>
-                <div className="space-y-2">
-                  {network.domains.map((d) => (
-                    <div key={d.id} className="flex items-center gap-2">
-                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: d.color }} />
-                      <span className="text-sm text-gray-700">{d.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Help improve Promise Pipeline</h3>
-                <p className="text-xs text-gray-500 mb-3">
-                  Share anonymized promise patterns. Content is never shared — only structure.
-                </p>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={network.config.dataContribution.enabled}
-                    onChange={(e) => updateConfig({
-                      dataContribution: { ...network.config.dataContribution, enabled: e.target.checked },
-                    })}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">Enable anonymous data sharing</span>
-                </label>
-              </div>
-
-              <DataExportImport
-                networkName={network.name}
-                onExport={exportNetwork}
-                onImport={importNetwork}
-              />
-            </div>
-          )}
-        </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </form>
   );
 }

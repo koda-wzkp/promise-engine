@@ -1,135 +1,144 @@
 "use client";
 
+import { useState } from "react";
 import { PersonalPromise } from "@/lib/types/personal";
-import { statusColors, statusBgColors, statusLabels } from "@/lib/utils/colors";
 import { PromiseStatus } from "@/lib/types/promise";
+import { StatusBadge } from "@/components/promise/StatusBadge";
+import { formatDate } from "@/lib/utils/formatting";
 
 interface PromiseTimelineProps {
   promises: PersonalPromise[];
-  onUpdateStatus: (id: string, status: PromiseStatus) => void;
-  onReflect: (id: string, reflection: string) => void;
+  onUpdateStatus: (id: string, status: PromiseStatus, reflection?: string) => void;
 }
 
-const STATUS_TRANSITIONS: Record<PromiseStatus, PromiseStatus[]> = {
-  declared: ["verified", "degraded", "violated"],
-  verified: [],
-  degraded: ["verified", "violated"],
-  violated: ["declared"],
-  unverifiable: [],
-  // ACA-extended statuses (not used in personal promises, but needed for type completeness)
-  kept: [],
-  broken: ["declared"],
-  partial: ["kept", "broken"],
-  delayed: ["kept", "broken"],
-  modified: ["kept", "broken"],
-  legally_challenged: ["kept", "broken"],
-  repealed: [],
-};
-
-export default function PromiseTimeline({ promises, onUpdateStatus, onReflect }: PromiseTimelineProps) {
-  const sorted = [...promises].sort((a, b) => {
-    if (a.status === "declared" && b.status !== "declared") return -1;
-    if (b.status === "declared" && a.status !== "declared") return 1;
-    if (a.status === "degraded" && b.status !== "degraded") return -1;
-    if (b.status === "degraded" && a.status !== "degraded") return 1;
-    return 0;
-  });
-
-  if (sorted.length === 0) {
-    return (
-      <p className="py-8 text-center text-sm text-gray-400">
-        No promises yet. Make your first commitment above.
-      </p>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {sorted.map((p) => (
-        <TimelineCard
-          key={p.id}
-          promise={p}
-          onUpdateStatus={onUpdateStatus}
-          onReflect={onReflect}
-        />
-      ))}
-    </div>
-  );
-}
-
-function TimelineCard({
-  promise,
+export function PromiseTimeline({
+  promises,
   onUpdateStatus,
-  onReflect,
-}: {
-  promise: PersonalPromise;
-  onUpdateStatus: (id: string, status: PromiseStatus) => void;
-  onReflect: (id: string, reflection: string) => void;
-}) {
-  const transitions = STATUS_TRANSITIONS[promise.status];
-  const isCompleted = promise.status === "verified" || promise.status === "violated";
+}: PromiseTimelineProps) {
+  const [reflectionId, setReflectionId] = useState<string | null>(null);
+  const [reflectionText, setReflectionText] = useState("");
+
+  const sorted = [...promises].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const handleUpdateWithReflection = (id: string, status: PromiseStatus) => {
+    onUpdateStatus(id, status, reflectionText || undefined);
+    setReflectionId(null);
+    setReflectionText("");
+  };
 
   return (
-    <div
-      className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-      style={{ borderLeftColor: statusColors[promise.status], borderLeftWidth: 3 }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-900">{promise.body}</p>
-          <div className="mt-1 flex items-center gap-2">
-            <span
-              className="rounded-full px-2 py-0.5 text-xs font-medium"
-              style={{
-                backgroundColor: statusBgColors[promise.status],
-                color: statusColors[promise.status],
-              }}
-            >
-              {statusLabels[promise.status]}
-            </span>
-            <span className="text-xs text-gray-400">{promise.domain}</span>
-            {promise.target && (
-              <span className="text-xs text-gray-400">· target: {promise.target}</span>
-            )}
-          </div>
-        </div>
+    <div className="max-w-2xl mx-auto">
+      <div className="relative">
+        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
 
-        {transitions.length > 0 && (
-          <div className="flex gap-1">
-            {transitions.map((s) => (
-              <button
-                key={s}
-                onClick={() => onUpdateStatus(promise.id, s)}
-                className="rounded px-2 py-1 text-xs font-medium transition-colors hover:opacity-80"
-                style={{
-                  backgroundColor: statusBgColors[s],
-                  color: statusColors[s],
-                }}
-              >
-                {statusLabels[s]}
-              </button>
-            ))}
-          </div>
-        )}
+        {sorted.map((promise) => {
+          const isActive =
+            promise.status === "declared" || promise.status === "degraded";
+
+          return (
+            <div key={promise.id} className="relative pl-10 pb-6">
+              <div
+                className={`absolute left-2.5 w-3 h-3 rounded-full border-2 bg-white ${
+                  promise.status === "verified"
+                    ? "border-green-600"
+                    : promise.status === "violated"
+                    ? "border-red-600"
+                    : promise.status === "degraded"
+                    ? "border-amber-600"
+                    : "border-blue-600"
+                }`}
+              />
+
+              <div className="bg-white rounded-lg border p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <StatusBadge status={promise.status} size="xs" />
+                  <span className="text-xs text-gray-400">
+                    {formatDate(promise.createdAt)}
+                  </span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                    {promise.domain}
+                  </span>
+                </div>
+
+                <p className="text-sm text-gray-900">{promise.body}</p>
+
+                {promise.promisee !== "self" && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    To: {promise.promisee}
+                  </p>
+                )}
+
+                {promise.reflection && (
+                  <p className="text-xs text-gray-500 mt-2 italic border-l-2 border-gray-200 pl-2">
+                    {promise.reflection}
+                  </p>
+                )}
+
+                {isActive && (
+                  <div className="mt-3">
+                    {reflectionId === promise.id ? (
+                      <div className="space-y-2">
+                        <label htmlFor={`reflection-${promise.id}`} className="sr-only">
+                          Reflection note
+                        </label>
+                        <textarea
+                          id={`reflection-${promise.id}`}
+                          value={reflectionText}
+                          onChange={(e) => setReflectionText(e.target.value)}
+                          className="w-full text-xs border rounded px-2 py-1 resize-none"
+                          rows={2}
+                          placeholder="Optional reflection..."
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() =>
+                              handleUpdateWithReflection(promise.id, "verified")
+                            }
+                            className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            Kept
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleUpdateWithReflection(promise.id, "degraded")
+                            }
+                            className="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700"
+                          >
+                            Renegotiate
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleUpdateWithReflection(promise.id, "violated")
+                            }
+                            className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                          >
+                            Broken
+                          </button>
+                          <button
+                            onClick={() => setReflectionId(null)}
+                            className="px-3 py-1 text-xs border rounded text-gray-600 hover:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setReflectionId(promise.id)}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Update status...
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
-
-      {isCompleted && !promise.reflection && (
-        <div className="mt-3">
-          <input
-            placeholder="Add a reflection..."
-            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-blue-400 focus:outline-none"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                onReflect(promise.id, (e.target as HTMLInputElement).value);
-              }
-            }}
-          />
-        </div>
-      )}
-
-      {promise.reflection && (
-        <p className="mt-2 text-xs italic text-gray-500">&ldquo;{promise.reflection}&rdquo;</p>
-      )}
     </div>
   );
 }

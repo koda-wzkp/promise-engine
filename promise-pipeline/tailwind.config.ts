@@ -11,7 +11,7 @@ const config: Config = {
       fontFamily: {
         sans: ["IBM Plex Sans", "system-ui", "sans-serif"],
         serif: ["IBM Plex Serif", "Georgia", "serif"],
-        mono: ["IBM Plex Mono", "Menlo", "monospace"],
+        mono: ["IBM Plex Mono", "monospace"],
       },
       colors: {
         sky: {
@@ -24,19 +24,28 @@ const config: Config = {
         },
         status: {
           verified: "#1a5f4a",
-          "verified-bg": "#ecfdf5",
-          declared: "#1e40af",
-          "declared-bg": "#eff6ff",
-          degraded: "#78350f",
-          "degraded-bg": "#fffbeb",
-          violated: "#991b1b",
-          "violated-bg": "#fef2f2",
-          unverifiable: "#5b21b6",
-          "unverifiable-bg": "#f5f3ff",
+          declared: "#2563eb",
+          degraded: "#b45309",
+          violated: "#b91c1c",
+          unverifiable: "#7c3aed",
         },
+        "status-bg": {
+          verified: "#ecfdf5",
+          declared: "#eff6ff",
+          degraded: "#fffbeb",
+          violated: "#fef2f2",
+          unverifiable: "#f5f3ff",
+        },
+      },
+      screens: {
+        mobile: "480px",
+        tablet: "768px",
+        desktop: "1024px",
+        wide: "1200px",
       },
     },
   },
   plugins: [],
 };
+
 export default config;

@@ -1,18 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
-import { HB2021_DASHBOARD } from "@/lib/data/hb2021";
+import { NextResponse } from "next/server";
 import { simulateCascade } from "@/lib/simulation/cascade";
+import { hb2021Data } from "@/lib/data/hb2021";
 import { WhatIfQuery } from "@/lib/types/simulation";
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json() as WhatIfQuery;
-    if (!body.promiseId || !body.newStatus) {
-      return NextResponse.json({ error: "promiseId and newStatus required" }, { status: 400 });
+    const query: WhatIfQuery = await request.json();
+
+    if (!query.promiseId || !query.newStatus) {
+      return NextResponse.json(
+        { error: "Missing promiseId or newStatus" },
+        { status: 400 }
+      );
     }
 
-    const result = simulateCascade(HB2021_DASHBOARD.promises, body);
+    const result = simulateCascade(
+      hb2021Data.promises,
+      query,
+      hb2021Data.threats
+    );
+
     return NextResponse.json(result);
   } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid request" },
+      { status: 400 }
+    );
   }
 }

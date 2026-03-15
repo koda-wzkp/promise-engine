@@ -1,37 +1,38 @@
 {
   "name": "promise-pipeline",
-  "version": "2.0.0",
-  "private": true,
-  "license": "AGPL-3.0-only",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:40499/git/koda-wzkp/Promise-Pipeline"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "AGPL-3.0",
   "dependencies": {
-    "@portabletext/react": "^3.1.0",
-    "@sanity/image-url": "^1.0.2",
-    "@sanity/vision": "^3.30.0",
-    "lucide-react": "^0.577.0",
-    "next": "^14.2.0",
-    "next-sanity": "^9.0.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "recharts": "^2.12.0",
-    "resend": "^6.9.3",
-    "simplex-noise": "^4.0.3"
+    "@portabletext/react": "^6.0.3",
+    "@sanity/image-url": "^2.0.3",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "autoprefixer": "^10.4.27",
+    "next": "^14.2.35",
+    "next-sanity": "^12.1.1",
+    "postcss": "^8.5.8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.8.0",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "autoprefixer": "^10.4.0",
-    "eslint": "^8.56.0",
-    "eslint-config-next": "^14.2.0",
-    "postcss": "^8.4.0",
-    "sanity": "^3.30.0",
-    "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.0"
+    "@types/react-dom": "^19.2.3",
+    "sanity": "^5.16.0"
   }
 }

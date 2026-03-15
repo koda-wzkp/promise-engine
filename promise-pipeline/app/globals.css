@@ -2,172 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600;700&display=swap');
-
-/* ─── WCAG AAA Color Variables ─── */
 :root {
-  --text-body: #1f2937;
-  --text-muted: #4b5563;
-  --bg: #faf9f6;
-  --bg-warm: #faf9f6;
+  --sky-lightest: #E0F6FF;
+  --sky-light: #B3E5FC;
+  --sky-medium: #87CEEB;
+  --sky-accent: #4A90D9;
+  --sky-dark: #1a1a2e;
+  --status-verified: #1a5f4a;
+  --status-declared: #2563eb;
+  --status-degraded: #b45309;
+  --status-violated: #b91c1c;
+  --status-unverifiable: #7c3aed;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  color: var(--text-body);
+  color: #1f2937;
+  background: #faf9f6;
 }
 
-/* ─── Focus indicators (WCAG) ─── */
-*:focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 2px;
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'IBM Plex Serif', Georgia, serif;
 }
 
-/* ─── Cascade animation for simulation ─── */
-@keyframes cascadePulse {
-  0% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.15); }
-  100% { opacity: 0.4; transform: scale(1); }
+code, pre, .font-mono {
+  font-family: 'IBM Plex Mono', monospace;
 }
 
-.cascade-pulse {
-  animation: cascadePulse 1.2s ease-in-out infinite;
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }
 
-@keyframes edgeFlow {
-  0% { stroke-dashoffset: 20; }
-  100% { stroke-dashoffset: 0; }
-}
-
-.edge-flow {
-  stroke-dasharray: 5 5;
-  animation: edgeFlow 0.8s linear infinite;
-}
-
-/* Cloud background animation */
-@keyframes cloudDrift {
+/* Cloud animation for landing page */
+@keyframes cloud-drift {
   0% { transform: translateX(-10%); }
-  100% { transform: translateX(10%); }
+  50% { transform: translateX(10%); }
+  100% { transform: translateX(-10%); }
 }
 
 .cloud-drift {
-  animation: cloudDrift 60s ease-in-out infinite alternate;
+  animation: cloud-drift 60s ease-in-out infinite;
 }
 
-/* Tab transitions */
-.tab-transition {
-  transition: color 0.2s ease, border-color 0.2s ease;
+.cloud-drift-slow {
+  animation: cloud-drift 90s ease-in-out infinite reverse;
 }
 
-.tab-content-fade {
-  animation: tabFadeIn 0.25s ease-out;
+/* Cascade animation */
+@keyframes cascade-pulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
 }
 
-@keyframes tabFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.cascade-pulse {
+  animation: cascade-pulse 1.5s ease-in-out infinite;
 }
 
-/* Detail panel slide-in */
-.detail-panel-slide-in {
-  animation: slideInFromRight 0.3s ease-out;
+/* Focus indicators for accessibility */
+*:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
-@keyframes slideInFromRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0.5;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* ─── Annotation card transitions ─── */
-.annotate-card-enter {
-  animation: annotateSlideIn 0.2s ease-out;
-}
-
-.annotate-card-exit-left {
-  animation: annotateSlideOut 0.2s ease-in forwards;
-}
-
-.annotate-card-fade-in {
-  animation: annotateFadeIn 0.2s ease-out;
-}
-
-.annotate-card-fade-out {
-  animation: annotateFadeOut 0.2s ease-in forwards;
-}
-
-@keyframes annotateSlideIn {
-  from {
-    transform: translateX(40px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes annotateSlideOut {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-40px);
-    opacity: 0;
-  }
-}
-
-@keyframes annotateFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes annotateFadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-/* ─── Scrollbar hiding for overflow-scroll areas ─── */
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-
-/* ─── Reduced Motion (WCAG) ─── */
+/* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* ─── High Contrast Mode (WCAG) ─── */
-@media (prefers-contrast: more) {
-  :root {
-    --text-body: #000000;
-    --text-muted: #1f2937;
-    --bg: #ffffff;
-    --bg-warm: #ffffff;
-  }
-  .promise-card, .graph-container, .health-card, [class*="border"] {
-    border-width: 2px;
-    border-color: #000000;
   }
 }

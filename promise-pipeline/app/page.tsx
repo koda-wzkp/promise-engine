@@ -1,179 +1,123 @@
 "use client";
 
 import Link from "next/link";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-
-const USE_CASES = [
-  {
-    title: "Climate Policy",
-    description: "Model HB 2021 emissions commitments across utilities, regulators, and communities.",
-    href: "/demo/hb2021",
-    tag: "Live Demo",
-  },
-  {
-    title: "Affordable Care Act",
-    description: "Analyze ACA promises across federal agencies, insurers, and courts with legal challenge tracking.",
-    href: "/demo/aca",
-    tag: "Live Demo",
-  },
-  {
-    title: "AI Governance",
-    description: "Track AI safety promises from labs, auditors, and oversight bodies.",
-    href: "/demo/ai",
-    tag: "Demo",
-  },
-  {
-    title: "Infrastructure",
-    description: "Monitor infrastructure delivery commitments across agencies.",
-    href: "/demo/infrastructure",
-    tag: "Demo",
-  },
-  {
-    title: "Supply Chain",
-    description: "Verify sustainability and labor promises across global supply chains.",
-    href: "/demo/supply-chain",
-    tag: "Demo",
-  },
-  {
-    title: "War on Drugs",
-    description: "Audit 50+ years of federal drug policy promises against public data on outcomes.",
-    href: "/demo/war-on-drugs",
-    tag: "Demo",
-  },
-];
-
-const HOW_IT_WORKS = [
-  {
-    step: "1",
-    title: "Map Promises",
-    description: "Define who promised what to whom, with verification methods and dependencies.",
-  },
-  {
-    step: "2",
-    title: "Build the Network",
-    description: "Connect promises through dependency edges to reveal the accountability graph.",
-  },
-  {
-    step: "3",
-    title: "Simulate Cascades",
-    description: "Ask \"What If?\" — change one promise and watch the network health shift.",
-  },
-];
+import { useState } from "react";
+import { CloudBackground } from "@/components/layout/CloudBackground";
 
 export default function LandingPage() {
-
   return (
-    <div className="min-h-screen bg-[#faf9f6]">
-      <Navbar />
-
-      <main id="main-content">
+    <div>
       {/* Hero */}
-      <section className="mx-auto max-w-4xl px-4 py-20 text-center" aria-labelledby="hero-heading">
-        <p className="mb-4 text-sm font-medium uppercase tracking-widest text-gray-400">
-          A trust primitive for accountability
-        </p>
-        <h1 id="hero-heading" className="font-serif text-5xl font-bold leading-tight text-gray-900 md:text-6xl">
-          See what happens when
-          <br />
-          <span className="text-blue-600">promises break</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
-          Promise Pipeline simulates commitment networks. Map who promised what to whom,
-          connect dependencies, and run cascade simulations to find hidden risks before they
-          materialize.
-        </p>
-        <div className="mt-8 flex justify-center gap-4">
-          <Link
-            href="/demo/aca"
-            className="rounded-lg bg-gray-900 px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
-          >
-            Try the ACA Demo
-          </Link>
-          <Link
-            href="/demo/hb2021"
-            className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            HB 2021 Demo
-          </Link>
-          <Link
-            href="/about"
-            className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            Learn More
-          </Link>
+      <section className="relative overflow-hidden py-20 md:py-32">
+        <CloudBackground />
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 text-center">
+          <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 text-balance">
+            A trust primitive for commitment networks.
+          </h1>
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+            Dashboards show you what&apos;s broken. Promise Pipeline shows you what
+            breaks next and why.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/demo/hb2021"
+              className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+            >
+              See the HB 2021 Demo
+            </Link>
+            <Link
+              href="/personal"
+              className="px-6 py-3 bg-white text-gray-900 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
+            >
+              Try Promise Garden
+            </Link>
+          </div>
+
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {[
+              { value: "20", label: "Promises tracked" },
+              { value: "11", label: "Agents mapped" },
+              { value: "7", label: "Domains covered" },
+              { value: "∞", label: "What If scenarios" },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm text-gray-500">{stat.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* X-ray vs MRI */}
-      <section className="border-t border-gray-200 bg-white px-4 py-16">
-        <div className="mx-auto max-w-4xl">
-          <h2 className="text-center font-serif text-3xl font-bold text-gray-900">
-            From Dashboard to Graph
-          </h2>
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
-            <div className="rounded-lg border border-gray-200 p-6">
-              <h3 className="font-serif text-lg font-semibold text-gray-400">Status Dashboard</h3>
-              <p className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-400">The X-ray</p>
-              <p className="mt-3 text-sm text-gray-600">
-                Shows which commitments are on track and which are not — in isolation.
-                Tells you <strong>what is broken</strong>.
+      <section className="py-16 bg-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="p-6 bg-gray-50 rounded-xl border">
+              <h3 className="font-serif text-lg font-semibold text-gray-500 mb-2">
+                Traditional dashboards
+              </h3>
+              <p className="font-serif text-2xl font-bold text-gray-400 mb-3">
+                The X-ray
+              </p>
+              <p className="text-sm text-gray-500">
+                Flat projections of isolated statuses. &quot;This promise is
+                broken.&quot; No context. No cascades. No downstream view.
               </p>
             </div>
-            <div className="rounded-lg border-2 border-gray-900 p-6">
-              <h3 className="font-serif text-lg font-semibold text-gray-900">Promise Graph</h3>
-              <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-600">The MRI</p>
-              <p className="mt-3 text-sm text-gray-600">
-                Reveals structural relationships, dependency pathways, and downstream effects.
-                Tells you <strong>what will break next</strong> and why.
+            <div className="p-6 bg-green-50 rounded-xl border border-green-200">
+              <h3 className="font-serif text-lg font-semibold text-green-800 mb-2">
+                Promise Pipeline
+              </h3>
+              <p className="font-serif text-2xl font-bold text-green-900 mb-3">
+                The MRI
               </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
-              <h3 className="font-serif text-lg font-semibold text-gray-900">Simulation Engine</h3>
-              <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-600">The Surgical Sim</p>
-              <p className="mt-3 text-sm text-gray-600">
-                Models interventions on the full structural scan before anyone operates.
-                Shows you <strong>what happens if</strong>.
+              <p className="text-sm text-green-800">
+                The full structural model — dependencies, cascades, threats,
+                downstream effects. See what breaks next and why.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Trust Primitive */}
-      <section className="px-4 py-16">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-serif text-3xl font-bold text-gray-900">
-            A Trust Primitive
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-gray-600 leading-relaxed">
-            Credit scores reduce trust to a number. Reputation systems reduce it to aggregate opinion.
-            Blockchain eliminates it entirely. None of these model the <em>structure</em> of trust
-            itself — the interdependencies, the cascades, the gap between what was promised and what
-            was delivered. The promise graph does.
-          </p>
-          <p className="mx-auto mt-4 max-w-2xl text-sm text-gray-500">
-            This is infrastructure, not advocacy. The data says what it says.
-          </p>
-        </div>
-      </section>
-
       {/* How It Works */}
-      <section className="border-t border-gray-200 bg-white px-4 py-16">
-        <div className="mx-auto max-w-4xl">
-          <h2 className="text-center font-serif text-3xl font-bold text-gray-900">
+      <section className="py-16" style={{ backgroundColor: "#faf9f6" }}>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <h2 className="font-serif text-3xl font-bold text-gray-900 text-center mb-12">
             How It Works
           </h2>
-          <div className="mt-10 grid gap-8 md:grid-cols-3">
-            {HOW_IT_WORKS.map((item) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              {
+                step: "1",
+                title: "Map",
+                desc: "Identify every promise in a system — who committed what to whom, by when.",
+              },
+              {
+                step: "2",
+                title: "Schema",
+                desc: "Encode promises in a universal type system with dependencies, verification, and polarity.",
+              },
+              {
+                step: "3",
+                title: "Verify",
+                desc: "Track status against evidence. Filing, audit, sensor, or self-report.",
+              },
+              {
+                step: "4",
+                title: "Simulate",
+                desc: "Run What If cascades. See which downstream promises break when one fails.",
+              },
+            ].map((item) => (
               <div key={item.step} className="text-center">
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white">
+                <div className="w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center mx-auto mb-3 font-bold">
                   {item.step}
                 </div>
-                <h3 className="mt-4 font-serif text-xl font-semibold text-gray-900">
+                <h3 className="font-serif font-semibold text-gray-900 mb-2">
                   {item.title}
                 </h3>
-                <p className="mt-2 text-sm text-gray-600">{item.description}</p>
+                <p className="text-sm text-gray-600">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -181,63 +125,175 @@ export default function LandingPage() {
       </section>
 
       {/* Use Cases */}
-      <section className="px-4 py-16">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-center font-serif text-3xl font-bold text-gray-900">
-            Works Across Domains
-          </h2>
-          <div className="mt-10 grid gap-4 md:grid-cols-2">
-            {USE_CASES.map((uc) => (
-              <Link
-                key={uc.href}
-                href={uc.href}
-                className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="font-serif text-lg font-semibold text-gray-900">
-                    {uc.title}
-                  </h3>
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                    {uc.tag}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-gray-600">{uc.description}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <UseCases />
 
-      {/* Services CTA */}
-      <section className="border-t border-gray-200 bg-white px-4 py-16">
-        <div className="mx-auto max-w-md text-center">
-          <h2 className="font-serif text-2xl font-bold text-gray-900">
-            Get Your Promises Mapped
+      {/* Beta Signup */}
+      <section className="py-16 bg-gray-900 text-white">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="font-serif text-3xl font-bold mb-3">
+            Join the Beta
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            We build interactive promise graphs for laws, policies, contracts, and organizational
-            commitments. Tell us what you need mapped and we&apos;ll send a proposal.
+          <p className="text-gray-400 mb-6">
+            Get early access to Promise Garden and team features.
           </p>
-          <div className="mt-6 flex justify-center gap-3">
-            <Link
-              href="/services#start"
-              className="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-            >
-              Start a project
-            </Link>
-            <Link
-              href="/services"
-              className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
-            >
-              Learn more
-            </Link>
-          </div>
+          <BetaSignupForm />
         </div>
       </section>
-
-      </main>
-
-      <Footer />
     </div>
+  );
+}
+
+function UseCases() {
+  const [activeTab, setActiveTab] = useState("civic");
+
+  const tabs = [
+    {
+      id: "civic",
+      label: "Civic",
+      title: "Climate & Civic Accountability",
+      desc: "Track legislative promises as dependency networks. See cascade effects when commitments fail. Oregon HB 2021 demo shows 20 promises across 11 agents.",
+    },
+    {
+      id: "jcpoa",
+      label: "JCPOA",
+      title: "Arms Control — Iran Nuclear Deal",
+      desc: "22 promises, 11 agents, 8 domains. The Iran nuclear deal analyzed as a promise network — revealing how the most sophisticated verification regime in arms control history collapsed in 3.5 years.",
+    },
+    {
+      id: "ai",
+      label: "AI",
+      title: "AI Safety Auditing",
+      desc: "Map safety commitments from AI labs. Track voluntary promises vs. imposed obligations. Identify verification gaps in the AI safety ecosystem.",
+    },
+    {
+      id: "infrastructure",
+      label: "Infrastructure",
+      title: "Infrastructure SLAs",
+      desc: "Model SLA dependencies across cloud providers. Simulate outage cascades. Sensor-based verification for real-time status tracking.",
+    },
+    {
+      id: "supply-chain",
+      label: "Supply Chain",
+      title: "Supply Chain Transparency",
+      desc: "Track labor, environmental, and transparency promises across global supply chains. Identify verification gaps in tier 2/3 suppliers.",
+    },
+    {
+      id: "teams",
+      label: "Teams",
+      title: "Team Promise Networks",
+      desc: "Track commitments within your team. See who's overloaded. Simulate what happens when someone's out. The promise schema works at every scale.",
+    },
+  ];
+
+  const active = tabs.find((t) => t.id === activeTab) || tabs[0];
+
+  return (
+    <section className="py-16 bg-white">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <h2 className="font-serif text-3xl font-bold text-gray-900 text-center mb-8">
+          Use Cases
+        </h2>
+
+        <div className="flex justify-center gap-2 mb-8 flex-wrap">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeTab === tab.id
+                  ? "bg-gray-900 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="bg-gray-50 rounded-xl border p-8 text-center max-w-2xl mx-auto">
+          <h3 className="font-serif text-xl font-semibold text-gray-900 mb-3">
+            {active.title}
+          </h3>
+          <p className="text-gray-600 mb-4">{active.desc}</p>
+          {active.id === "civic" && (
+            <Link
+              href="/demo/hb2021"
+              className="inline-block px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800"
+            >
+              See HB 2021 Demo
+            </Link>
+          )}
+          {active.id === "jcpoa" && (
+            <Link
+              href="/demo/jcpoa"
+              className="inline-block px-4 py-2 bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-800"
+            >
+              See JCPOA Analysis
+            </Link>
+          )}
+          {active.id === "teams" && (
+            <Link
+              href="/team"
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+            >
+              Try Team Dashboard
+            </Link>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BetaSignupForm() {
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+
+    try {
+      await fetch("/api/beta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+    } catch {
+      // Silently handle — beta signup is best-effort
+    }
+
+    setSubmitted(true);
+  };
+
+  if (submitted) {
+    return (
+      <p className="text-green-400 font-medium">
+        Thanks! We&apos;ll be in touch.
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2 max-w-md mx-auto">
+      <label htmlFor="beta-email" className="sr-only">
+        Email address
+      </label>
+      <input
+        id="beta-email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="flex-1 px-4 py-2.5 rounded-lg text-gray-900 text-sm"
+        placeholder="your@email.com"
+        required
+      />
+      <button
+        type="submit"
+        className="px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 text-sm"
+      >
+        Sign Up
+      </button>
+    </form>
   );
 }

@@ -1,129 +1,168 @@
 "use client";
 
 import { CascadeResult } from "@/lib/types/simulation";
-import { Promise as PromiseType } from "@/lib/types/promise";
-import StatusBadge from "../promise/StatusBadge";
+import { Promise as PromiseType, Agent } from "@/lib/types/promise";
+import { StatusBadge } from "@/components/promise/StatusBadge";
 
 interface CascadeResultsProps {
   result: CascadeResult;
   promises: PromiseType[];
+  agents: Agent[];
   onReset: () => void;
-  onPromiseClick?: (promiseId: string) => void;
 }
 
-export default function CascadeResults({ result, promises, onReset, onPromiseClick }: CascadeResultsProps) {
+export function CascadeResults({
+  result,
+  promises,
+  agents,
+  onReset,
+}: CascadeResultsProps) {
   const healthDelta = result.newNetworkHealth - result.originalNetworkHealth;
-
-  // Sort affected promises by cascade depth
-  const sortedAffected = [...result.affectedPromises].sort(
-    (a, b) => a.cascadeDepth - b.cascadeDepth
-  );
-
-  // Build a more specific narrative
-  const specificNarrative = buildSpecificNarrative(result, promises);
-
-  // Health bar widths
-  const maxHealth = 100;
-  const beforeWidth = (result.originalNetworkHealth / maxHealth) * 100;
-  const afterWidth = (result.newNetworkHealth / maxHealth) * 100;
+  const promiseMap = new Map(promises.map((p) => [p.id, p]));
 
   return (
-    <div className="space-y-4 rounded-lg border-2 border-yellow-300 bg-yellow-50 p-4" aria-live="polite" role="region" aria-label="Cascade simulation results">
-      <div className="flex items-start justify-between">
-        <h3 className="text-sm font-bold text-gray-900">Cascade Results</h3>
+    <div className="bg-white rounded-xl border border-orange-200 shadow-lg p-5">
+      <div className="flex justify-between items-start mb-4">
+        <h3 className="font-serif font-semibold text-gray-900">
+          Cascade Results
+        </h3>
         <button
           onClick={onReset}
-          className="rounded bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+          className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
         >
           Reset
         </button>
       </div>
 
-      {/* Health score before/after mini bar chart */}
-      <div className="rounded bg-white p-3">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="w-10 text-right text-[10px] text-gray-400">Before</span>
-            <div className="flex-1">
-              <div className="h-4 overflow-hidden rounded-full bg-gray-100">
-                <div
-                  className="flex h-full items-center justify-end rounded-full bg-gray-300 pr-1.5 transition-all"
-                  style={{ width: `${beforeWidth}%` }}
-                >
-                  <span className="font-mono text-[9px] font-bold text-gray-600">{result.originalNetworkHealth}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-10 text-right text-[10px] text-gray-400">After</span>
-            <div className="flex-1">
-              <div className="h-4 overflow-hidden rounded-full bg-gray-100">
-                <div
-                  className={`flex h-full items-center justify-end rounded-full pr-1.5 transition-all ${
-                    healthDelta < 0 ? "bg-red-400" : "bg-green-400"
-                  }`}
-                  style={{ width: `${afterWidth}%` }}
-                >
-                  <span className="font-mono text-[9px] font-bold text-white">{result.newNetworkHealth}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Health score change */}
+      <div className="flex items-center gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+        <div className="text-center">
+          <p className="text-xs text-gray-500">Before</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {Math.round(result.originalNetworkHealth)}
+          </p>
         </div>
-        <div className={`mt-2 text-right text-sm font-bold ${healthDelta < 0 ? "text-red-600" : "text-green-600"}`}>
-          {healthDelta >= 0 ? "+" : ""}{healthDelta} points
+        <div className="text-center">
+          <span
+            className={`text-lg font-bold ${
+              healthDelta < 0 ? "text-red-600" : healthDelta > 0 ? "text-green-600" : "text-gray-500"
+            }`}
+          >
+            {healthDelta > 0 ? "+" : ""}
+            {Math.round(healthDelta)}
+          </span>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-gray-500">After</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {Math.round(result.newNetworkHealth)}
+          </p>
         </div>
       </div>
 
-      {/* Specific narrative */}
-      <p className="text-xs leading-relaxed text-gray-700">{specificNarrative}</p>
+      {/* Summary */}
+      <p className="text-sm text-gray-700 mb-4 leading-relaxed">{result.summary}</p>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded bg-white p-2">
-          <p className="font-mono text-lg font-bold text-gray-900">{result.affectedPromises.length}</p>
-          <p className="text-[10px] text-gray-400">Affected</p>
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="text-center p-2 bg-gray-50 rounded">
+          <p className="text-xl font-bold text-gray-900">
+            {result.affectedPromises.length}
+          </p>
+          <p className="text-xs text-gray-500">Affected</p>
         </div>
-        <div className="rounded bg-white p-2">
-          <p className="font-mono text-lg font-bold text-gray-900">{result.cascadeDepth}</p>
-          <p className="text-[10px] text-gray-400">Max Depth</p>
+        <div className="text-center p-2 bg-gray-50 rounded">
+          <p className="text-xl font-bold text-gray-900">
+            {result.domainsAffected.length}
+          </p>
+          <p className="text-xs text-gray-500">Domains</p>
         </div>
-        <div className="rounded bg-white p-2">
-          <p className="font-mono text-lg font-bold text-gray-900">{result.domainsAffected.length}</p>
-          <p className="text-[10px] text-gray-400">Domains</p>
+        <div className="text-center p-2 bg-gray-50 rounded">
+          <p className="text-xl font-bold text-gray-900">
+            {result.cascadeDepth}
+          </p>
+          <p className="text-xs text-gray-500">Max Depth</p>
         </div>
       </div>
 
-      {/* Affected promises — sorted by cascade depth with visual nesting */}
-      {sortedAffected.length > 0 && (
-        <div>
-          <h4 className="mb-2 text-xs font-semibold uppercase text-gray-400">Cascade Chain</h4>
-          <div className="space-y-1">
-            {sortedAffected.map((a) => {
-              const promise = promises.find((p) => p.id === a.promiseId);
-              const indent = (a.cascadeDepth - 1) * 12;
+      {/* Triggered threats */}
+      {result.triggeredThreats.length > 0 && (
+        <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
+          <p className="text-sm font-medium text-red-800 mb-1">
+            Triggered Threats
+          </p>
+          {result.triggeredThreats.map((id) => (
+            <p key={id} className="text-xs text-red-700">
+              {id}
+            </p>
+          ))}
+        </div>
+      )}
 
+      {/* Certainty impacts */}
+      {result.certaintyImpacts && result.certaintyImpacts.length > 0 && (
+        <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+          <p className="text-sm font-medium text-purple-800 mb-2">
+            Certainty Effects ({result.certaintyImpacts.length} promise{result.certaintyImpacts.length !== 1 ? "s" : ""})
+          </p>
+          <div className="space-y-1.5">
+            {result.certaintyImpacts.map((ci) => {
+              const promise = promiseMap.get(ci.promiseId);
               return (
-                <button
-                  key={a.promiseId}
-                  onClick={() => onPromiseClick?.(a.promiseId)}
-                  className="flex w-full items-center gap-2 rounded bg-white p-2 text-left text-xs transition-colors hover:bg-gray-50"
-                  style={{ marginLeft: indent }}
-                >
-                  {a.cascadeDepth > 1 && (
-                    <span className="text-[10px] text-gray-300">↳</span>
-                  )}
-                  <span className="font-mono font-semibold text-gray-500">{a.promiseId}</span>
-                  <StatusBadge status={a.originalStatus} size="sm" />
-                  <span className="text-gray-300">→</span>
-                  <StatusBadge status={a.newStatus} size="sm" simulated />
-                  {promise && (
-                    <span className="ml-auto max-w-[80px] truncate text-[10px] text-gray-400">
-                      {promise.body}
+                <div key={ci.promiseId} className="text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-gray-500">{ci.promiseId}</span>
+                    <span className="text-purple-700">
+                      certainty {Math.round(ci.previousCertainty * 100)}% → {Math.round(ci.newCertainty * 100)}%
                     </span>
-                  )}
-                </button>
+                  </div>
+                  <p className="text-gray-500 ml-4 truncate">{ci.reason}</p>
+                </div>
+              );
+            })}
+          </div>
+          {result.originalNetworkEntropy !== undefined && (
+            <div className="mt-2 pt-2 border-t border-purple-200 text-xs text-purple-800">
+              Network Certainty: {Math.round(100 - result.originalNetworkEntropy)} → {Math.round(100 - result.newNetworkEntropy)}
+              <span className="ml-1">
+                ({Math.round(result.originalNetworkEntropy - result.newNetworkEntropy) > 0 ? "+" : ""}{Math.round((100 - result.newNetworkEntropy) - (100 - result.originalNetworkEntropy))})
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Affected promises */}
+      {result.affectedPromises.length > 0 && (
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">
+            Affected Promises
+          </p>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {result.affectedPromises.map((ap) => {
+              const promise = promiseMap.get(ap.promiseId);
+              return (
+                <div
+                  key={ap.promiseId}
+                  className="flex items-start gap-2 p-2 bg-gray-50 rounded text-sm"
+                >
+                  <span className="font-mono text-xs text-gray-500 shrink-0">
+                    {ap.promiseId}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-600 truncate">
+                      {promise?.body}
+                    </p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <StatusBadge status={ap.originalStatus} size="xs" />
+                      <span className="text-xs text-gray-400">→</span>
+                      <StatusBadge status={ap.newStatus} size="xs" />
+                      <span className="text-xs text-gray-400 ml-1">
+                        (depth {ap.cascadeDepth})
+                      </span>
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -131,34 +170,4 @@ export default function CascadeResults({ result, promises, onReset, onPromiseCli
       )}
     </div>
   );
-}
-
-function buildSpecificNarrative(result: CascadeResult, promises: PromiseType[]): string {
-  const source = promises.find((p) => p.id === result.query.promiseId);
-  if (!source) return result.summary;
-
-  if (result.affectedPromises.length === 0) {
-    return `Setting "${source.body}" to ${result.query.newStatus} has no downstream effects.`;
-  }
-
-  const parts: string[] = [];
-  parts.push(
-    `Setting [${source.body}] to ${result.query.newStatus} affects ${result.affectedPromises.length} downstream promise${result.affectedPromises.length === 1 ? "" : "s"}:`
-  );
-
-  // List first 3 affected promises specifically
-  const toShow = result.affectedPromises.slice(0, 3);
-  for (const a of toShow) {
-    const p = promises.find((pr) => pr.id === a.promiseId);
-    if (p) {
-      const bodyShort = p.body.length > 50 ? p.body.slice(0, 50) + "…" : p.body;
-      parts.push(`[${bodyShort}] degrades to ${a.newStatus}`);
-    }
-  }
-
-  if (result.affectedPromises.length > 3) {
-    parts.push(`…and ${result.affectedPromises.length - 3} more.`);
-  }
-
-  return parts.join(" ");
 }

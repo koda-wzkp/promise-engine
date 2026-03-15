@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "Promise Pipeline — Commitment Network Simulation",
+  title: "Promise Pipeline — A Trust Primitive for Commitment Networks",
   description:
-    "From accountability tracking to predictive simulation of commitment networks. See what happens when promises break.",
-  metadataBase: new URL("https://promisepipeline.org"),
+    "Map, verify, and simulate commitment networks. From climate legislation to team accountability.",
   openGraph: {
-    title: "Promise Pipeline — Commitment Network Simulation",
-    description:
-      "Map who promised what to whom, connect dependencies, and run cascade simulations to find hidden risks.",
+    title: "Promise Pipeline",
+    description: "A trust primitive for commitment networks.",
     type: "website",
-    siteName: "Promise Pipeline",
   },
 };
 
@@ -22,14 +21,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-white text-gray-900 antialiased">
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#1a1a2e] focus:text-white"
-        >
-          Skip to main content
-        </a>
-        {children}
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1">{children}</main>
+        <Footer />
       </body>
     </html>
   );

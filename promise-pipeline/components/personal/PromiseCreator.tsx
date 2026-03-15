@@ -4,103 +4,134 @@ import { useState } from "react";
 import { PersonalPromise } from "@/lib/types/personal";
 
 interface PromiseCreatorProps {
-  onAdd: (promise: PersonalPromise) => void;
+  onCreate: (promise: PersonalPromise) => void;
 }
 
-const DOMAINS = ["Health", "Career", "Finance", "Relationships", "Learning", "Creativity", "Community"];
+const defaultDomains = ["Work", "Health", "Relationships", "Creative", "Financial"];
 
-export default function PromiseCreator({ onAdd }: PromiseCreatorProps) {
-  const [open, setOpen] = useState(false);
+export function PromiseCreator({ onCreate }: PromiseCreatorProps) {
   const [body, setBody] = useState("");
-  const [domain, setDomain] = useState("Health");
+  const [promisee, setPromisee] = useState("self");
+  const [domain, setDomain] = useState("Work");
+  const [customDomain, setCustomDomain] = useState("");
   const [target, setTarget] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!body.trim()) return;
 
-    const now = new Date().toISOString();
     const promise: PersonalPromise = {
-      id: `personal-${Date.now()}`,
-      promiser: "me",
-      promisee: "me",
+      id: `PG-${Date.now()}`,
+      isPersonal: true,
+      promiser: "self",
+      promisee: promisee || "self",
       body: body.trim(),
-      domain,
+      domain: customDomain || domain,
       status: "declared",
-      target: target || undefined,
       note: "",
       verification: { method: "self-report" },
       depends_on: [],
-      isPersonal: true,
+      polarity: "give",
+      origin: "voluntary",
+      createdAt: new Date().toISOString(),
+      target: target || undefined,
     };
 
-    onAdd(promise);
+    onCreate(promise);
     setBody("");
+    setPromisee("self");
     setTarget("");
-    setOpen(false);
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
-      >
-        + Make a new promise
-      </button>
-    );
-  }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-semibold text-gray-900">New Promise</h3>
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white rounded-xl border p-6 max-w-lg mx-auto"
+    >
+      <h3 className="font-serif text-lg font-semibold text-gray-900 mb-4">
+        Plant a New Promise
+      </h3>
 
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="What are you committing to?"
-        className="mb-3 w-full rounded border border-gray-200 p-2 text-sm focus:border-blue-400 focus:outline-none"
-        rows={2}
-        autoFocus
-      />
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="promise-body" className="block text-sm font-medium text-gray-700 mb-1">
+            What are you promising?
+          </label>
+          <textarea
+            id="promise-body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            rows={3}
+            placeholder="e.g., Exercise three times a week"
+            required
+          />
+        </div>
 
-      <div className="mb-3 flex flex-wrap gap-1.5">
-        {DOMAINS.map((d) => (
-          <button
-            key={d}
-            type="button"
-            onClick={() => setDomain(d)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              domain === d
-                ? "bg-gray-900 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+        <div>
+          <label htmlFor="promise-to" className="block text-sm font-medium text-gray-700 mb-1">
+            To whom?
+          </label>
+          <input
+            id="promise-to"
+            type="text"
+            value={promisee}
+            onChange={(e) => setPromisee(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+            placeholder="self, a person, a group..."
+          />
+        </div>
+
+        <div>
+          <label htmlFor="promise-domain" className="block text-sm font-medium text-gray-700 mb-1">
+            Domain
+          </label>
+          <select
+            id="promise-domain"
+            value={domain}
+            onChange={(e) => {
+              setDomain(e.target.value);
+              if (e.target.value !== "custom") setCustomDomain("");
+            }}
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
           >
-            {d}
-          </button>
-        ))}
-      </div>
+            {defaultDomains.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+            <option value="custom">Custom...</option>
+          </select>
+          {domain === "custom" && (
+            <input
+              type="text"
+              value={customDomain}
+              onChange={(e) => setCustomDomain(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm mt-2"
+              placeholder="Enter custom domain"
+              required
+            />
+          )}
+        </div>
 
-      <input
-        value={target}
-        onChange={(e) => setTarget(e.target.value)}
-        placeholder="Target date (optional)"
-        className="mb-3 w-full rounded border border-gray-200 p-2 text-sm focus:border-blue-400 focus:outline-none"
-      />
+        <div>
+          <label htmlFor="promise-target" className="block text-sm font-medium text-gray-700 mb-1">
+            By when? (optional)
+          </label>
+          <input
+            id="promise-target"
+            type="date"
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
 
-      <div className="flex gap-2">
         <button
           type="submit"
-          className="rounded bg-gray-900 px-4 py-1.5 text-sm text-white hover:bg-gray-800"
+          className="w-full py-2.5 bg-green-700 text-white text-sm font-medium rounded-lg hover:bg-green-800 transition-colors"
         >
-          Commit
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="rounded px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700"
-        >
-          Cancel
+          Plant This Promise
         </button>
       </div>
     </form>

@@ -1,36 +1,29 @@
 # Promise Engine
 
-**Accountability infrastructure for systems that make promises.**
-
-Promise Engine turns implicit claims into verifiable commitments. AI models promise not to hallucinate. Utilities promise to cut emissions. Cloud services promise 99.9% uptime. We make those promises auditable.
-
-Built on [Promise Theory](https://en.wikipedia.org/wiki/Promise_theory) (Burgess, 2004) — a formal methodology proven in production at 2,700+ companies via CFEngine and adopted by Cisco for software-defined networking.
+A trust primitive for commitment networks. Promise Engine applies [Promise Theory](https://en.wikipedia.org/wiki/Promise_theory) (Burgess, 2004) to commitment tracking, auditing, and simulation across domains — from climate legislation to team accountability.
 
 > **Promise Engine** is the open-source core — the schema, simulation engine, graph utilities, and annotation pipeline. **Promise Pipeline** is the product and platform built on Promise Engine, including the hosted dashboards, services, and client-facing tools at [promisepipeline.com](https://promisepipeline.com).
 
 ---
 
-## What's Here
+## What It Does
 
-This repo contains two main systems:
+- **Map** commitments as typed promises with dependencies, verification, and polarity
+- **Verify** promise status against evidence (filing, audit, sensor, self-report)
+- **Simulate** cascade effects: when one promise fails, what breaks downstream?
+- **Track** personal and team promises with the same universal schema
 
-### Promise Pipeline (`/promise-pipeline`)
-A **Next.js application** for legislative promise extraction and analysis. This is the active development focus — a tool for decomposing laws into structured promise graphs and training ML models to do it automatically.
+## Live Demos
 
-- **Annotation tool** (`/annotate`) — AI-assisted extraction of promises from legislative text using Claude
-- **Promise network visualization** — interactive force-directed graphs of promise dependency networks
-- **Simulation engine** — cascade failure modeling ("what breaks if this promise fails?")
-- **Bill analysis pipeline** — structured analysis of state clean energy laws (WA CETA, VA VCEA, NM ETA, and more)
+- **Oregon HB 2021** — 20 promises, 11 agents, 7 domains, full cascade simulation
+- **AI Safety** — Tracking voluntary safety commitments from frontier AI labs
+- **Infrastructure SLAs** — Cloud provider uptime and sustainability promises
+- **Supply Chain** — Labor, materials, and transparency across global brands
 
-**Tech stack:** Next.js 14, TypeScript, Tailwind CSS, Recharts, Claude API (Anthropic)
+## Products
 
-### Legacy Platform (`/backend` + `/frontend`)
-The original **Flask + React** promise verification platform with:
-- Core promise engine (create, verify, query promises)
-- HB 2021 civic dashboard (Oregon's 100% Clean Electricity law)
-- Integrity scoring system
-- PostgreSQL + JSONB storage
-- 144 passing tests (Promise Theory axioms, API, security)
+- **Promise Garden** — Personal promise tracker with rewilding visualization (free)
+- **Teams** — Team promise network with capacity simulation and cascade analysis
 
 ---
 
@@ -41,15 +34,18 @@ The original **Flask + React** promise verification platform with:
 ```bash
 cd promise-pipeline
 npm install
-
-# Create .env.local with your API keys:
-# ANTHROPIC_API_KEY=sk-ant-...
-# OPENSTATES_API_KEY=... (optional, for legislator data)
-
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). Navigate to `/annotate` for the annotation tool.
+Open [http://localhost:3000](http://localhost:3000).
+
+### Promise Garden
+
+```bash
+cd promise-garden
+npm install
+npm run dev
+```
 
 ### Legacy Platform
 
@@ -69,24 +65,6 @@ npm start  # Runs on :3000
 
 ---
 
-## The Idea
-
-Everything makes promises. Most systems can't prove they keep them.
-
-A single broken promise rarely matters in isolation. What matters is the **cascade** — how one failure propagates through a network of dependent commitments. A rejected Clean Energy Plan doesn't just mean one utility failed a filing requirement. It means the emissions targets that depend on that plan are now unreachable, the community benefit investments that depend on those targets won't materialize, and the environmental justice communities who were promised protection have no pathway to the outcome the law intended.
-
-Promise Engine makes these cascades visible, queryable, and eventually predictable.
-
-**Three horizons:**
-
-1. **Deterministic simulation** — Model the dependency graph. Toggle a promise to "failed" and propagate effects through the network using graph traversal. No ML required — just making the structure explicit.
-
-2. **Statistical prediction** — Train on historical promise-keeping data. Predict which promises are likely to fail based on actor reliability, structural features, and domain patterns.
-
-3. **Counterfactual reasoning** — "What if this amendment passes?" "What if this actor exits?" "Where should advocacy resources go for maximum leverage?"
-
----
-
 ## Current State (March 2026)
 
 ### What Works
@@ -96,6 +74,7 @@ Promise Engine makes these cascades visible, queryable, and eventually predictab
 | Promise annotation tool (AI-assisted extraction from bill text) | Working |
 | Promise network visualization (force-directed graphs) | Working |
 | Cascade simulation (toggle promises, see what breaks) | Working |
+| Promise Garden (personal promise tracker) | Working |
 | HB 2021 civic dashboard (20 hand-labeled promises, 11 agents) | Working |
 | Core promise engine (verify, log, score, query) | Working |
 | Emissions trajectory verification (linear interpolation) | Working |
@@ -115,38 +94,50 @@ Promise Engine makes these cascades visible, queryable, and eventually predictab
 
 ```
 promise-engine/
-├── promise-pipeline/          # Next.js app (active development)
+├── promise-pipeline/          # Next.js v2 app (active development)
 │   ├── app/                   # Pages and API routes
-│   │   ├── annotate/          # AI annotation tool
-│   │   ├── networks/          # Promise network visualization
-│   │   ├── demo/              # Interactive demos
-│   │   └── api/               # API routes (Claude, simulation, etc.)
 │   ├── components/            # React components
-│   ├── lib/                   # Core logic (simulation, storage, types)
-│   └── data/                  # Training data and bill texts
-│
-├── backend/                   # Flask API (legacy platform)
-│   ├── app/
-│   │   ├── promise_engine/    # Core engine, verticals, storage
-│   │   └── api/               # REST endpoints
-│   ├── schemas/               # JSON Schema definitions
-│   └── tests/                 # 144 tests
-│
-├── frontend/                  # React frontend (legacy platform)
-│   └── src/
-│       ├── pages/             # HB2021, AI, Infra, Supply Chain dashboards
-│       └── components/        # Shared UI
-│
-├── docs/                      # Documentation
-│   ├── THEORY.md              # Promise Theory foundations
-│   ├── HB2021_SPEC.md         # HB 2021 law specification
-│   └── BUILD_REPORT.md        # Technical build report
-│
-├── ROADMAP.md                 # Project roadmap and architecture plan
-├── LABELED_DATA_INVENTORY.md  # ML training data catalog
-├── TRAINING_BILL_CANDIDATES.md # Bills to label next
-└── CONTRIBUTING.md            # Contribution guide
+│   ├── lib/                   # Core logic (types, simulation, data)
+│   └── sanity/                # CMS schemas
+├── promise-garden/            # Personal promise tracker (Next.js)
+├── backend/                   # Flask API (legacy — promise kernel, verification)
+├── frontend/                  # React v1 (legacy — original dashboards)
+├── docs/                      # Documentation and whitepaper
+├── analysis/                  # Analysis scripts
+├── .github/workflows/         # CI configuration
+├── ROADMAP.md
+├── CONTRIBUTING.md
+├── TRAINING_BILL_CANDIDATES.md
+└── LABELED_DATA_INVENTORY.md
 ```
+
+---
+
+## Tech Stack
+
+**Promise Pipeline:** Next.js 14+ (App Router), TypeScript (strict), Tailwind CSS, Recharts, Sanity CMS, SVG network graphs, deterministic BFS cascade simulation engine
+
+**Promise Garden:** Next.js, TypeScript, Tailwind CSS, Supabase
+
+**Legacy Platform:** Python 3.9.6, Flask 3.0.0, SQLAlchemy 2.0.25, Alembic, PostgreSQL, React 18.2.0, JWT + bcrypt, Stripe, SendGrid
+
+---
+
+## The Idea
+
+Everything makes promises. Most systems can't prove they keep them.
+
+A single broken promise rarely matters in isolation. What matters is the **cascade** — how one failure propagates through a network of dependent commitments. A rejected Clean Energy Plan doesn't just mean one utility failed a filing requirement. It means the emissions targets that depend on that plan are now unreachable, the community benefit investments that depend on those targets won't materialize, and the environmental justice communities who were promised protection have no pathway to the outcome the law intended.
+
+Promise Engine makes these cascades visible, queryable, and eventually predictable.
+
+**Three horizons:**
+
+1. **Deterministic simulation** — Model the dependency graph. Toggle a promise to "failed" and propagate effects through the network using graph traversal. No ML required — just making the structure explicit.
+
+2. **Statistical prediction** — Train on historical promise-keeping data. Predict which promises are likely to fail based on actor reliability, structural features, and domain patterns.
+
+3. **Counterfactual reasoning** — "What if this amendment passes?" "What if this actor exits?" "Where should advocacy resources go for maximum leverage?"
 
 ---
 

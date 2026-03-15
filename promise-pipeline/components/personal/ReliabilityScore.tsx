@@ -1,99 +1,87 @@
 "use client";
 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { PersonalStats } from "@/lib/types/personal";
 
 interface ReliabilityScoreProps {
   stats: PersonalStats;
 }
 
-export default function ReliabilityScore({ stats }: ReliabilityScoreProps) {
-  const momentum = getMomentum(stats.keptRate, stats.totalPromises);
-
+export function ReliabilityScore({ stats }: ReliabilityScoreProps) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-        Your Momentum
+    <div className="bg-white rounded-xl border p-6">
+      <h3 className="font-serif font-semibold text-gray-900 mb-4">
+        Reliability Score
       </h3>
 
-      <div className="flex items-end gap-3">
-        <span className={`font-serif text-2xl font-bold ${momentum.color}`}>
-          {momentum.label}
-        </span>
-        {stats.totalPromises > 0 && (
-          <span className="mb-0.5 text-sm text-gray-400">
-            {Math.round(stats.keptRate)}% kept
-          </span>
-        )}
-      </div>
-      <p className="mt-1 text-xs text-gray-500">{momentum.message}</p>
-
-      <div className="mt-3 grid grid-cols-3 gap-3 text-center">
-        <div>
-          <p className="text-lg font-semibold text-gray-900">{stats.totalPromises}</p>
-          <p className="text-xs text-gray-500">Total</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="text-center">
+          <p className="text-3xl font-bold text-green-700">
+            {Math.round(stats.keptRate * 100)}%
+          </p>
+          <p className="text-xs text-gray-500">Promise-keeping rate</p>
         </div>
-        <div>
-          <p className="text-lg font-semibold text-green-700">{stats.activePromises}</p>
+        <div className="text-center">
+          <p className="text-3xl font-bold text-gray-900">
+            {stats.totalPromises}
+          </p>
+          <p className="text-xs text-gray-500">Total promises</p>
+        </div>
+        <div className="text-center">
+          <p className="text-3xl font-bold text-blue-600">
+            {stats.activePromises}
+          </p>
           <p className="text-xs text-gray-500">Active</p>
         </div>
-        <div>
-          <p className="text-lg font-semibold text-gray-900">
-            {stats.averageDaysToComplete > 0 ? `${stats.averageDaysToComplete}d` : "—"}
+        <div className="text-center">
+          <p className="text-3xl font-bold text-gray-700">
+            {stats.mtkp > 0 ? `${Math.round(stats.mtkp)}d` : "—"}
           </p>
-          <p className="text-xs text-gray-500">Avg Days</p>
+          <p className="text-xs text-gray-500">MTKP (days)</p>
         </div>
       </div>
+
+      {stats.trend.length > 0 && stats.trend.some((t) => t.keptRate > 0) && (
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={stats.trend}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 11 }}
+                stroke="#9ca3af"
+              />
+              <YAxis
+                domain={[0, 1]}
+                tickFormatter={(v) => `${Math.round(v * 100)}%`}
+                tick={{ fontSize: 11 }}
+                stroke="#9ca3af"
+              />
+              <Tooltip
+                formatter={(value: any) => [
+                  `${Math.round(Number(value) * 100)}%`,
+                  "Kept Rate",
+                ]}
+              />
+              <Line
+                type="monotone"
+                dataKey="keptRate"
+                stroke="#1a5f4a"
+                strokeWidth={2}
+                dot={{ fill: "#1a5f4a", r: 3 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
-}
-
-function getMomentum(
-  keptRate: number,
-  totalPromises: number,
-): { label: string; message: string; color: string } {
-  if (totalPromises === 0) {
-    return {
-      label: "Ready to begin",
-      message: "Your first promise is waiting. Start small.",
-      color: "text-gray-700",
-    };
-  }
-
-  if (totalPromises <= 2) {
-    return {
-      label: "Planting seeds",
-      message: "Early days. Every commitment counts.",
-      color: "text-sky-accent",
-    };
-  }
-
-  if (keptRate >= 85) {
-    return {
-      label: "Thriving",
-      message: "Strong follow-through. Your word means something.",
-      color: "text-green-700",
-    };
-  }
-
-  if (keptRate >= 65) {
-    return {
-      label: "Building steady",
-      message: "Consistent progress. Keep showing up.",
-      color: "text-blue-700",
-    };
-  }
-
-  if (keptRate >= 40) {
-    return {
-      label: "Finding your rhythm",
-      message: "Some promises land, some teach you. Both matter.",
-      color: "text-amber-700",
-    };
-  }
-
-  return {
-    label: "Still here",
-    message: "Showing up is the hardest part. Try smaller promises.",
-    color: "text-gray-700",
-  };
 }

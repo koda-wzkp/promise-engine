@@ -1,40 +1,49 @@
 "use client";
 
-import { Domain } from "@/lib/types/promise";
+import { getDomainColor } from "@/lib/utils/colors";
 
 interface DomainFilterProps {
-  domains: Domain[];
+  domains: string[];
   selected: string | null;
   onSelect: (domain: string | null) => void;
+  vertical?: string;
 }
 
-export default function DomainFilter({ domains, selected, onSelect }: DomainFilterProps) {
+export function DomainFilter({ domains, selected, onSelect, vertical }: DomainFilterProps) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by domain">
       <button
         onClick={() => onSelect(null)}
-        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+        className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
           selected === null
-            ? "bg-gray-900 text-white"
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            ? "bg-gray-900 text-white border-gray-900"
+            : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
         }`}
       >
         All
       </button>
-      {domains.map((d) => (
-        <button
-          key={d.name}
-          onClick={() => onSelect(d.name === selected ? null : d.name)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            selected === d.name
-              ? "text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
-          style={selected === d.name ? { backgroundColor: d.color } : undefined}
-        >
-          {d.name} ({d.promiseCount})
-        </button>
-      ))}
+      {domains.map((domain) => {
+        const color = getDomainColor(domain, vertical);
+        const isActive = selected === domain;
+        return (
+          <button
+            key={domain}
+            onClick={() => onSelect(isActive ? null : domain)}
+            className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+              isActive
+                ? "text-white border-transparent"
+                : "bg-white border-gray-300 hover:border-gray-400"
+            }`}
+            style={
+              isActive
+                ? { backgroundColor: color, borderColor: color }
+                : { color }
+            }
+          >
+            {domain}
+          </button>
+        );
+      })}
     </div>
   );
 }

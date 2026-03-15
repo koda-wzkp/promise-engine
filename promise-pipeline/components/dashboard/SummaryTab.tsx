@@ -1,227 +1,175 @@
 "use client";
 
 import { DashboardData } from "@/lib/types/promise";
-import { NetworkHealthScore } from "@/lib/types/simulation";
-import StatusBadge from "../promise/StatusBadge";
-import NetworkHealthBar from "../simulation/NetworkHealthBar";
-import { statusColors, statusBgColors, statusLabels } from "@/lib/utils/colors";
-import { computeGrade } from "@/lib/utils/formatting";
-import { PromiseStatus } from "@/lib/types/promise";
-
-const statusDefinitions: Record<PromiseStatus, string> = {
-  verified: "Evidence confirms the promise is being met. Metrics, audits, or sensors validate compliance with the stated commitment.",
-  declared: "The promise has been publicly announced or committed to, but there is not yet enough data or time elapsed to verify it.",
-  degraded: "The promise is partially failing or falling behind its target. Performance has slipped but has not fully breached the commitment.",
-  violated: "The promise has been clearly broken. Evidence shows the commitment is not being met and no remediation is underway.",
-  unverifiable: "No independent verification mechanism exists for this promise. The claim cannot be confirmed or denied with available evidence.",
-  kept: "The promise has been fulfilled with measurable evidence demonstrating the commitment was met.",
-  broken: "The promise was clearly not met. Outcome data confirms failure to deliver on the commitment.",
-  partial: "The promise was partially fulfilled. Some aspects were delivered, but the full scope of the commitment was not achieved.",
-  delayed: "The promise was implemented late or is still pending past its original deadline.",
-  modified: "The promise was changed from its original commitment, altering scope, timeline, or terms.",
-  legally_challenged: "The promise is subject to legal challenge that affects its implementation or enforcement.",
-  repealed: "The promise was legislatively or administratively reversed and is no longer in effect.",
-};
+import { NetworkHealthBar } from "@/components/simulation/NetworkHealthBar";
+import { StatusBadge } from "@/components/promise/StatusBadge";
+import { calculateNetworkHealth, identifyBottlenecks } from "@/lib/simulation/cascade";
+import { statusBreakdown, domainHealthScores, computeGrade, calculateNetworkEntropy, identifyHighLeverageNodes } from "@/lib/simulation/scoring";
 
 interface SummaryTabProps {
   data: DashboardData;
-  health: NetworkHealthScore;
-  onDomainClick?: (domain: string) => void;
-  onPromiseClick?: (promiseId: string) => void;
 }
 
-export default function SummaryTab({ data, health, onDomainClick, onPromiseClick }: SummaryTabProps) {
-  // Dynamically count all statuses present in this demo's data
-  const statusCounts: Partial<Record<PromiseStatus, number>> = {};
-  for (const status of activeStatuses(data)) {
-    statusCounts[status] = data.promises.filter((p) => p.status === status).length;
-  }
-
+export function SummaryTab({ data }: SummaryTabProps) {
+  const health = calculateNetworkHealth(data.promises);
+  const breakdown = statusBreakdown(data.promises);
+  const domainScores = domainHealthScores(data.promises);
+  const bottlenecks = identifyBottlenecks(data.promises);
   const grade = computeGrade(health.overall);
-
-  // Generate grade improvement hint
-  const gradeHint = getGradeHint(data, health);
+  const entropy = calculateNetworkEntropy(data.promises);
+  const certainty = Math.round(100 - entropy.overall);
+  const leverageNodes = identifyHighLeverageNodes(data.promises);
+  const domainEntropy = entropy.byDomain;
 
   return (
     <div className="space-y-6">
-      {/* Top row: Grade + Health + Status breakdown */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* Grade */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Overall Grade</p>
-          <p className="mt-2 font-serif text-5xl font-bold text-gray-900" aria-label={`Overall grade: ${grade}`}>{grade}</p>
-          <p className="mt-2 text-xs text-gray-500">{data.gradeExplanation}</p>
-          {gradeHint && (
-            <p className="mt-2 rounded bg-blue-50 px-2 py-1 text-[11px] text-blue-700">
-              {gradeHint}
-            </p>
-          )}
-        </div>
-
-        {/* Health Score */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Network Health</p>
-          <p className="mt-2 text-4xl font-bold text-gray-900">
-            {health.overall}<span className="text-lg text-gray-400">/100</span>
+      {/* Top metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border p-6 text-center">
+          <p className="text-sm text-gray-500 mb-1">Network Health</p>
+          <p className="text-4xl font-bold" style={{ color: health.overall >= 60 ? "#1a5f4a" : health.overall >= 40 ? "#b45309" : "#b91c1c" }}>
+            {Math.round(health.overall)}
           </p>
-          <div className="mt-4">
+          <p className="text-xs text-gray-400 mt-1">out of 100</p>
+          <div className="mt-3">
             <NetworkHealthBar score={health.overall} showLabel={false} />
           </div>
-          {health.bottlenecks.length > 0 && (
-            <p className="mt-3 text-xs text-gray-500">
-              Bottleneck:{" "}
-              <button
-                onClick={() => onPromiseClick?.(health.bottlenecks[0])}
-                className="font-mono font-medium text-gray-700 underline decoration-gray-300 hover:text-gray-900"
-              >
-                {health.bottlenecks[0]}
-              </button>
-              {health.bottlenecks.length > 1 && ` +${health.bottlenecks.length - 1} more`}
-            </p>
-          )}
         </div>
 
-        {/* Status breakdown */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Promise Status</p>
-          <p className="mt-1 mb-3 text-[11px] text-gray-400">
-            {data.promises.length} commitments tracked across {data.domains.length} domains
+        <div className="bg-white rounded-xl border p-6 text-center">
+          <p className="text-sm text-gray-500 mb-1">Network Certainty</p>
+          <p className="text-4xl font-bold" style={{ color: certainty >= 70 ? "#1a5f4a" : certainty >= 40 ? "#78350f" : "#991b1b" }}>
+            {certainty}
           </p>
-          <div className="space-y-2">
-            {(Object.entries(statusCounts) as [PromiseStatus, number][]).map(([status, count]) => (
-              <div key={status} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: statusColors[status] }}
-                    aria-hidden="true"
-                  />
-                  <span className="text-xs text-gray-600">{statusLabels[status]}</span>
-                </div>
-                <span className="font-mono text-xs font-medium text-gray-900">{count}</span>
-              </div>
-            ))}
+          <p className="text-xs text-gray-400 mt-1">out of 100</p>
+          <div className="mt-3">
+            <NetworkHealthBar score={certainty} showLabel={false} />
           </div>
-          {/* Mini bar chart with tooltip-style labels */}
-          <div className="mt-3 flex h-3 overflow-hidden rounded-full" role="img" aria-label="Status distribution bar">
-            {(Object.entries(statusCounts) as [PromiseStatus, number][]).map(([status, count]) => (
-              count > 0 ? (
-                <div
-                  key={status}
-                  title={`${statusLabels[status]}: ${count} (${Math.round((count / data.promises.length) * 100)}%)`}
-                  style={{
-                    width: `${(count / data.promises.length) * 100}%`,
-                    backgroundColor: statusColors[status],
-                  }}
-                />
-              ) : null
-            ))}
-          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border p-6 text-center">
+          <p className="text-sm text-gray-500 mb-1">Overall Grade</p>
+          <p className="text-4xl font-bold text-gray-900">{grade}</p>
+          <p className="text-xs text-gray-400 mt-1">{data.promises.length} promises, {data.agents.length} agents</p>
         </div>
       </div>
 
-      {/* Domain Health — clickable */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <p className="mb-4 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Domain Health</p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data.domains.map((domain) => (
-            <button
-              key={domain.name}
-              onClick={() => onDomainClick?.(domain.name)}
-              className="rounded-lg bg-gray-50 p-3 text-left transition-colors hover:bg-gray-100"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">{domain.name}</span>
-                <span className="font-mono text-xs text-gray-400">{domain.promiseCount} promises</span>
-              </div>
-              <div className="mt-2">
-                <NetworkHealthBar
-                  score={health.byDomain[domain.name] ?? domain.healthScore}
-                  showLabel={false}
-                />
-              </div>
-            </button>
+      {/* Status breakdown */}
+      <div className="bg-white rounded-xl border p-6">
+        <h3 className="font-serif font-semibold text-gray-900 mb-4">Status Breakdown</h3>
+        <div className="flex flex-wrap gap-4">
+          {(Object.entries(breakdown) as [string, number][]).map(([status, count]) => (
+            <div key={status} className="flex items-center gap-2">
+              <StatusBadge status={status as any} size="sm" />
+              <span className="text-sm font-bold text-gray-900">{count}</span>
+            </div>
           ))}
         </div>
+        {/* Visual bar */}
+        <div className="mt-4 flex h-4 rounded-full overflow-hidden">
+          {(Object.entries(breakdown) as [string, number][]).map(([status, count]) => {
+            if (count === 0) return null;
+            const colors: Record<string, string> = {
+              verified: "#1a5f4a",
+              declared: "#2563eb",
+              degraded: "#b45309",
+              violated: "#b91c1c",
+              unverifiable: "#7c3aed",
+            };
+            return (
+              <div
+                key={status}
+                className="h-full"
+                style={{
+                  width: `${(count / data.promises.length) * 100}%`,
+                  backgroundColor: colors[status] || "#6b7280",
+                }}
+                title={`${status}: ${count}`}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      {/* At Risk — clickable */}
-      {health.atRisk.length > 0 && (
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-yellow-700">At Risk</p>
-          <p className="mt-1 text-xs text-yellow-600">
-            These promises are currently on track but depend on upstream promises that are degraded or violated.
+      {/* Certainty warning */}
+      {certainty < 50 && (
+        <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
+          <p className="text-sm text-amber-800">
+            This network&apos;s assessment has high uncertainty — {entropy.byStatus.unverifiable + entropy.byStatus.declared} promises have no verification mechanism or remain untested.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {health.atRisk.map((id) => {
-              const p = data.promises.find((pr) => pr.id === id);
-              return p ? (
-                <button
-                  key={id}
-                  onClick={() => onPromiseClick?.(id)}
-                  className="flex items-center gap-1 rounded bg-white px-2 py-1 text-xs transition-colors hover:bg-yellow-100"
-                >
-                  <span className="font-mono font-semibold text-gray-500">{id}</span>
-                  <StatusBadge status={p.status} size="sm" />
-                </button>
-              ) : null;
+        </div>
+      )}
+
+      {/* Domain health */}
+      <div className="bg-white rounded-xl border p-6">
+        <h3 className="font-serif font-semibold text-gray-900 mb-4">Domain Health</h3>
+        <div className="space-y-3">
+          {Object.entries(domainScores)
+            .sort((a, b) => b[1] - a[1])
+            .map(([domain, score]) => {
+              const domCertainty = Math.round(100 - (domainEntropy[domain] || 0));
+              const hasVerificationGap = domCertainty < 30;
+              return (
+                <div key={domain}>
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-sm font-medium text-gray-700 w-28">{domain}</span>
+                    <span className="text-xs text-gray-500">Health: {Math.round(score)}</span>
+                    <span className="text-xs" style={{ color: domCertainty >= 70 ? "#1a5f4a" : domCertainty >= 40 ? "#78350f" : "#991b1b" }}>
+                      Certainty: {domCertainty}
+                    </span>
+                    {hasVerificationGap && (
+                      <span className="text-xs text-amber-700 font-medium">⚠ Verification gap</span>
+                    )}
+                  </div>
+                  <NetworkHealthBar score={score} showLabel={false} />
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* High-Leverage Promises */}
+      {leverageNodes.length > 0 && (
+        <div className="bg-white rounded-xl border p-6">
+          <h3 className="font-serif font-semibold text-gray-900 mb-3">High-Leverage Promises</h3>
+          <p className="text-sm text-gray-500 mb-3">
+            Promises ranked by combined dependent count and structural bridge score (betweenness centrality).
+          </p>
+          <div className="space-y-2">
+            {leverageNodes.slice(0, 5).map((node) => {
+              const promise = data.promises.find((p) => p.id === node.promiseId);
+              if (!promise) return null;
+              const medianDeps = leverageNodes.length > 0
+                ? leverageNodes[Math.floor(leverageNodes.length / 2)].dependentCount
+                : 0;
+              const isStructuralBridge = node.betweenness > 0.7 && node.dependentCount < medianDeps;
+              return (
+                <div key={node.promiseId} className="flex items-center gap-2 text-sm">
+                  <span className="font-mono text-xs text-gray-500 w-10">{node.promiseId}</span>
+                  <StatusBadge status={promise.status} size="xs" />
+                  <span className="text-gray-500 text-xs whitespace-nowrap">
+                    {node.dependentCount} dep{node.dependentCount !== 1 ? "s" : ""}
+                  </span>
+                  <span className="text-xs text-gray-400">|</span>
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                    Bridge: {node.betweenness.toFixed(2)}
+                  </span>
+                  {isStructuralBridge && (
+                    <span className="text-xs text-amber-700 font-medium whitespace-nowrap">← structural bridge</span>
+                  )}
+                  <span className="text-gray-700 truncate">{promise.body}</span>
+                </div>
+              );
             })}
           </div>
         </div>
       )}
 
-      {/* State Definitions */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <p className="mb-4 text-[10px] font-semibold uppercase tracking-wider text-gray-400">State Definitions</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {activeStatuses(data).map((status) => (
-            <div key={status} className="flex gap-3 rounded-lg p-3" style={{ backgroundColor: statusBgColors[status] }}>
-              <span
-                className="mt-1.5 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                style={{ backgroundColor: statusColors[status] }}
-                aria-hidden="true"
-              />
-              <div>
-                <p className="text-sm font-medium capitalize" style={{ color: statusColors[status] }}>
-                  {status.replace("_", " ")}
-                </p>
-                <p className="mt-0.5 text-xs leading-relaxed text-gray-600">
-                  {statusDefinitions[status]}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Grade explanation */}
+      <div className="bg-gray-50 rounded-xl border p-6">
+        <h3 className="font-serif font-semibold text-gray-900 mb-2">Assessment</h3>
+        <p className="text-sm text-gray-700 leading-relaxed">{data.gradeExplanation}</p>
       </div>
     </div>
   );
-}
-
-function activeStatuses(data: DashboardData): PromiseStatus[] {
-  const seen = new Set<PromiseStatus>();
-  for (const p of data.promises) {
-    seen.add(p.status);
-  }
-  // Return in a logical order: positive → neutral → negative
-  const order: PromiseStatus[] = [
-    "verified", "kept", "declared", "partial", "modified", "delayed",
-    "degraded", "legally_challenged", "violated", "broken", "repealed", "unverifiable",
-  ];
-  return order.filter((s) => seen.has(s));
-}
-
-function getGradeHint(data: DashboardData, health: NetworkHealthScore): string | null {
-  if (health.bottlenecks.length > 0) {
-    const bottleneck = data.promises.find((p) => p.id === health.bottlenecks[0]);
-    if (bottleneck && (bottleneck.status === "violated" || bottleneck.status === "degraded")) {
-      const currentGrade = computeGrade(health.overall);
-      const estimatedImprovement = health.overall + 8;
-      const newGrade = computeGrade(estimatedImprovement);
-      if (newGrade !== currentGrade) {
-        return `Resolving the ${bottleneck.id} cascade could raise this to ${newGrade}.`;
-      }
-      return `Resolving ${bottleneck.id} would improve network health.`;
-    }
-  }
-  return null;
 }

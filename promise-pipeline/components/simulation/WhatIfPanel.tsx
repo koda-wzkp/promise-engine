@@ -1,97 +1,88 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Promise as PromiseType, PromiseStatus, Agent } from "@/lib/types/promise";
-import StatusBadge from "../promise/StatusBadge";
+import { useState } from "react";
+import { Promise as PromiseType, PromiseStatus } from "@/lib/types/promise";
+import { StatusBadge } from "@/components/promise/StatusBadge";
 
 interface WhatIfPanelProps {
   promise: PromiseType;
-  agents: Agent[];
   onSimulate: (promiseId: string, newStatus: PromiseStatus) => void;
   onClose: () => void;
-  statusOptions?: PromiseStatus[];
 }
 
-const DEFAULT_STATUSES: PromiseStatus[] = ["verified", "declared", "degraded", "violated", "unverifiable"];
+const statuses: PromiseStatus[] = [
+  "verified",
+  "declared",
+  "degraded",
+  "violated",
+  "unverifiable",
+];
 
-export default function WhatIfPanel({ promise, agents, onSimulate, onClose, statusOptions }: WhatIfPanelProps) {
-  const STATUSES = statusOptions ?? DEFAULT_STATUSES;
+export function WhatIfPanel({ promise, onSimulate, onClose }: WhatIfPanelProps) {
   const [selectedStatus, setSelectedStatus] = useState<PromiseStatus>(
-    promise.status === "violated" ? "verified" : "violated"
+    promise.status === "verified" ? "violated" : "verified"
   );
-  const promiser = agents.find((a) => a.id === promise.promiser);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // Close on Escape key
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
 
   return (
-    <div
-      ref={panelRef}
-      className="rounded-lg border-2 border-yellow-300 bg-yellow-50 p-4"
-      role="region"
-      aria-label="What If simulation panel"
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-gray-900">What If?</h3>
-          <p className="mt-0.5 text-xs text-gray-500">
-            Simulate a status change and see cascade effects
-          </p>
-        </div>
+    <div className="bg-white rounded-xl border border-blue-200 shadow-lg p-5">
+      <div className="flex justify-between items-start mb-3">
+        <h3 className="font-serif font-semibold text-gray-900">
+          What If Simulation
+        </h3>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"
+          className="text-gray-400 hover:text-gray-600"
           aria-label="Close What If panel"
         >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div className="mt-3 rounded bg-white p-3">
+      <div className="mb-4">
+        <p className="text-sm text-gray-500 mb-1">Selected promise:</p>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-gray-400">{promise.id}</span>
-          <StatusBadge status={promise.status} size="sm" />
+          <span className="font-mono text-xs text-gray-500">{promise.id}</span>
+          <StatusBadge status={promise.status} size="xs" />
         </div>
-        <p className="mt-1 text-sm text-gray-800">{promise.body}</p>
-        <p className="text-xs text-gray-400">{promiser?.name ?? promise.promiser}</p>
+        <p className="text-sm text-gray-900 mt-1">{promise.body}</p>
       </div>
 
-      <div className="mt-3">
-        <label id="whatif-status-label" className="text-xs font-medium text-gray-600">Change status to:</label>
-        <div className="mt-1.5 flex flex-wrap gap-1.5" role="radiogroup" aria-labelledby="whatif-status-label">
-          {STATUSES.filter((s) => s !== promise.status).map((s) => (
-            <button
-              key={s}
-              role="radio"
-              aria-checked={selectedStatus === s}
-              onClick={() => setSelectedStatus(s)}
-              className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
-                selectedStatus === s
-                  ? "bg-yellow-400 text-yellow-900"
-                  : "bg-white text-gray-500 hover:bg-gray-100"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
+      <div className="mb-4">
+        <label htmlFor="what-if-status" className="text-sm font-medium text-gray-700 block mb-1">
+          Change status to:
+        </label>
+        <select
+          id="what-if-status"
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value as PromiseStatus)}
+          className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          {statuses
+            .filter((s) => s !== promise.status)
+            .map((s) => (
+              <option key={s} value={s}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </option>
+            ))}
+        </select>
       </div>
 
-      <button
-        onClick={() => onSimulate(promise.id, selectedStatus)}
-        className="mt-4 w-full rounded-lg bg-yellow-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-yellow-600 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-      >
-        Simulate Cascade
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={() => onSimulate(promise.id, selectedStatus)}
+          className="flex-1 py-2 px-4 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Simulate Cascade
+        </button>
+        <button
+          onClick={onClose}
+          className="py-2 px-4 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

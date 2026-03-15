@@ -1,132 +1,120 @@
 "use client";
 
-import { Trajectory } from "@/lib/types/promise";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, ReferenceLine, Legend,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+  ResponsiveContainer,
+  Legend,
 } from "recharts";
+import { Trajectory } from "@/lib/types/promise";
 
 interface TrajectoryTabProps {
   trajectories: Trajectory[];
 }
 
-const COLORS = ["#1e40af", "#991b1b", "#1a5f4a", "#78350f"];
-const MILESTONE_COLORS = ["#991b1b", "#78350f", "#1a5f4a", "#1e40af"];
-
-export default function TrajectoryTab({ trajectories }: TrajectoryTabProps) {
-  if (trajectories.length === 0) {
-    return (
-      <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
-        <p className="text-sm text-gray-500">No trajectory data available for this network.</p>
-      </div>
-    );
-  }
-
+export function TrajectoryTab({ trajectories }: TrajectoryTabProps) {
   return (
     <div className="space-y-8">
-      {trajectories.map((traj, i) => {
-        const color = COLORS[i % COLORS.length];
-        const yDomain = traj.yDomain ?? [0, 100];
-        const yLabel = traj.yAxisLabel ?? "% Reduction";
-        const subtitle = traj.subtitle ?? "";
+      {trajectories.map((trajectory) => (
+        <div key={trajectory.agentId} className="bg-white rounded-xl border p-6">
+          <h3 className="font-serif font-semibold text-gray-900 mb-1">
+            {trajectory.label}
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Emissions relative to 2019 baseline (100%)
+          </p>
 
-        const chartData = traj.data.map((d) => ({
-          year: d.year,
-          actual: d.actual,
-          projected: d.projected,
-          target: d.target,
-        }));
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={trajectory.data}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="year"
+                  tick={{ fontSize: 12 }}
+                  stroke="#9ca3af"
+                />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  stroke="#9ca3af"
+                  domain={[0, 110]}
+                  tickFormatter={(v) => `${v}%`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 8,
+                    border: "1px solid #e5e7eb",
+                    fontSize: 13,
+                  }}
+                  formatter={(value: any) => [`${value}%`]}
+                />
+                <Legend />
 
-        return (
-          <div key={traj.agentId} className="rounded-lg border border-gray-200 bg-white p-6">
-            <h3 className="mb-1 font-serif text-lg font-bold text-gray-900">{traj.label}</h3>
-            {subtitle && (
-              <p className="mb-4 text-xs text-gray-500">{subtitle}</p>
-            )}
+                {/* Target line */}
+                <Area
+                  type="monotone"
+                  dataKey="target"
+                  stroke="#1a5f4a"
+                  fill="#ecfdf5"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Target"
+                  dot={false}
+                />
 
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="year"
-                    tick={{ fontSize: 11, fill: "#4b5563" }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    domain={yDomain}
-                    tick={{ fontSize: 11, fill: "#4b5563" }}
-                    tickLine={false}
-                    label={{
-                      value: yLabel,
-                      angle: -90,
-                      position: "insideLeft",
-                      style: { fontSize: 11, fill: "#4b5563" },
-                    }}
-                  />
-                  <Tooltip
-                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                    formatter={(value: number, name: string) => {
-                      const formatted = Number.isInteger(value) ? value.toLocaleString() : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
-                      const label = name === "actual" ? "Actual" : name === "projected" ? "Projected" : "Target";
-                      return [formatted, label];
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="top"
-                    height={30}
-                    formatter={(value: string) =>
-                      value === "actual" ? "Actual" : value === "projected" ? "Projected" : "Target"
-                    }
-                    iconType="line"
-                    wrapperStyle={{ fontSize: 11 }}
-                  />
+                {/* Projected */}
+                <Area
+                  type="monotone"
+                  dataKey="projected"
+                  stroke="#b45309"
+                  fill="#fffbeb"
+                  strokeWidth={2}
+                  strokeDasharray="3 3"
+                  name="Projected"
+                  dot={false}
+                />
 
-                  {/* Configurable milestone reference lines */}
-                  {traj.milestones?.map((m, mi) => (
-                    <ReferenceLine
-                      key={mi}
-                      y={m.value}
-                      stroke={m.color ?? MILESTONE_COLORS[mi % MILESTONE_COLORS.length]}
-                      strokeDasharray="5 5"
-                      label={{
-                        value: m.label,
-                        position: "right",
-                        fontSize: 10,
-                        fill: m.color ?? MILESTONE_COLORS[mi % MILESTONE_COLORS.length],
-                      }}
-                    />
-                  ))}
+                {/* Actual */}
+                <Area
+                  type="monotone"
+                  dataKey="actual"
+                  stroke="#2563eb"
+                  fill="#eff6ff"
+                  strokeWidth={2}
+                  name="Actual"
+                  dot={{ fill: "#2563eb", r: 3 }}
+                />
 
-                  <Area
-                    type="monotone"
-                    dataKey="actual"
-                    stroke={color}
-                    fill={color}
-                    fillOpacity={0.15}
-                    strokeWidth={2}
-                    dot={{ r: 4, fill: color }}
-                    connectNulls={false}
-                    name="actual"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="projected"
-                    stroke={color}
-                    fill={color}
-                    fillOpacity={0.05}
-                    strokeWidth={2}
-                    strokeDasharray="8 4"
-                    dot={{ r: 3, fill: "white", stroke: color, strokeWidth: 2 }}
-                    connectNulls={false}
-                    name="projected"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+                {/* Key milestone lines */}
+                <ReferenceLine x={2030} stroke="#6b7280" strokeDasharray="3 3" label={{ value: "2030", position: "top" }} />
+                <ReferenceLine y={20} stroke="#dc2626" strokeDasharray="3 3" opacity={0.4} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="mt-3 flex gap-4 text-xs text-gray-500">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-0.5 bg-blue-600" />
+              <span>Actual emissions</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-0.5 bg-amber-600 border-dashed" style={{ borderTop: "1px dashed" }} />
+              <span>Projected path</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-0.5 bg-green-800 border-dashed" style={{ borderTop: "1px dashed" }} />
+              <span>Required target</span>
             </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }

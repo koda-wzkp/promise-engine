@@ -1,51 +1,18 @@
-import { PromiseStatus } from "../types/promise";
-
-export const statusColors: Record<PromiseStatus, string> = {
-  // Base statuses (HB 2021) — WCAG AAA 7:1 on respective backgrounds
+export const statusColors = {
   verified: "#1a5f4a",
-  declared: "#1e40af",
-  degraded: "#78350f",
-  violated: "#991b1b",
-  unverifiable: "#5b21b6",
-  // Extended statuses (ACA) — WCAG AAA 7:1 on respective backgrounds
-  kept: "#14532d",
-  broken: "#991b1b",
-  partial: "#78350f",
-  delayed: "#713f12",
-  modified: "#1e40af",
-  legally_challenged: "#5b21b6",
-  repealed: "#374151",
-};
+  declared: "#2563eb",
+  degraded: "#b45309",
+  violated: "#b91c1c",
+  unverifiable: "#7c3aed",
+} as const;
 
-export const statusBgColors: Record<PromiseStatus, string> = {
+export const statusBgColors = {
   verified: "#ecfdf5",
   declared: "#eff6ff",
   degraded: "#fffbeb",
   violated: "#fef2f2",
   unverifiable: "#f5f3ff",
-  kept: "#f0fdf4",
-  broken: "#fef2f2",
-  partial: "#fffbeb",
-  delayed: "#fefce8",
-  modified: "#eff6ff",
-  legally_challenged: "#f5f3ff",
-  repealed: "#f3f4f6",
-};
-
-export const statusLabels: Record<PromiseStatus, string> = {
-  verified: "Verified",
-  declared: "Declared",
-  degraded: "Degraded",
-  violated: "Violated",
-  unverifiable: "Unverifiable",
-  kept: "Kept",
-  broken: "Broken",
-  partial: "Partial",
-  delayed: "Delayed",
-  modified: "Modified",
-  legally_challenged: "Challenged",
-  repealed: "Repealed",
-};
+} as const;
 
 export const agentColors: Record<string, string> = {
   legislator: "#1e40af",
@@ -56,13 +23,10 @@ export const agentColors: Record<string, string> = {
   provider: "#dc2626",
   stakeholder: "#6b7280",
   certifier: "#0891b2",
-  brand: "#9333ea",
-  monitor: "#64748b",
-  executive: "#1e3a5f",
-  insurer: "#0e7490",
-  judiciary: "#6d28d9",
-  federal: "#1e40af",
-};
+  brand: "#db2777",
+  monitor: "#4f46e5",
+  "team-member": "#2563eb",
+} as const;
 
 export const hb2021DomainColors: Record<string, string> = {
   Emissions: "#dc2626",
@@ -72,53 +36,7 @@ export const hb2021DomainColors: Record<string, string> = {
   Affordability: "#d97706",
   Tribal: "#9333ea",
   Workforce: "#0891b2",
-};
-
-export const acaDomainColors: Record<string, string> = {
-  "Coverage Expansion": "#15803d",
-  "Insurance Market Reform": "#0e7490",
-  "Affordability & Subsidies": "#d97706",
-  "Medicare & Medicaid": "#7c3aed",
-  "Delivery System Reform": "#2563eb",
-  "Public Health & Prevention": "#059669",
-  "Consumer Protections": "#0891b2",
-  "Employer Requirements": "#b45309",
-  "Political & Legal Challenges": "#dc2626",
-};
-
-export const caaDomainColors: Record<string, string> = {
-  "Acid Rain": "#dc2626",
-  "Air Quality": "#f59e0b",
-  "Mobile Sources": "#2563eb",
-  "Hazardous Pollutants": "#7c3aed",
-  "Permitting": "#6b7280",
-  "Ozone Protection": "#0891b2",
-  "Enforcement": "#991b1b",
-  "Market Mechanisms": "#059669",
-};
-
-export const doddFrankDomainColors: Record<string, string> = {
-  "Systemic Risk": "#dc2626",
-  "Consumer Protection": "#059669",
-  "Derivatives": "#7c3aed",
-  "Banking Regulation": "#2563eb",
-  "Investor Protection": "#0891b2",
-  "Mortgage Reform": "#f59e0b",
-  "Resolution Authority": "#991b1b",
-  "Regulatory Structure": "#6b7280",
-  "Rollbacks": "#374151",
-};
-
-export const nclbEssaDomainColors: Record<string, string> = {
-  "Accountability": "#dc2626",
-  "Assessment": "#2563eb",
-  "Teacher Quality": "#7c3aed",
-  "School Improvement": "#f59e0b",
-  "Equity": "#059669",
-  "Funding": "#0891b2",
-  "State Flexibility": "#6b7280",
-  "Federal Authority": "#991b1b",
-};
+} as const;
 
 export const skyColors = {
   lightest: "#E0F6FF",
@@ -127,31 +45,36 @@ export const skyColors = {
   accent: "#4A90D9",
   dark: "#1a1a2e",
   darkAccent: "#2d2d44",
-};
+} as const;
+
+export const jcpoaDomainColors: Record<string, string> = {
+  Enrichment: "#dc2626",
+  Facilities: "#b45309",
+  Verification: "#7c3aed",
+  Sanctions: "#2563eb",
+  Cooperation: "#059669",
+  Governance: "#0891b2",
+} as const;
 
 export const dashboardThemes = {
   hb2021: { bg: "#faf9f6", accent: "#1a5f4a" },
   ai: { bg: "#f5f0eb", accent: "#1a1a2e" },
   infrastructure: { bg: "#0f1419", accent: "#00d4aa" },
   supplyChain: { bg: "#faf9f6", accent: "#2d5016" },
-  aca: { bg: "#f8fafc", accent: "#1e40af" },
-  caa: { bg: "#f8fafc", accent: "#059669" },
-  doddFrank: { bg: "#f8fafc", accent: "#2563eb" },
-  nclbEssa: { bg: "#f8fafc", accent: "#7c3aed" },
-};
+  jcpoa: { bg: "#f5f0eb", accent: "#991b1b" },
+} as const;
 
-// Status health weights for network health calculation
-export const statusWeights: Record<PromiseStatus, number> = {
-  verified: 100,
-  declared: 60,
-  degraded: 30,
-  violated: 0,
-  unverifiable: 20,
-  kept: 100,
-  broken: 0,
-  partial: 50,
-  delayed: 40,
-  modified: 55,
-  legally_challenged: 25,
-  repealed: 0,
-};
+export function getStatusColor(status: string): string {
+  return statusColors[status as keyof typeof statusColors] || "#6b7280";
+}
+
+export function getStatusBgColor(status: string): string {
+  return statusBgColors[status as keyof typeof statusBgColors] || "#f3f4f6";
+}
+
+export function getDomainColor(domain: string, vertical: string = "hb2021"): string {
+  if (vertical === "hb2021") {
+    return hb2021DomainColors[domain] || "#6b7280";
+  }
+  return "#6b7280";
+}

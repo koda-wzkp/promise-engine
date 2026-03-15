@@ -1,26 +1,32 @@
 // ─── STATUS ───
-// Base statuses (HB 2021 and general use)
-// Extended statuses (ACA: historical legislation with 15+ year track records)
 export type PromiseStatus =
-  | "verified"            // On track, evidence confirms
-  | "declared"            // Announced/committed, not yet verifiable
-  | "degraded"            // Behind schedule or partially failing
-  | "violated"            // Off track, commitment broken
-  | "unverifiable"        // No verification mechanism exists
-  | "kept"                // Promise fulfilled with measurable evidence
-  | "broken"              // Promise clearly not met
-  | "partial"             // Partially fulfilled
-  | "delayed"             // Implemented late or still pending
-  | "modified"            // Changed from original commitment
-  | "legally_challenged"  // Subject to legal challenge affecting implementation
-  | "repealed";           // Legislatively or administratively reversed
+  | "verified"
+  | "declared"
+  | "degraded"
+  | "violated"
+  | "unverifiable";
+
+// ─── POLARITY (v2.1) ───
+export type PromisePolarity = "give" | "accept";
+
+// ─── ORIGIN (v2.1) ───
+export type PromiseOrigin =
+  | "voluntary"
+  | "imposed"
+  | "negotiated";
+
+// ─── VIOLATION TYPE (v2.1) ───
+export type ViolationType =
+  | "fault"
+  | "flaw"
+  | "abandoned"
+  | "expired";
 
 // ─── AGENT ───
 export type AgentType =
   | "legislator" | "utility" | "regulator" | "community"
   | "auditor" | "provider" | "stakeholder" | "certifier"
-  | "brand" | "monitor"
-  | "executive" | "insurer" | "judiciary" | "federal";
+  | "brand" | "monitor" | "team-member";
 
 export interface Agent {
   id: string;
@@ -31,14 +37,12 @@ export interface Agent {
 
 // ─── VERIFICATION ───
 export type VerificationMethod =
-  | "filing"       // Regulatory filing
-  | "audit"        // Third-party audit
-  | "self-report"  // Self-assessed
-  | "sensor"       // Automated sensor/API (future)
-  | "benchmark"    // Standardized benchmark
-  | "none"         // No verification mechanism
-  | "data"         // Public data/statistics
-  | "legal";       // Court ruling / legal record
+  | "filing"
+  | "audit"
+  | "self-report"
+  | "sensor"
+  | "benchmark"
+  | "none";
 
 export interface VerificationSource {
   method: VerificationMethod;
@@ -50,30 +54,23 @@ export interface VerificationSource {
     value: number;
   };
   frequency?: string;
+
+  // Cryptographic verification commitment
+  commitment?: {
+    hash: string;           // SHA-256 hash of the source document or API response
+    timestamp: string;      // ISO timestamp of when verification was performed
+    sourceDigest: string;   // Human-readable description: "Oregon DEQ Filing Q3 2025"
+  };
+
+  // Verification dependency chain
+  // The ID of a promise that must be kept for this verification to function.
+  // If that promise degrades or is violated, this verification mechanism
+  // is compromised — and the promise it verifies becomes less certain
+  // even if its compliance status hasn't changed.
+  dependsOnPromise?: string;
 }
 
-// ─── ACA-SPECIFIC EXTENSIONS ───
-export interface OutcomeData {
-  metric: string;
-  target: string | number;
-  actual: string | number;
-  source: string;
-}
-
-export interface LegalChallenge {
-  case: string;
-  year: number;
-  outcome: string;
-  impact: string;
-}
-
-export interface StateVariance {
-  description: string;
-  statesAffected: number;
-  details: string;
-}
-
-// ─── PROMISE ───
+// ─── PROMISE (v2.1) ───
 export interface Promise {
   id: string;
   ref?: string;
@@ -88,17 +85,36 @@ export interface Promise {
   note: string;
   verification: VerificationSource;
   depends_on: string[];
-  // ACA extensions (optional — backward compatible)
-  effectiveDate?: string;
-  nodeType?: "promise" | "modifier";
-  outcomeData?: OutcomeData[];
-  legalChallenges?: LegalChallenge[];
-  stateVariance?: StateVariance;
+
+  // v2.1 additions
+  polarity?: PromisePolarity;
+  scope?: string[];
+  origin?: PromiseOrigin;
+  violationType?: ViolationType;
+}
+
+// ─── THREAT (v2.1) ───
+export interface Threat {
+  id: string;
+  triggerPromiseId: string;
+  triggerCondition: PromiseStatus;
+  affectedPromiseIds: string[];
+  body: string;
+  severity: InsightSeverity;
 }
 
 // ─── INSIGHT ───
 export type InsightSeverity = "critical" | "warning" | "positive";
-export type InsightType = "Cascade" | "Gap" | "Conflict" | "Working" | "Drift" | "Legal" | "Paradox";
+export type InsightType =
+  | "Cascade"
+  | "Gap"
+  | "Conflict"
+  | "Working"
+  | "Drift"
+  | "Threat"
+  | "IncompleteBinding"
+  | "ScopeGap"
+  | "DesignFlaw";
 
 export interface Insight {
   severity: InsightSeverity;
@@ -116,19 +132,9 @@ export interface TrajectoryPoint {
   target?: number;
 }
 
-export interface TrajectoryMilestone {
-  value: number;
-  label: string;
-  color?: string;
-}
-
 export interface Trajectory {
   agentId: string;
   label: string;
-  subtitle?: string;
-  yAxisLabel?: string;
-  yDomain?: [number, number];
-  milestones?: TrajectoryMilestone[];
   data: TrajectoryPoint[];
 }
 
@@ -148,6 +154,7 @@ export interface DashboardData {
   promises: Promise[];
   domains: Domain[];
   insights: Insight[];
+  threats?: Threat[];
   trajectories: Trajectory[];
   grade: string;
   gradeExplanation: string;

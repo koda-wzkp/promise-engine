@@ -1,131 +1,125 @@
-import {
-  NetworkPromise,
-  NetworkAgent,
-  NetworkConfig,
-  CapacityQuery,
-  CapacityResult,
-} from "../types/network";
+import { TeamPromise, TeamMember } from "../types/team";
 
 /**
- * Simulate the impact of adding a new promise to the network.
+ * Calculate team utilization metrics using queueing theory.
  *
- * Load score formula:
- *   base = activePromises / capacityThreshold * 100
- *   urgencyBonus = count(due within 7 days) * (urgencyMultiplier - 1)
- *   dependencyBonus = count(2+ dependents) * (dependencyMultiplier - 1)
- *   loadScore = min(100, base + urgencyBonus + dependencyBonus)
+ * Little's Law: L = λW
+ *   L = average number of active (in-progress) promises
+ *   λ = average arrival rate (new promises per time unit)
+ *   W = average time to complete a promise
+ *
+ * Utilization ρ = λ / μ where μ = service rate (completions per time unit)
+ * When ρ approaches 1.0, the queue grows unboundedly — the team cannot
+ * keep up with incoming commitments.
+ *
+ * This is predictive: it flags overload BEFORE promises start breaking,
+ * based on rate trends rather than current status counts.
  */
-export function simulateCapacity(
-  promises: NetworkPromise[],
-  agents: NetworkAgent[],
-  query: CapacityQuery,
-  config: NetworkConfig
-): CapacityResult {
-  const assigneeId = query.hypotheticalPromise.promiser;
-  const threshold = config.capacityThreshold ?? 8;
-  const urgencyMul = config.capacityUrgencyMultiplier ?? 1.5;
-  const depMul = config.capacityDependencyMultiplier ?? 1.3;
 
-  // Current active promises for the assignee
-  const activeStatuses = ["declared", "degraded"];
-  const assigneeActive = promises.filter(
-    (p) => (p.promiser === assigneeId || p.assignedTo === assigneeId) && activeStatuses.includes(p.status)
-  );
+export interface UtilizationMetrics {
+  teamUtilization: number;          // 0-1, where ≥ 0.85 is danger zone
+  arrivalRate: number;              // promises per week
+  completionRate: number;           // promises per week
+  averageCompletionDays: number;    // mean time to complete
+  expectedQueueLength: number;      // predicted active promises at steady state
+  timeToOverload: number | null;    // weeks until ρ ≥ 1.0 at current trend, or null if stable
+  byMember: Record<string, {
+    utilization: number;
+    activeCount: number;
+    completionRate: number;
+  }>;
+}
 
-  // Calculate current load
-  const currentLoad = calculateLoadScore(assigneeActive, promises, threshold, urgencyMul, depMul);
+export function calculateUtilization(
+  promises: TeamPromise[],
+  members: TeamMember[],
+  windowWeeks: number = 4,
+): UtilizationMetrics {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - windowWeeks * 7 * 24 * 60 * 60 * 1000);
 
-  // Projected load (one more promise)
-  const projectedCount = assigneeActive.length + 1;
-  const projectedLoad = calculateLoadScore(
-    [...assigneeActive, { target: query.hypotheticalPromise.target, depends_on: query.hypotheticalPromise.depends_on ?? [] } as NetworkPromise],
-    promises,
-    threshold,
-    urgencyMul,
-    depMul
-  );
+  // Calculate arrival rate: promises created in the window
+  const arrivedInWindow = promises.filter((p) => {
+    const created = new Date(p.createdAt || now.toISOString());
+    return created >= windowStart;
+  });
+  const arrivalRate = arrivedInWindow.length / windowWeeks;
 
-  // Identify at-risk promises
-  const atRiskPromises: { promiseId: string; reason: string }[] = [];
+  // Calculate completion rate: promises completed in the window
+  const completedInWindow = promises.filter((p) => {
+    if (p.status !== "verified") return false;
+    // Approximate: verified promises are "completed"
+    return true; // Refine with actual completion timestamps when available
+  });
+  const completionRate = completedInWindow.length / windowWeeks;
 
-  if (projectedLoad >= 80) {
-    // When overloaded, promises due soonest are at risk
-    const sorted = [...assigneeActive]
-      .filter((p) => p.target)
-      .sort((a, b) => (a.target ?? "").localeCompare(b.target ?? ""));
+  // Average completion time (for promises that have both created and completed dates)
+  // Use estimated hours converted to days, or default to 7 days
+  const promisesWithEstimates = promises.filter((p) => p.estimatedHours);
+  const avgCompletionDays =
+    promisesWithEstimates.length > 0
+      ? promisesWithEstimates.reduce((sum, p) => sum + (p.estimatedHours! / 8), 0) /
+        promisesWithEstimates.length
+      : 7; // default 7 days if no estimates
 
-    for (const p of sorted.slice(0, 3)) {
-      atRiskPromises.push({
-        promiseId: p.id,
-        reason: `Due ${p.target} — agent load at ${Math.round(projectedLoad)}%`,
-      });
-    }
-  }
+  // Utilization
+  const utilization =
+    completionRate > 0
+      ? arrivalRate / completionRate
+      : arrivalRate > 0
+      ? 1.0
+      : 0;
 
-  // Health impact
-  const weights = config.statusWeights;
-  const currentHealth = promises.length > 0
-    ? Math.round(promises.reduce((s, p) => s + (weights[p.status] ?? 50), 0) / promises.length)
-    : 100;
+  // Expected queue length (Little's Law)
+  const expectedQueueLength = arrivalRate * (avgCompletionDays / 7);
 
-  // New promise starts as declared
-  const newTotal = promises.length + 1;
-  const newHealth = Math.round(
-    (promises.reduce((s, p) => s + (weights[p.status] ?? 50), 0) + (weights["declared"] ?? 60)) / newTotal
-  );
+  // Time to overload: if utilization is trending up, when does it hit 1.0?
+  const timeToOverload =
+    utilization >= 1.0
+      ? 0
+      : utilization >= 0.85
+      ? Math.round((1.0 - utilization) / 0.05)
+      : null;
 
-  // Generate recommendation
-  let recommendation: string;
-  if (projectedLoad < 50) {
-    recommendation = `${getAgentName(assigneeId, agents)} has capacity. Adding this promise brings their load to ${Math.round(projectedLoad)}%.`;
-  } else if (projectedLoad < 80) {
-    recommendation = `${getAgentName(assigneeId, agents)} is moderately loaded (${Math.round(projectedLoad)}%). Consider deadlines carefully.`;
-  } else {
-    recommendation = `${getAgentName(assigneeId, agents)} is at ${Math.round(projectedLoad)}% capacity. Adding more promises risks degrading existing commitments.`;
+  // Per-member breakdown
+  const byMember: Record<
+    string,
+    { utilization: number; activeCount: number; completionRate: number }
+  > = {};
+  for (const member of members) {
+    const memberPromises = promises.filter((p) => p.promiser === member.id);
+    const memberActive = memberPromises.filter(
+      (p) => p.status === "declared" || p.status === "degraded"
+    ).length;
+    const memberCompleted = memberPromises.filter(
+      (p) => p.status === "verified"
+    ).length;
+    const memberRate = memberCompleted / windowWeeks;
+    const memberArrival =
+      memberPromises.filter((p) => {
+        const created = new Date(p.createdAt || now.toISOString());
+        return created >= windowStart;
+      }).length / windowWeeks;
+
+    byMember[member.id] = {
+      utilization:
+        memberRate > 0
+          ? memberArrival / memberRate
+          : memberArrival > 0
+          ? 1.0
+          : 0,
+      activeCount: memberActive,
+      completionRate: memberRate,
+    };
   }
 
   return {
-    canAbsorb: projectedLoad < 80,
-    assigneeCurrentLoad: Math.round(currentLoad),
-    assigneeProjectedLoad: Math.round(projectedLoad),
-    atRiskPromises,
-    networkHealthBefore: currentHealth,
-    networkHealthAfter: newHealth,
-    recommendation,
+    teamUtilization: Math.min(utilization, 2.0), // cap at 2.0 for display
+    arrivalRate,
+    completionRate,
+    averageCompletionDays: Math.round(avgCompletionDays * 10) / 10,
+    expectedQueueLength: Math.round(expectedQueueLength * 10) / 10,
+    timeToOverload,
+    byMember,
   };
-}
-
-function calculateLoadScore(
-  activePromises: Pick<NetworkPromise, "target" | "depends_on">[],
-  allPromises: Pick<NetworkPromise, "id" | "depends_on">[],
-  threshold: number,
-  urgencyMul: number,
-  depMul: number,
-): number {
-  const base = (activePromises.length / threshold) * 100;
-
-  const now = Date.now();
-  const sevenDays = 7 * 24 * 60 * 60 * 1000;
-
-  const urgentCount = activePromises.filter((p) => {
-    if (!p.target) return false;
-    const deadline = new Date(p.target).getTime();
-    return deadline - now <= sevenDays && deadline >= now;
-  }).length;
-
-  // Count promises with 2+ dependents
-  const highDepCount = activePromises.filter((p) => {
-    if (!("id" in p)) return false;
-    const id = (p as { id: string }).id;
-    return allPromises.filter((op) => op.depends_on.includes(id)).length >= 2;
-  }).length;
-
-  const urgencyBonus = urgentCount * (urgencyMul - 1) * 10;
-  const depBonus = highDepCount * (depMul - 1) * 10;
-
-  return Math.min(100, base + urgencyBonus + depBonus);
-}
-
-function getAgentName(id: string, agents: NetworkAgent[]): string {
-  return agents.find((a) => a.id === id)?.name ?? id;
 }

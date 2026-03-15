@@ -1,687 +1,219 @@
 "use client";
 
-import { useMemo, useState, useRef, useCallback, useEffect } from "react";
-import { Promise as PromiseType, Agent } from "@/lib/types/promise";
+import { useMemo, useState, useCallback } from "react";
+import { Promise as PromiseType, Agent, Threat } from "@/lib/types/promise";
 import { buildPromiseGraph, layoutGraph, countDependents } from "@/lib/simulation/graph";
-import { statusColors, agentColors, hb2021DomainColors, acaDomainColors } from "@/lib/utils/colors";
-import { CascadeResult } from "@/lib/types/simulation";
-
-// Merged domain colors for all demos
-const allDomainColors: Record<string, string> = { ...hb2021DomainColors, ...acaDomainColors };
+import { identifyHighLeverageNodes } from "@/lib/simulation/scoring";
+import { GraphNodeComponent } from "./GraphNode";
+import { GraphEdgeComponent } from "./GraphEdge";
 
 interface PromiseGraphProps {
   promises: PromiseType[];
   agents: Agent[];
+  threats?: Threat[];
   width?: number;
   height?: number;
-  cascadeResult?: CascadeResult | null;
-  selectedPromise?: string | null;
-  onSelectPromise?: (id: string) => void;
+  selectedPromiseId?: string | null;
+  affectedIds?: Set<string>;
+  certaintyAffectedIds?: Set<string>;
+  onNodeClick?: (promiseId: string) => void;
+  showAgentNodes?: boolean;
 }
 
-export default function PromiseGraph({
+export function PromiseGraphView({
   promises,
   agents,
-  width = 900,
-  height = 700,
-  cascadeResult,
-  selectedPromise,
-  onSelectPromise,
+  threats = [],
+  width = 800,
+  height = 600,
+  selectedPromiseId,
+  affectedIds = new Set(),
+  certaintyAffectedIds = new Set(),
+  onNodeClick,
+  showAgentNodes = true,
 }: PromiseGraphProps) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Zoom/pan state
-  const [viewBox, setViewBox] = useState({ x: 0, y: 0, w: width, h: height });
-  const [isPanning, setIsPanning] = useState(false);
-  const panStart = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
-
-  // Touch state for pinch-to-zoom and touch-pan
-  const touchState = useRef<{
-    lastTouches: { x: number; y: number }[];
-    lastDist: number;
-    lastCenter: { x: number; y: number };
-  }>({ lastTouches: [], lastDist: 0, lastCenter: { x: 0, y: 0 } });
-
-  // Reset viewbox when dimensions change
-  useEffect(() => {
-    setViewBox({ x: 0, y: 0, w: width, h: height });
-  }, [width, height]);
 
   const graph = useMemo(() => {
-    const raw = buildPromiseGraph(promises, agents);
+    const raw = buildPromiseGraph(promises, agents, threats);
     return layoutGraph(raw, width, height);
-  }, [promises, agents, width, height]);
+  }, [promises, agents, threats, width, height]);
 
   const depCounts = useMemo(() => countDependents(promises), [promises]);
 
-  const maxDepCount = useMemo(() => {
-    let max = 0;
-    depCounts.forEach((count) => {
-      if (count > max) max = count;
-    });
-    return max;
-  }, [depCounts]);
-
-  // Build a set of affected promise IDs for highlighting
-  const affectedIds = useMemo(() => {
-    if (!cascadeResult) return new Set<string>();
-    const ids = new Set(cascadeResult.affectedPromises.map((a) => a.promiseId));
-    ids.add(cascadeResult.query.promiseId);
-    return ids;
-  }, [cascadeResult]);
-
-  const sourceId = cascadeResult?.query.promiseId ?? null;
-
-  // Build a set of affected edges for highlighting
-  const affectedEdges = useMemo(() => {
-    if (!cascadeResult) return new Set<string>();
-    const edges = new Set<string>();
-    for (const a of cascadeResult.affectedPromises) {
-      const promise = promises.find((p) => p.id === a.promiseId);
-      if (promise) {
-        for (const depId of promise.depends_on) {
-          if (affectedIds.has(depId)) {
-            edges.add(`${depId}->${a.promiseId}`);
-          }
-        }
-      }
-    }
-    return edges;
-  }, [cascadeResult, promises, affectedIds]);
-
-  const nodeMap = useMemo(() => {
-    const map = new Map<string, { x: number; y: number }>();
-    for (const n of graph.nodes) {
-      if (n.x != null && n.y != null) map.set(n.id, { x: n.x, y: n.y });
-    }
+  const leverageScores = useMemo(() => {
+    const nodes = identifyHighLeverageNodes(promises);
+    const map = new Map<string, number>();
+    for (const n of nodes) map.set(n.promiseId, n.leverage);
     return map;
-  }, [graph]);
+  }, [promises]);
 
-  // Domain label positions (average position of domain's promise nodes)
-  const domainLabels = useMemo(() => {
-    const domains = new Map<string, { sx: number; sy: number; count: number }>();
-    for (const n of graph.nodes) {
-      if (n.type === "promise" && n.domain && n.x != null && n.y != null) {
-        const d = domains.get(n.domain) ?? { sx: 0, sy: 0, count: 0 };
-        d.sx += n.x;
-        d.sy += n.y;
-        d.count++;
-        domains.set(n.domain, d);
+  const nodeMap = useMemo(
+    () => new Map(graph.nodes.map((n) => [n.id, n])),
+    [graph.nodes]
+  );
+
+  const handleNodeClick = useCallback(
+    (id: string) => {
+      const node = nodeMap.get(id);
+      if (node?.type === "promise" && onNodeClick) {
+        onNodeClick(id);
       }
-    }
-    const labels: { domain: string; x: number; y: number }[] = [];
-    domains.forEach(({ sx, sy, count }, domain) => {
-      const cx = sx / count;
-      const cy = sy / count;
-      // Push label outward from center
-      const dx = cx - width / 2;
-      const dy = cy - height / 2;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const scale = dist > 0 ? 30 / dist : 0;
-      labels.push({
-        domain,
-        x: cx + dx * scale,
-        y: cy + dy * scale - 28,
-      });
-    });
-    return labels;
-  }, [graph, width, height]);
+    },
+    [nodeMap, onNodeClick]
+  );
 
-  // Zoom handler
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const svg = svgRef.current;
-    if (!svg) return;
+  const filteredNodes = showAgentNodes
+    ? graph.nodes
+    : graph.nodes.filter((n) => n.type === "promise");
 
-    const rect = svg.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    // Convert mouse position to SVG coords
-    const svgX = viewBox.x + (mouseX / rect.width) * viewBox.w;
-    const svgY = viewBox.y + (mouseY / rect.height) * viewBox.h;
-
-    const scaleFactor = e.deltaY > 0 ? 1.1 : 0.9;
-    const newW = Math.max(200, Math.min(width * 3, viewBox.w * scaleFactor));
-    const newH = Math.max(150, Math.min(height * 3, viewBox.h * scaleFactor));
-
-    // Keep the point under the mouse fixed
-    const newX = svgX - (mouseX / rect.width) * newW;
-    const newY = svgY - (mouseY / rect.height) * newH;
-
-    setViewBox({ x: newX, y: newY, w: newW, h: newH });
-  }, [viewBox, width, height]);
-
-  // Pan handlers (mouse)
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    // Only pan if clicking on the background
-    const target = e.target as SVGElement;
-    if (target.tagName !== "svg" && target.tagName !== "rect") return;
-    setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY, vx: viewBox.x, vy: viewBox.y };
-  }, [viewBox]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const dx = (e.clientX - panStart.current.x) * (viewBox.w / rect.width);
-    const dy = (e.clientY - panStart.current.y) * (viewBox.h / rect.height);
-    setViewBox((v) => ({ ...v, x: panStart.current.vx - dx, y: panStart.current.vy - dy }));
-  }, [isPanning, viewBox.w, viewBox.h]);
-
-  const handleMouseUp = useCallback(() => setIsPanning(false), []);
-
-  // Touch handlers for mobile pan + pinch-to-zoom
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      // Single touch: start pan
-      const touch = e.touches[0];
-      setIsPanning(true);
-      panStart.current = { x: touch.clientX, y: touch.clientY, vx: viewBox.x, vy: viewBox.y };
-    } else if (e.touches.length === 2) {
-      // Two-finger: start pinch-zoom
-      e.preventDefault();
-      const t0 = e.touches[0];
-      const t1 = e.touches[1];
-      const dx = t1.clientX - t0.clientX;
-      const dy = t1.clientY - t0.clientY;
-      touchState.current = {
-        lastTouches: [
-          { x: t0.clientX, y: t0.clientY },
-          { x: t1.clientX, y: t1.clientY },
-        ],
-        lastDist: Math.sqrt(dx * dx + dy * dy),
-        lastCenter: {
-          x: (t0.clientX + t1.clientX) / 2,
-          y: (t0.clientY + t1.clientY) / 2,
-        },
-      };
-      setIsPanning(false);
-    }
-  }, [viewBox]);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-
-    if (e.touches.length === 1 && isPanning) {
-      // Single-finger pan
-      const touch = e.touches[0];
-      const dx = (touch.clientX - panStart.current.x) * (viewBox.w / rect.width);
-      const dy = (touch.clientY - panStart.current.y) * (viewBox.h / rect.height);
-      setViewBox((v) => ({ ...v, x: panStart.current.vx - dx, y: panStart.current.vy - dy }));
-    } else if (e.touches.length === 2) {
-      e.preventDefault();
-      const t0 = e.touches[0];
-      const t1 = e.touches[1];
-      const dx = t1.clientX - t0.clientX;
-      const dy = t1.clientY - t0.clientY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const center = {
-        x: (t0.clientX + t1.clientX) / 2,
-        y: (t0.clientY + t1.clientY) / 2,
-      };
-
-      const prev = touchState.current;
-      if (prev.lastDist > 0) {
-        const scale = prev.lastDist / dist;
-
-        // Convert center to SVG coords
-        const svgCX = viewBox.x + ((center.x - rect.left) / rect.width) * viewBox.w;
-        const svgCY = viewBox.y + ((center.y - rect.top) / rect.height) * viewBox.h;
-
-        const newW = Math.max(200, Math.min(width * 3, viewBox.w * scale));
-        const newH = Math.max(150, Math.min(height * 3, viewBox.h * scale));
-
-        // Also handle two-finger pan
-        const panDX = (center.x - prev.lastCenter.x) * (viewBox.w / rect.width);
-        const panDY = (center.y - prev.lastCenter.y) * (viewBox.h / rect.height);
-
-        const newX = svgCX - ((center.x - rect.left) / rect.width) * newW - panDX;
-        const newY = svgCY - ((center.y - rect.top) / rect.height) * newH - panDY;
-
-        setViewBox({ x: newX, y: newY, w: newW, h: newH });
-      }
-
-      touchState.current = {
-        lastTouches: [
-          { x: t0.clientX, y: t0.clientY },
-          { x: t1.clientX, y: t1.clientY },
-        ],
-        lastDist: dist,
-        lastCenter: center,
-      };
-    }
-  }, [isPanning, viewBox, width, height]);
-
-  const handleTouchEnd = useCallback(() => {
-    setIsPanning(false);
-    touchState.current = { lastTouches: [], lastDist: 0, lastCenter: { x: 0, y: 0 } };
-  }, []);
-
-  // Quadratic bezier curve for dependency edges
-  function getCurvedPath(sx: number, sy: number, tx: number, ty: number) {
-    const midX = (sx + tx) / 2;
-    const midY = (sy + ty) / 2;
-    // Perpendicular offset for the curve
-    const dx = tx - sx;
-    const dy = ty - sy;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const offset = Math.min(len * 0.2, 40);
-    // Perpendicular direction
-    const px = -dy / (len || 1);
-    const py = dx / (len || 1);
-    const cx = midX + px * offset;
-    const cy = midY + py * offset;
-    return `M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`;
-  }
-
-  const hasCascade = cascadeResult != null;
-  const isMobile = width < 640;
+  const filteredEdges = showAgentNodes
+    ? graph.edges
+    : graph.edges.filter(
+        (e) => e.type === "depends_on" || e.type === "threat" || e.type === "verification_dependency"
+      );
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50 graph-container" ref={containerRef}>
-      <svg
-        ref={svgRef}
-        role="img"
-        aria-label={`Promise dependency graph showing ${promises.length} promises and their relationships. Click a node to view details or simulate cascades.`}
-        viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
-        className={`w-full touch-none ${isPanning ? "cursor-grabbing" : "cursor-grab"}`}
-        style={{ maxHeight: height }}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-      >
-        <desc>Interactive network graph visualizing promise dependencies and status across domains. Nodes represent promises sized by downstream dependents; edges show dependency relationships.</desc>
-        {/* Background rect for pan target */}
-        <rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="transparent" />
-
-        {/* Defs: arrow markers */}
-        <defs>
-          <marker
-            id="arrow"
-            viewBox="0 0 10 7"
-            refX="10"
-            refY="3.5"
-            markerWidth="7"
-            markerHeight="5"
-            orient="auto-start-reverse"
-          >
-            <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
-          </marker>
-          <marker
-            id="arrow-active"
-            viewBox="0 0 10 7"
-            refX="10"
-            refY="3.5"
-            markerWidth="8"
-            markerHeight="6"
-            orient="auto-start-reverse"
-          >
-            <polygon points="0 0, 10 3.5, 0 7" fill="#eab308" />
-          </marker>
-          <marker
-            id="arrow-hovered"
-            viewBox="0 0 10 7"
-            refX="10"
-            refY="3.5"
-            markerWidth="8"
-            markerHeight="6"
-            orient="auto-start-reverse"
-          >
-            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
-          </marker>
-          {/* Glow filter for cascade source */}
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        {/* Domain cluster labels */}
-        {domainLabels.map(({ domain, x, y }) => (
-          <text
-            key={`domain-label-${domain}`}
-            x={x}
-            y={y}
-            textAnchor="middle"
-            className="pointer-events-none select-none fill-gray-400 text-[10px] font-sans font-semibold uppercase tracking-wider"
-            style={{ color: allDomainColors[domain] ?? "#6b7280" }}
-            fill={allDomainColors[domain] ?? "#9ca3af"}
-            opacity={0.6}
-          >
-            {domain}
-          </text>
-        ))}
-
-        {/* Agent-to-promise edges (very light, behind everything) */}
-        {graph.edges
-          .filter((e) => e.type === "promiser" || e.type === "promisee")
-          .map((edge) => {
-            const source = nodeMap.get(edge.source);
-            const target = nodeMap.get(edge.target);
-            if (!source || !target) return null;
-
-            return (
-              <line
-                key={`${edge.type}-${edge.source}-${edge.target}`}
-                x1={source.x}
-                y1={source.y}
-                x2={target.x}
-                y2={target.y}
-                stroke="#e5e7eb"
-                strokeWidth={0.5}
-                opacity={hasCascade ? 0.1 : 0.2}
-              />
-            );
-          })}
-
-        {/* Dependency edges — curved bezier */}
-        {graph.edges
-          .filter((e) => e.type === "depends_on")
-          .map((edge) => {
-            const source = nodeMap.get(edge.source);
-            const target = nodeMap.get(edge.target);
-            if (!source || !target) return null;
-
-            const edgeKey = `${edge.source}->${edge.target}`;
-            const isAffected = affectedEdges.has(edgeKey);
-            const isConnectedToHovered =
-              hoveredNode && (edge.source === hoveredNode || edge.target === hoveredNode);
-
-            let stroke = "#cbd5e1";
-            let strokeWidth = 1.2;
-            let opacity = hasCascade ? 0.15 : 0.35;
-            let markerEnd = "url(#arrow)";
-            let className = "";
-
-            if (isAffected) {
-              stroke = "#eab308";
-              strokeWidth = 2.5;
-              opacity = 1;
-              markerEnd = "url(#arrow-active)";
-              className = "edge-flow";
-            } else if (isConnectedToHovered) {
-              stroke = "#64748b";
-              strokeWidth = 2;
-              opacity = 0.9;
-              markerEnd = "url(#arrow-hovered)";
-            }
-
-            return (
-              <path
-                key={edgeKey}
-                d={getCurvedPath(source.x, source.y, target.x, target.y)}
-                fill="none"
-                stroke={stroke}
-                strokeWidth={strokeWidth}
-                markerEnd={markerEnd}
-                className={className}
-                opacity={opacity}
-              />
-            );
-          })}
-
-        {/* Promise nodes */}
-        {graph.nodes
-          .filter((n) => n.type === "promise")
-          .map((node) => {
-            if (node.x == null || node.y == null) return null;
-
-            const promise = promises.find((p) => p.id === node.id);
-            if (!promise) return null;
-
-            const isSelected = node.id === selectedPromise;
-            const isAffected = affectedIds.has(node.id);
-            const isSource = node.id === sourceId;
-            const isHovered = node.id === hoveredNode;
-
-            // More pronounced size difference for bottleneck nodes
-            const depCount = depCounts.get(node.id) ?? 0;
-            const baseRadius = isMobile ? 12 : 10;
-            const maxRadius = isMobile ? 32 : 28;
-            const radius = maxDepCount > 0
-              ? baseRadius + (depCount / maxDepCount) * (maxRadius - baseRadius)
-              : baseRadius;
-
-            const color = statusColors[promise.status];
-
-            // During cascade, dim unaffected nodes
-            let nodeOpacity = 0.9;
-            if (hasCascade && !isAffected) {
-              nodeOpacity = 0.25;
-            }
-
-            return (
-              <g
-                key={node.id}
-                className="cursor-pointer"
-                role="button"
-                tabIndex={0}
-                aria-label={`Promise ${promise.id}: ${promise.body}. Status: ${promise.status}. ${depCount} downstream dependents.`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectPromise?.(node.id);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onSelectPromise?.(node.id);
-                  }
-                }}
-                onMouseEnter={() => setHoveredNode(node.id)}
-                onMouseLeave={() => setHoveredNode(null)}
-                onFocus={() => setHoveredNode(node.id)}
-                onBlur={() => setHoveredNode(null)}
-                opacity={nodeOpacity}
-              >
-                {/* Source glow ring */}
-                {isSource && (
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={radius + 8}
-                    fill="none"
-                    stroke="#eab308"
-                    strokeWidth={3}
-                    opacity={0.6}
-                    filter="url(#glow)"
-                    className="cascade-pulse"
-                  />
-                )}
-
-                {/* Selection ring */}
-                {isSelected && !isSource && (
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={radius + 5}
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth={2.5}
-                    strokeDasharray="4 2"
-                  />
-                )}
-
-                {/* Affected pulse ring */}
-                {isAffected && !isSource && (
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={radius + 3}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth={2}
-                    className="cascade-pulse"
-                  />
-                )}
-
-                {/* Main shape — diamond for modifier nodes, circle for standard */}
-                {promise.nodeType === "modifier" ? (
-                  <rect
-                    x={node.x - radius * 0.75}
-                    y={node.y - radius * 0.75}
-                    width={radius * 1.5}
-                    height={radius * 1.5}
-                    rx={3}
-                    fill={color}
-                    stroke={isHovered ? "#1e293b" : "rgba(255,255,255,0.3)"}
-                    strokeWidth={isHovered ? 2 : 1}
-                    transform={`rotate(45, ${node.x}, ${node.y})`}
-                  />
-                ) : (
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={radius}
-                    fill={color}
-                    stroke={isHovered ? "#1e293b" : "rgba(255,255,255,0.3)"}
-                    strokeWidth={isHovered ? 2 : 1}
-                  />
-                )}
-
-                {/* Promise ID label */}
-                <text
-                  x={node.x}
-                  y={node.y + 1}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="pointer-events-none select-none font-mono font-bold"
-                  fill="white"
-                  fontSize={radius > 16 ? 11 : 9}
-                >
-                  {node.label}
-                </text>
-
-                {/* Hover tooltip with promise body */}
-                {isHovered && (
-                  <foreignObject
-                    x={node.x + radius + 8}
-                    y={node.y - 30}
-                    width={isMobile ? 160 : 220}
-                    height={70}
-                    className="pointer-events-none"
-                  >
-                    <div className="rounded-md border border-gray-700 bg-gray-900 px-2.5 py-1.5 shadow-xl">
-                      <p className="font-mono text-[9px] text-gray-400">{promise.id} · {promise.domain}</p>
-                      <p className="mt-0.5 text-[11px] font-medium leading-tight text-white">
-                        {promise.body.length > 80 ? promise.body.slice(0, 80) + "…" : promise.body}
-                      </p>
-                    </div>
-                  </foreignObject>
-                )}
-              </g>
-            );
-          })}
-
-        {/* Agent nodes */}
-        {graph.nodes
-          .filter((n) => n.type === "agent")
-          .map((node) => {
-            if (node.x == null || node.y == null) return null;
-            const agent = agents.find((a) => a.id === node.id);
-            const agentType = agent?.type ?? "stakeholder";
-            const color = agentColors[agentType] ?? "#6b7280";
-
-            return (
-              <g key={node.id} opacity={hasCascade ? 0.3 : 0.65}>
-                <rect
-                  x={node.x - 18}
-                  y={node.y - 10}
-                  width={36}
-                  height={20}
-                  rx={4}
-                  fill={color}
-                  opacity={0.8}
-                />
-                <text
-                  x={node.x}
-                  y={node.y + 1}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="pointer-events-none select-none font-sans font-medium italic"
-                  fill="white"
-                  fontSize={8}
-                  opacity={0.9}
-                >
-                  {node.label}
-                </text>
-              </g>
-            );
-          })}
-      </svg>
-
-      {/* Fixed legend — top-right, collapsible on mobile */}
-      <div
-        className="absolute right-2 top-2 flex flex-col gap-1 rounded-md bg-white/90 px-2 py-1.5 text-[9px] text-gray-500 shadow-sm backdrop-blur-sm sm:px-2.5 sm:py-2 sm:text-[10px]"
-        role="legend"
-        aria-label="Promise status legend"
-      >
-        {(["verified", "declared", "degraded", "violated", "unverifiable"] as const).map((status) => (
-          <span key={status} className="flex items-center gap-1.5">
-            <span
-              className="inline-block h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
-              style={{ background: statusColors[status] }}
-              aria-hidden="true"
-            />
-            <span className="capitalize">{status}</span>
-          </span>
-        ))}
-        <span className="mt-1 hidden items-center gap-1.5 border-t border-gray-200 pt-1 sm:flex">
-          <span className="inline-block h-2.5 w-5 rounded bg-gray-400" />
-          <span className="italic">Agent</span>
-        </span>
-      </div>
-
-      {/* Zoom controls */}
-      <div className="absolute bottom-2 right-2 flex flex-col gap-0.5">
-        <button
-          onClick={() => setViewBox((v) => ({
-            x: v.x + v.w * 0.1,
-            y: v.y + v.h * 0.1,
-            w: v.w * 0.8,
-            h: v.h * 0.8,
-          }))}
-          className="rounded bg-white/90 px-2.5 py-1 text-sm font-bold text-gray-600 shadow-sm backdrop-blur-sm hover:bg-white sm:px-2 sm:py-0.5 sm:text-xs"
-          aria-label="Zoom in"
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="w-full h-full"
+      style={{ maxHeight: height }}
+    >
+      <defs>
+        <marker
+          id="arrowhead-dep"
+          viewBox="0 0 10 7"
+          refX="9"
+          refY="3.5"
+          markerWidth="8"
+          markerHeight="6"
+          orient="auto"
         >
-          +
-        </button>
-        <button
-          onClick={() => setViewBox((v) => ({
-            x: v.x - v.w * 0.125,
-            y: v.y - v.h * 0.125,
-            w: Math.min(v.w * 1.25, width * 3),
-            h: Math.min(v.h * 1.25, height * 3),
-          }))}
-          className="rounded bg-white/90 px-2.5 py-1 text-sm font-bold text-gray-600 shadow-sm backdrop-blur-sm hover:bg-white sm:px-2 sm:py-0.5 sm:text-xs"
-          aria-label="Zoom out"
+          <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
+        </marker>
+        <marker
+          id="arrowhead-threat"
+          viewBox="0 0 10 7"
+          refX="9"
+          refY="3.5"
+          markerWidth="8"
+          markerHeight="6"
+          orient="auto"
         >
-          −
-        </button>
-        <button
-          onClick={() => setViewBox({ x: 0, y: 0, w: width, h: height })}
-          className="rounded bg-white/90 px-2 py-1 text-[10px] text-gray-500 shadow-sm backdrop-blur-sm hover:bg-white sm:px-1.5 sm:py-0.5 sm:text-[9px]"
-          aria-label="Reset zoom"
+          <polygon points="0 0, 10 3.5, 0 7" fill="#b91c1c" />
+        </marker>
+        <marker
+          id="arrowhead-active"
+          viewBox="0 0 10 7"
+          refX="9"
+          refY="3.5"
+          markerWidth="8"
+          markerHeight="6"
+          orient="auto"
         >
-          Reset
-        </button>
-      </div>
-    </div>
+          <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b" />
+        </marker>
+        <marker
+          id="arrowhead-verification"
+          viewBox="0 0 10 7"
+          refX="9"
+          refY="3.5"
+          markerWidth="8"
+          markerHeight="6"
+          orient="auto"
+        >
+          <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed" />
+        </marker>
+        <marker
+          id="arrowhead-agent"
+          viewBox="0 0 10 7"
+          refX="9"
+          refY="3.5"
+          markerWidth="6"
+          markerHeight="5"
+          orient="auto"
+        >
+          <polygon points="0 0, 10 3.5, 0 7" fill="#d1d5db" />
+        </marker>
+      </defs>
+
+      {/* Edges */}
+      {filteredEdges.map((edge, i) => {
+        const sourceNode = nodeMap.get(edge.source);
+        const targetNode = nodeMap.get(edge.target);
+        if (!sourceNode || !targetNode) return null;
+
+        const isActive =
+          affectedIds.has(edge.source) || affectedIds.has(edge.target);
+
+        return (
+          <GraphEdgeComponent
+            key={`${edge.source}-${edge.target}-${i}`}
+            edge={edge}
+            sourceNode={sourceNode}
+            targetNode={targetNode}
+            isActive={isActive}
+          />
+        );
+      })}
+
+      {/* Nodes */}
+      {filteredNodes.map((node) => {
+        const baseSize = 12;
+        const leverage = leverageScores.get(node.id) || 0;
+        const size = node.type === "promise" ? baseSize + leverage * 15 : baseSize;
+
+        return (
+          <GraphNodeComponent
+            key={node.id}
+            node={node}
+            size={size}
+            isSelected={selectedPromiseId === node.id}
+            isAffected={affectedIds.has(node.id)}
+            isCertaintyAffected={certaintyAffectedIds.has(node.id)}
+            onClick={handleNodeClick}
+          />
+        );
+      })}
+
+      {/* Legend */}
+      <g transform={`translate(10, ${height - 95})`}>
+        <text className="text-[10px] fill-gray-500 font-medium" y={0}>
+          Legend
+        </text>
+        <line x1={0} y1={12} x2={20} y2={12} stroke="#6b7280" strokeWidth={1.5} />
+        <text className="text-[9px] fill-gray-500" x={24} y={15}>
+          Dependency
+        </text>
+        <line
+          x1={0}
+          y1={26}
+          x2={20}
+          y2={26}
+          stroke="#7c3aed"
+          strokeWidth={1.5}
+          strokeDasharray="6,3"
+        />
+        <text className="text-[9px] fill-gray-500" x={24} y={29}>
+          Verification Dep.
+        </text>
+        <line
+          x1={0}
+          y1={40}
+          x2={20}
+          y2={40}
+          stroke="#b91c1c"
+          strokeWidth={1.5}
+          strokeDasharray="4,3"
+        />
+        <text className="text-[9px] fill-gray-500" x={24} y={43}>
+          Threat
+        </text>
+        <circle cx={5} cy={56} r={5} fill="#1a5f4a" opacity={0.85} />
+        <text className="text-[9px] fill-gray-500" x={14} y={59}>
+          = Node size shows leverage
+        </text>
+      </g>
+    </svg>
   );
 }

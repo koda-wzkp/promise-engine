@@ -1,18 +1,21 @@
-import { Promise, Agent } from "./promise";
+import { Promise, Agent, PromiseStatus, PromiseOrigin } from "./promise";
 import { NetworkHealthScore } from "./simulation";
 
 export interface TeamMember extends Agent {
-  type: "stakeholder";
+  type: "team-member";
   role?: string;
   activePromiseCount: number;
   keptRate: number;
+  mtkp: number;
   loadScore: number;
 }
 
 export interface TeamPromise extends Promise {
   isTeam: true;
+  origin: PromiseOrigin;
   estimatedHours?: number;
   actualHours?: number;
+  createdAt: string;
   priority?: "critical" | "high" | "normal" | "low";
 }
 
@@ -41,4 +44,12 @@ export interface CapacityResult {
   atRiskPromises: string[];
   healthImpact: number;
   recommendation: string;
+
+  // Utilization impact from queueing theory
+  utilizationImpact?: {
+    before: number;       // team utilization before the new promise
+    after: number;        // projected utilization after
+    memberBefore: number; // assignee utilization before
+    memberAfter: number;  // assignee utilization after
+  };
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { HB2021_DASHBOARD } from "@/lib/data/hb2021";
+import { hb2021Data } from "@/lib/data/hb2021";
 
 export async function GET() {
-  return NextResponse.json(HB2021_DASHBOARD);
+  return NextResponse.json(hb2021Data);
 }

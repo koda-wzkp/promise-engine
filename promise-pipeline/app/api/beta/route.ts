@@ -1,16 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json() as { email?: string };
-    if (!body.email || !body.email.includes("@")) {
-      return NextResponse.json({ error: "Valid email required" }, { status: 400 });
-    }
-
-    // In production, store to database or email service
-    console.log("Beta signup:", body.email);
-
-    return NextResponse.json({ success: true, message: "Thanks for signing up!" });
+    const { email } = await request.json();
+    // Stub: log to console. In production, store in database.
+    console.log(`[Beta Signup] ${email} at ${new Date().toISOString()}`);
+    return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }

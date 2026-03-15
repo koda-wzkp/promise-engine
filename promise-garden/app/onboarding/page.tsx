@@ -80,13 +80,16 @@ export default function OnboardingPage() {
         position
       );
       setPlants((prev) => [...prev, plant]);
-      setPendingPromises((prev) => [...prev, data]);
-
-      if (pendingPromises.length >= 2) {
-        setStep("dependencies");
-      }
+      setPendingPromises((prev) => {
+        const updated = [...prev, data];
+        // Advance once we have 3 total promises
+        if (updated.length >= 3) {
+          setStep("dependencies");
+        }
+        return updated;
+      });
     },
-    [plants, pendingPromises.length]
+    [plants]
   );
 
   async function handleAuthComplete() {
@@ -204,6 +207,7 @@ export default function OnboardingPage() {
           </div>
         </div>
         <PromiseForm
+          key={pendingPromises.length}
           onSubmit={handleAdditionalPromise}
           simplified
         />

@@ -6,15 +6,7 @@ import {
   CertaintyImpact,
   NetworkHealthScore,
 } from "../types/simulation";
-import { calculateNetworkEntropy } from "./scoring";
-
-const STATUS_WEIGHTS: Record<PromiseStatus, number> = {
-  verified: 100,
-  declared: 60,
-  degraded: 30,
-  violated: 0,
-  unverifiable: 20,
-};
+import { calculateNetworkEntropy, STATUS_WEIGHTS, CERTAINTY_WEIGHTS, healthScore, domainHealthScores } from "./scoring";
 
 const DEGRADATION_ORDER: PromiseStatus[] = [
   "verified",
@@ -30,14 +22,6 @@ function degradeStatus(current: PromiseStatus, levels: number = 1): PromiseStatu
   const newIdx = Math.min(idx + levels, DEGRADATION_ORDER.length - 1);
   return DEGRADATION_ORDER[newIdx];
 }
-
-const CERTAINTY_WEIGHTS: Record<PromiseStatus, number> = {
-  verified: 1.0,
-  violated: 0.9,
-  degraded: 0.6,
-  declared: 0.3,
-  unverifiable: 0.0,
-};
 
 /**
  * Propagate certainty changes through verification dependency chains.
@@ -312,21 +296,8 @@ export function calculateNetworkHealth(promises: Promise[]): NetworkHealthScore 
     };
   }
 
-  const overall =
-    promises.reduce((sum, p) => sum + STATUS_WEIGHTS[p.status], 0) /
-    promises.length;
-
-  // By domain
-  const byDomain: Record<string, number> = {};
-  const domainPromises: Record<string, Promise[]> = {};
-  for (const p of promises) {
-    if (!domainPromises[p.domain]) domainPromises[p.domain] = [];
-    domainPromises[p.domain].push(p);
-  }
-  for (const [domain, dps] of Object.entries(domainPromises)) {
-    byDomain[domain] =
-      dps.reduce((sum, p) => sum + STATUS_WEIGHTS[p.status], 0) / dps.length;
-  }
+  const overall = healthScore(promises);
+  const byDomain = domainHealthScores(promises);
 
   // By agent (promiser)
   const byAgent: Record<string, number> = {};
@@ -336,21 +307,10 @@ export function calculateNetworkHealth(promises: Promise[]): NetworkHealthScore 
     agentPromises[p.promiser].push(p);
   }
   for (const [agent, aps] of Object.entries(agentPromises)) {
-    byAgent[agent] =
-      aps.reduce((sum, p) => sum + STATUS_WEIGHTS[p.status], 0) / aps.length;
+    byAgent[agent] = healthScore(aps);
   }
 
-  // Bottlenecks: promises with most dependents
-  const dependentCount = new Map<string, number>();
-  for (const p of promises) {
-    for (const depId of p.depends_on) {
-      dependentCount.set(depId, (dependentCount.get(depId) || 0) + 1);
-    }
-  }
-  const bottlenecks = Array.from(dependentCount.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([id]) => id);
+  const bottlenecks = identifyBottlenecks(promises).slice(0, 5);
 
   // At risk: promises whose dependencies include degraded/violated
   const atRisk: string[] = [];

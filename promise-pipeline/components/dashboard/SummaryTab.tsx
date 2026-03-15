@@ -1,25 +1,32 @@
 "use client";
 
-import { DashboardData } from "@/lib/types/promise";
+import { useMemo } from "react";
+import { DashboardData, PromiseStatus } from "@/lib/types/promise";
 import { NetworkHealthBar } from "@/components/simulation/NetworkHealthBar";
 import { StatusBadge } from "@/components/promise/StatusBadge";
 import { calculateNetworkHealth, identifyBottlenecks } from "@/lib/simulation/cascade";
-import { statusBreakdown, domainHealthScores, computeGrade, calculateNetworkEntropy, identifyHighLeverageNodes } from "@/lib/simulation/scoring";
+import { statusBreakdown, domainHealthScores, calculateNetworkEntropy, identifyHighLeverageNodes } from "@/lib/simulation/scoring";
+import { getGradeFromScore } from "@/lib/utils/formatting";
+import { statusColors } from "@/lib/utils/colors";
 
 interface SummaryTabProps {
   data: DashboardData;
 }
 
 export function SummaryTab({ data }: SummaryTabProps) {
-  const health = calculateNetworkHealth(data.promises);
-  const breakdown = statusBreakdown(data.promises);
-  const domainScores = domainHealthScores(data.promises);
-  const bottlenecks = identifyBottlenecks(data.promises);
-  const grade = computeGrade(health.overall);
-  const entropy = calculateNetworkEntropy(data.promises);
+  const health = useMemo(() => calculateNetworkHealth(data.promises), [data.promises]);
+  const breakdown = useMemo(() => statusBreakdown(data.promises), [data.promises]);
+  const domainScores = useMemo(() => domainHealthScores(data.promises), [data.promises]);
+  const bottlenecks = useMemo(() => identifyBottlenecks(data.promises), [data.promises]);
+  const grade = useMemo(() => getGradeFromScore(health.overall), [health.overall]);
+  const entropy = useMemo(() => calculateNetworkEntropy(data.promises), [data.promises]);
   const certainty = Math.round(100 - entropy.overall);
-  const leverageNodes = identifyHighLeverageNodes(data.promises);
+  const leverageNodes = useMemo(() => identifyHighLeverageNodes(data.promises), [data.promises]);
   const domainEntropy = entropy.byDomain;
+
+  const medianDeps = leverageNodes.length > 0
+    ? leverageNodes[Math.floor(leverageNodes.length / 2)].dependentCount
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -58,31 +65,24 @@ export function SummaryTab({ data }: SummaryTabProps) {
       <div className="bg-white rounded-xl border p-6">
         <h3 className="font-serif font-semibold text-gray-900 mb-4">Status Breakdown</h3>
         <div className="flex flex-wrap gap-4">
-          {(Object.entries(breakdown) as [string, number][]).map(([status, count]) => (
+          {(Object.entries(breakdown) as [PromiseStatus, number][]).map(([status, count]) => (
             <div key={status} className="flex items-center gap-2">
-              <StatusBadge status={status as any} size="sm" />
+              <StatusBadge status={status} size="sm" />
               <span className="text-sm font-bold text-gray-900">{count}</span>
             </div>
           ))}
         </div>
         {/* Visual bar */}
         <div className="mt-4 flex h-4 rounded-full overflow-hidden">
-          {(Object.entries(breakdown) as [string, number][]).map(([status, count]) => {
+          {(Object.entries(breakdown) as [PromiseStatus, number][]).map(([status, count]) => {
             if (count === 0) return null;
-            const colors: Record<string, string> = {
-              verified: "#1a5f4a",
-              declared: "#2563eb",
-              degraded: "#b45309",
-              violated: "#b91c1c",
-              unverifiable: "#7c3aed",
-            };
             return (
               <div
                 key={status}
                 className="h-full"
                 style={{
                   width: `${(count / data.promises.length) * 100}%`,
-                  backgroundColor: colors[status] || "#6b7280",
+                  backgroundColor: statusColors[status] || "#6b7280",
                 }}
                 title={`${status}: ${count}`}
               />
@@ -139,9 +139,6 @@ export function SummaryTab({ data }: SummaryTabProps) {
             {leverageNodes.slice(0, 5).map((node) => {
               const promise = data.promises.find((p) => p.id === node.promiseId);
               if (!promise) return null;
-              const medianDeps = leverageNodes.length > 0
-                ? leverageNodes[Math.floor(leverageNodes.length / 2)].dependentCount
-                : 0;
               const isStructuralBridge = node.betweenness > 0.7 && node.dependentCount < medianDeps;
               return (
                 <div key={node.promiseId} className="flex items-center gap-2 text-sm">

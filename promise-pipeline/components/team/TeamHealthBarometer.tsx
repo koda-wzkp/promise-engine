@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { TeamPromise, TeamMember } from "@/lib/types/team";
 import { NetworkHealthBar } from "@/components/simulation/NetworkHealthBar";
 import { calculateNetworkHealth } from "@/lib/simulation/cascade";
@@ -15,12 +16,14 @@ export function TeamHealthBarometer({
   promises,
   members,
 }: TeamHealthBarometerProps) {
-  const health = calculateNetworkHealth(promises);
-  const breakdown = statusBreakdown(promises);
-  const domainScores = domainHealthScores(promises);
+  const health = useMemo(() => calculateNetworkHealth(promises), [promises]);
+  const breakdown = useMemo(() => statusBreakdown(promises), [promises]);
+  const domainScores = useMemo(() => domainHealthScores(promises), [promises]);
+  const utilization = useMemo(() => calculateUtilization(promises, members), [promises, members]);
 
-  const completedPromises = promises.filter(
-    (p) => p.status === "verified" || p.status === "violated"
+  const completedPromises = useMemo(() =>
+    promises.filter((p) => p.status === "verified" || p.status === "violated"),
+    [promises]
   );
   const keptRate =
     completedPromises.length > 0
@@ -29,20 +32,19 @@ export function TeamHealthBarometer({
       : 0;
 
   // MTKP
-  const keptWithDates = promises.filter(
-    (p) => p.status === "verified" && p.createdAt
-  );
-  const mtkp =
-    keptWithDates.length > 0
-      ? keptWithDates.reduce((sum, p) => {
-          const days =
-            (Date.now() - new Date(p.createdAt).getTime()) /
-            (1000 * 60 * 60 * 24);
-          return sum + days;
-        }, 0) / keptWithDates.length
-      : 0;
+  const mtkp = useMemo(() => {
+    const keptWithDates = promises.filter(
+      (p) => p.status === "verified" && p.createdAt
+    );
+    if (keptWithDates.length === 0) return 0;
+    return keptWithDates.reduce((sum, p) => {
+      const days =
+        (Date.now() - new Date(p.createdAt).getTime()) /
+        (1000 * 60 * 60 * 24);
+      return sum + days;
+    }, 0) / keptWithDates.length;
+  }, [promises]);
 
-  const utilization = calculateUtilization(promises, members);
   const utilizationPct = Math.round(utilization.teamUtilization * 100);
 
   const healthColor =

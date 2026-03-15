@@ -1,7 +1,7 @@
 import { Promise, PromiseStatus } from "../types/promise";
-import { calculateBetweenness } from "./graph";
+import { calculateBetweenness, countDependents } from "./graph";
 
-const STATUS_WEIGHTS: Record<PromiseStatus, number> = {
+export const STATUS_WEIGHTS: Record<PromiseStatus, number> = {
   verified: 100,
   declared: 60,
   degraded: 30,
@@ -9,7 +9,7 @@ const STATUS_WEIGHTS: Record<PromiseStatus, number> = {
   unverifiable: 20,
 };
 
-const CERTAINTY_WEIGHTS: Record<PromiseStatus, number> = {
+export const CERTAINTY_WEIGHTS: Record<PromiseStatus, number> = {
   verified: 1.0,
   violated: 0.9,
   degraded: 0.6,
@@ -17,22 +17,14 @@ const CERTAINTY_WEIGHTS: Record<PromiseStatus, number> = {
   unverifiable: 0.0,
 };
 
-/**
- * Compute a letter grade from a 0-100 health score.
- */
-export function computeGrade(score: number): string {
-  if (score >= 93) return "A";
-  if (score >= 90) return "A-";
-  if (score >= 87) return "B+";
-  if (score >= 83) return "B";
-  if (score >= 80) return "B-";
-  if (score >= 77) return "C+";
-  if (score >= 73) return "C";
-  if (score >= 70) return "C-";
-  if (score >= 67) return "D+";
-  if (score >= 63) return "D";
-  if (score >= 60) return "D-";
-  return "F";
+function groupBy<T>(items: T[], key: (item: T) => string): Record<string, T[]> {
+  const groups: Record<string, T[]> = {};
+  for (const item of items) {
+    const k = key(item);
+    if (!groups[k]) groups[k] = [];
+    groups[k].push(item);
+  }
+  return groups;
 }
 
 /**
@@ -71,11 +63,7 @@ export function statusBreakdown(
 export function domainHealthScores(
   promises: Promise[]
 ): Record<string, number> {
-  const byDomain: Record<string, Promise[]> = {};
-  for (const p of promises) {
-    if (!byDomain[p.domain]) byDomain[p.domain] = [];
-    byDomain[p.domain].push(p);
-  }
+  const byDomain = groupBy(promises, (p) => p.domain);
   const scores: Record<string, number> = {};
   for (const [domain, dps] of Object.entries(byDomain)) {
     scores[domain] = healthScore(dps);
@@ -89,11 +77,7 @@ export function domainHealthScores(
 export function agentReliabilityScores(
   promises: Promise[]
 ): Record<string, { score: number; total: number }> {
-  const byAgent: Record<string, Promise[]> = {};
-  for (const p of promises) {
-    if (!byAgent[p.promiser]) byAgent[p.promiser] = [];
-    byAgent[p.promiser].push(p);
-  }
+  const byAgent = groupBy(promises, (p) => p.promiser);
   const scores: Record<string, { score: number; total: number }> = {};
   for (const [agent, aps] of Object.entries(byAgent)) {
     scores[agent] = { score: healthScore(aps), total: aps.length };
@@ -169,42 +153,33 @@ export function calculateNetworkEntropy(promises: Promise[]): {
       verificationCoverage: 0,
     };
 
-  // Overall uncertainty
-  const uncertainties = promises.map(
-    (p) => 1.0 - CERTAINTY_WEIGHTS[p.status]
-  );
-  const overall =
-    (uncertainties.reduce((a, b) => a + b, 0) / promises.length) * 100;
-
-  // By domain
-  const byDomain: Record<string, number> = {};
+  // Single pass: accumulate uncertainty, domain groups, status counts, verification count
   const domainGroups: Record<string, Promise[]> = {};
+  const byStatus: Record<PromiseStatus, number> = {
+    verified: 0, declared: 0, degraded: 0, violated: 0, unverifiable: 0,
+  };
+  let totalUncertainty = 0;
+  let withVerification = 0;
+
   for (const p of promises) {
+    totalUncertainty += 1.0 - CERTAINTY_WEIGHTS[p.status];
+    byStatus[p.status]++;
+    if (p.verification.method !== "none") withVerification++;
     if (!domainGroups[p.domain]) domainGroups[p.domain] = [];
     domainGroups[p.domain].push(p);
   }
+
+  const overall = (totalUncertainty / promises.length) * 100;
+
+  // By domain
+  const byDomain: Record<string, number> = {};
   for (const [domain, group] of Object.entries(domainGroups)) {
-    const domUncertainties = group.map(
-      (p) => 1.0 - CERTAINTY_WEIGHTS[p.status]
+    const domUncertainty = group.reduce(
+      (sum, p) => sum + (1.0 - CERTAINTY_WEIGHTS[p.status]), 0
     );
-    byDomain[domain] =
-      (domUncertainties.reduce((a, b) => a + b, 0) / group.length) * 100;
+    byDomain[domain] = (domUncertainty / group.length) * 100;
   }
 
-  // Status counts
-  const byStatus: Record<PromiseStatus, number> = {
-    verified: 0,
-    declared: 0,
-    degraded: 0,
-    violated: 0,
-    unverifiable: 0,
-  };
-  for (const p of promises) byStatus[p.status]++;
-
-  // Verification coverage
-  const withVerification = promises.filter(
-    (p) => p.verification.method !== "none"
-  ).length;
   const verificationCoverage = (withVerification / promises.length) * 100;
 
   return { overall, byDomain, byStatus, verificationCoverage };
@@ -236,12 +211,13 @@ export function calculateEntropyTimeSeries(
     const entropy = calculateNetworkEntropy(snapshot.promises);
     const health = healthScore(snapshot.promises);
 
+    // Build lookup map for O(1) access
+    const promiseMap = new Map(snapshot.promises.map(p => [p.id, p]));
+
     const effectivelyVerified = snapshot.promises.filter(p => {
       if (p.verification.method === "none") return false;
       if (!p.verification.dependsOnPromise) return true;
-      const verifier = snapshot.promises.find(
-        v => v.id === p.verification.dependsOnPromise
-      );
+      const verifier = promiseMap.get(p.verification.dependsOnPromise);
       if (!verifier) return true;
       return verifier.status !== "violated" && verifier.status !== "unverifiable";
     }).length;
@@ -268,35 +244,25 @@ export function calculateEntropyTimeSeries(
  * (few dependents but critical structural position).
  */
 export function identifyHighLeverageNodes(
-  promises: Promise[]
+  promises: Promise[],
+  precomputedBetweenness?: Record<string, number>,
 ): {
   promiseId: string;
   dependentCount: number;
   betweenness: number;
   leverage: number;
 }[] {
-  const betweenness = calculateBetweenness(promises);
-
-  // Count dependents (reverse dependency)
-  const dependentCounts: Record<string, number> = {};
-  for (const p of promises) dependentCounts[p.id] = 0;
-  for (const p of promises) {
-    for (const dep of p.depends_on) {
-      if (dependentCounts[dep] !== undefined) {
-        dependentCounts[dep]++;
-      }
-    }
-  }
-
-  const maxDeps = Math.max(...Object.values(dependentCounts), 1);
+  const betweenness = precomputedBetweenness ?? calculateBetweenness(promises);
+  const dependentCounts = countDependents(promises);
+  const maxDeps = Math.max(...dependentCounts.values(), 1);
 
   return promises
     .map((p) => ({
       promiseId: p.id,
-      dependentCount: dependentCounts[p.id] || 0,
+      dependentCount: dependentCounts.get(p.id) || 0,
       betweenness: betweenness[p.id] || 0,
       leverage:
-        0.5 * ((dependentCounts[p.id] || 0) / maxDeps) +
+        0.5 * (((dependentCounts.get(p.id) || 0)) / maxDeps) +
         0.5 * (betweenness[p.id] || 0),
     }))
     .sort((a, b) => b.leverage - a.leverage);

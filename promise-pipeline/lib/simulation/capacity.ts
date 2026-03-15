@@ -30,6 +30,11 @@ export interface UtilizationMetrics {
   }>;
 }
 
+function computeUtilization(arrivalRate: number, completionRate: number): number {
+  if (completionRate > 0) return arrivalRate / completionRate;
+  return arrivalRate > 0 ? 1.0 : 0;
+}
+
 export function calculateUtilization(
   promises: TeamPromise[],
   members: TeamMember[],
@@ -38,6 +43,15 @@ export function calculateUtilization(
   const now = new Date();
   const windowStart = new Date(now.getTime() - windowWeeks * 7 * 24 * 60 * 60 * 1000);
 
+  // Group promises by member upfront
+  const byMemberMap: Record<string, TeamPromise[]> = {};
+  for (const m of members) byMemberMap[m.id] = [];
+  for (const p of promises) {
+    if (byMemberMap[p.promiser]) {
+      byMemberMap[p.promiser].push(p);
+    }
+  }
+
   // Calculate arrival rate: promises created in the window
   const arrivedInWindow = promises.filter((p) => {
     const created = new Date(p.createdAt || now.toISOString());
@@ -45,35 +59,29 @@ export function calculateUtilization(
   });
   const arrivalRate = arrivedInWindow.length / windowWeeks;
 
-  // Calculate completion rate: promises completed in the window
+  // Calculate completion rate: verified promises created in the window
+  // (completedAt not available on TeamPromise, so use createdAt as proxy)
   const completedInWindow = promises.filter((p) => {
     if (p.status !== "verified") return false;
-    // Approximate: verified promises are "completed"
-    return true; // Refine with actual completion timestamps when available
+    const created = new Date(p.createdAt || now.toISOString());
+    return created >= windowStart;
   });
   const completionRate = completedInWindow.length / windowWeeks;
 
-  // Average completion time (for promises that have both created and completed dates)
-  // Use estimated hours converted to days, or default to 7 days
+  // Average completion time
   const promisesWithEstimates = promises.filter((p) => p.estimatedHours);
   const avgCompletionDays =
     promisesWithEstimates.length > 0
       ? promisesWithEstimates.reduce((sum, p) => sum + (p.estimatedHours! / 8), 0) /
         promisesWithEstimates.length
-      : 7; // default 7 days if no estimates
+      : 7;
 
-  // Utilization
-  const utilization =
-    completionRate > 0
-      ? arrivalRate / completionRate
-      : arrivalRate > 0
-      ? 1.0
-      : 0;
+  const utilization = computeUtilization(arrivalRate, completionRate);
 
   // Expected queue length (Little's Law)
   const expectedQueueLength = arrivalRate * (avgCompletionDays / 7);
 
-  // Time to overload: if utilization is trending up, when does it hit 1.0?
+  // Time to overload
   const timeToOverload =
     utilization >= 1.0
       ? 0
@@ -81,40 +89,36 @@ export function calculateUtilization(
       ? Math.round((1.0 - utilization) / 0.05)
       : null;
 
-  // Per-member breakdown
+  // Per-member breakdown using pre-grouped data
   const byMember: Record<
     string,
     { utilization: number; activeCount: number; completionRate: number }
   > = {};
   for (const member of members) {
-    const memberPromises = promises.filter((p) => p.promiser === member.id);
-    const memberActive = memberPromises.filter(
-      (p) => p.status === "declared" || p.status === "degraded"
-    ).length;
-    const memberCompleted = memberPromises.filter(
-      (p) => p.status === "verified"
-    ).length;
+    const memberPromises = byMemberMap[member.id] || [];
+    let memberActive = 0;
+    let memberCompleted = 0;
+    let memberArrived = 0;
+
+    for (const p of memberPromises) {
+      if (p.status === "declared" || p.status === "degraded") memberActive++;
+      if (p.status === "verified") memberCompleted++;
+      const created = new Date(p.createdAt || now.toISOString());
+      if (created >= windowStart) memberArrived++;
+    }
+
     const memberRate = memberCompleted / windowWeeks;
-    const memberArrival =
-      memberPromises.filter((p) => {
-        const created = new Date(p.createdAt || now.toISOString());
-        return created >= windowStart;
-      }).length / windowWeeks;
+    const memberArrivalRate = memberArrived / windowWeeks;
 
     byMember[member.id] = {
-      utilization:
-        memberRate > 0
-          ? memberArrival / memberRate
-          : memberArrival > 0
-          ? 1.0
-          : 0,
+      utilization: computeUtilization(memberArrivalRate, memberRate),
       activeCount: memberActive,
       completionRate: memberRate,
     };
   }
 
   return {
-    teamUtilization: Math.min(utilization, 2.0), // cap at 2.0 for display
+    teamUtilization: Math.min(utilization, 2.0),
     arrivalRate,
     completionRate,
     averageCompletionDays: Math.round(avgCompletionDays * 10) / 10,

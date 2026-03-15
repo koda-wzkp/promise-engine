@@ -1,5 +1,6 @@
 import { Promise, Agent, Threat } from "../types/promise";
 import { PromiseGraph, GraphNode, GraphEdge } from "../types/simulation";
+import { truncate } from "../utils/formatting";
 
 /**
  * Build a graph representation from promises and agents.
@@ -17,7 +18,7 @@ export function buildPromiseGraph(
     nodes.push({
       id: p.id,
       type: "promise",
-      label: p.body.length > 60 ? p.body.slice(0, 57) + "..." : p.body,
+      label: truncate(p.body, 60),
       status: p.status,
       domain: p.domain,
       polarity: p.polarity,

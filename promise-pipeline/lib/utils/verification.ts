@@ -7,6 +7,14 @@
  * what we checked and when."
  */
 
+async function sha256(content: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 /**
  * Generate a SHA-256 hash of verification source content.
  * Uses the Web Crypto API (available in all modern browsers and Node 18+).
@@ -17,22 +25,13 @@
  */
 export async function generateVerificationHash(
   sourceContent: string,
-  sourceDigest: string,
 ): Promise<{
   hash: string;
   timestamp: string;
-  sourceDigest: string;
 }> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(sourceContent);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-
   return {
-    hash,
+    hash: await sha256(sourceContent),
     timestamp: new Date().toISOString(),
-    sourceDigest,
   };
 }
 
@@ -44,12 +43,6 @@ export async function verifyCommitment(
   sourceContent: string,
   expectedHash: string,
 ): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(sourceContent);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const actualHash = hashArray
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  const actualHash = await sha256(sourceContent);
   return actualHash === expectedHash;
 }

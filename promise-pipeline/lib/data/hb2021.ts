@@ -90,7 +90,14 @@ export const promises: Promise[] = [
     progress: 70,
     required: 100,
     note: "PacifiCorp filed a plan but received conditional approval with required amendments on coal retirement timeline.",
-    verification: { method: "filing", source: "Oregon PUC", metric: "Plan filing status", frequency: "annual" },
+    verification: {
+      method: "filing", source: "Oregon PUC", metric: "Plan filing status", frequency: "annual",
+      commitment: {
+        hash: "placeholder — will be computed from actual source documents",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "Oregon PUC, PacifiCorp Clean Energy Plan Filing, Docket LC 82",
+      },
+    },
     // P003 depends on: tribal consultation (P016)
     depends_on: ["P016"],
     polarity: "give",
@@ -183,7 +190,14 @@ export const promises: Promise[] = [
     progress: 65,
     required: 80,
     note: "PGE has executed PPAs for ~1,200 MW of new wind and solar. On track for interim target.",
-    verification: { method: "filing", source: "Oregon PUC", metric: "MW procured vs. target", frequency: "annual" },
+    verification: {
+      method: "filing", source: "Oregon PUC", metric: "MW procured vs. target", frequency: "annual",
+      commitment: {
+        hash: "placeholder — will be computed from actual source documents",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "Oregon PUC, PGE Renewable Procurement Filing, IRP 2024",
+      },
+    },
     // Procurement depends on having an approved plan
     depends_on: ["P002"],
     polarity: "give",
@@ -201,7 +215,14 @@ export const promises: Promise[] = [
     progress: 40,
     required: 80,
     note: "PacifiCorp's multi-state IRP complicates Oregon-specific procurement. Behind on renewable additions.",
-    verification: { method: "filing", source: "Oregon PUC", metric: "MW procured vs. target", frequency: "annual" },
+    verification: {
+      method: "filing", source: "Oregon PUC", metric: "MW procured vs. target", frequency: "annual",
+      commitment: {
+        hash: "placeholder — will be computed from actual source documents",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "Oregon PUC, PacifiCorp Renewable Procurement Filing, IRP 2024",
+      },
+    },
     depends_on: ["P003"],
     polarity: "give",
     origin: "imposed",
@@ -218,7 +239,14 @@ export const promises: Promise[] = [
     progress: 35,
     required: 50,
     note: "PGE has allocated approximately 35% of relevant program spending to EJ communities. Tracking mechanisms are in place.",
-    verification: { method: "self-report", source: "Portland General Electric", metric: "% spending in EJ communities", frequency: "annual" },
+    verification: {
+      method: "self-report", source: "Portland General Electric", metric: "% spending in EJ communities", frequency: "annual",
+      commitment: {
+        hash: "placeholder — will be computed from actual source documents",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "PGE Community Benefits Report, EJ Program Spending 2024",
+      },
+    },
     // Equity spending depends on the transition actually proceeding (emissions reduction)
     depends_on: ["P001"],
     polarity: "give",
@@ -237,7 +265,14 @@ export const promises: Promise[] = [
     progress: undefined,
     required: undefined,
     note: "No quantitative metric or independent verification mechanism exists for 'direct benefits.' The promise is structurally unverifiable.",
-    verification: { method: "none" },
+    verification: {
+      method: "none",
+      commitment: {
+        hash: "placeholder — no source document exists; promise is structurally unverifiable",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "No verification mechanism — 'direct benefits' undefined in statute",
+      },
+    },
     depends_on: ["P001"],
     polarity: "give",
     origin: "imposed",
@@ -255,7 +290,14 @@ export const promises: Promise[] = [
     progress: undefined,
     required: undefined,
     note: "Energy burden is tracked at aggregate level but not at the household level required to verify this promise. No causal isolation between transition costs and other rate factors.",
-    verification: { method: "none" },
+    verification: {
+      method: "none",
+      commitment: {
+        hash: "placeholder — no source document exists; promise is structurally unverifiable",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "No verification mechanism — energy burden tracked at aggregate, not household level",
+      },
+    },
     depends_on: ["P005", "P014"],
     polarity: "give",
     origin: "imposed",
@@ -272,7 +314,14 @@ export const promises: Promise[] = [
     progress: undefined,
     required: undefined,
     note: "Same verification gap as P010. PacifiCorp's multi-state structure further complicates Oregon-specific benefit tracking.",
-    verification: { method: "none" },
+    verification: {
+      method: "none",
+      commitment: {
+        hash: "placeholder — no source document exists; promise is structurally unverifiable",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "No verification mechanism — same gap as P010, compounded by multi-state structure",
+      },
+    },
     depends_on: ["P004"],
     polarity: "give",
     origin: "imposed",
@@ -362,7 +411,14 @@ export const promises: Promise[] = [
     progress: 40,
     required: 100,
     note: "PUC has initiated tribal consultation but feedback indicates it has been procedural rather than substantive. Tribes report limited influence on final planning decisions.",
-    verification: { method: "self-report", source: "Oregon PUC", metric: "Consultation meetings held", frequency: "annual" },
+    verification: {
+      method: "self-report", source: "Oregon PUC", metric: "Consultation meetings held", frequency: "annual",
+      commitment: {
+        hash: "placeholder — will be computed from actual source documents",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "Oregon PUC Tribal Consultation Log, Annual Summary 2024",
+      },
+    },
     depends_on: [],
     polarity: "give",
     origin: "imposed",
@@ -379,7 +435,14 @@ export const promises: Promise[] = [
     progress: 20,
     required: undefined,
     note: "PGE has acknowledged tribal sovereignty in its CEP but specific procurement commitments remain vague.",
-    verification: { method: "self-report", source: "Portland General Electric" },
+    verification: {
+      method: "self-report", source: "Portland General Electric",
+      commitment: {
+        hash: "placeholder — will be computed from actual source documents",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "PGE Clean Energy Plan, Tribal Energy Sovereignty Section, 2024",
+      },
+    },
     // Tribal procurement depends on the plan and tribal consultation
     depends_on: ["P002", "P016"],
     polarity: "give",
@@ -397,7 +460,14 @@ export const promises: Promise[] = [
     progress: 30,
     required: 100,
     note: "Programs have been announced but enrollment is below targets. Coordination with utility transition timelines is lacking.",
-    verification: { method: "self-report", source: "Workforce Development Board", metric: "Program enrollment", frequency: "annual" },
+    verification: {
+      method: "self-report", source: "Workforce Development Board", metric: "Program enrollment", frequency: "annual",
+      commitment: {
+        hash: "placeholder — will be computed from actual source documents",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "Oregon Workforce Development Board, Clean Energy Training Program Report 2024",
+      },
+    },
     // Workforce programs depend on the transition proceeding (both utility plans)
     depends_on: ["P002", "P003"],
     polarity: "give",
@@ -415,7 +485,14 @@ export const promises: Promise[] = [
     progress: 15,
     required: undefined,
     note: "PGE has committed funding but specific programs have not launched. Boardman plant closure (2020) preceded HB 2021.",
-    verification: { method: "self-report", source: "Portland General Electric", metric: "Funding allocated ($)", frequency: "annual" },
+    verification: {
+      method: "self-report", source: "Portland General Electric", metric: "Funding allocated ($)", frequency: "annual",
+      commitment: {
+        hash: "placeholder — will be computed from actual source documents",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "PGE Worker Transition Assistance Report, Annual Filing 2024",
+      },
+    },
     depends_on: ["P002", "P018"],
     polarity: "give",
     origin: "imposed",
@@ -432,7 +509,14 @@ export const promises: Promise[] = [
     progress: 40,
     required: 100,
     note: "PUC has drafted indicators but they have not been finalized or adopted. Community organizations report the indicators do not capture lived experience.",
-    verification: { method: "filing", source: "Oregon PUC", metric: "Indicator adoption status", frequency: "annual" },
+    verification: {
+      method: "filing", source: "Oregon PUC", metric: "Indicator adoption status", frequency: "annual",
+      commitment: {
+        hash: "placeholder — will be computed from actual source documents",
+        timestamp: "2026-03-15T00:00:00Z",
+        sourceDigest: "Oregon PUC Community Benefit Indicators Draft, Docket UM 2225",
+      },
+    },
     depends_on: ["P005"],
     polarity: "give",
     origin: "imposed",

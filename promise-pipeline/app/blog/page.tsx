@@ -7,14 +7,11 @@ export default async function BlogPage() {
   let posts: any[] = [];
 
   try {
-    // Only fetch if Sanity is configured
-    if (process.env.NEXT_PUBLIC_SANITY_PROJECT_ID && process.env.NEXT_PUBLIC_SANITY_PROJECT_ID !== "placeholder") {
-      const { client } = await import("@/sanity/lib/client");
-      const { allPostsQuery } = await import("@/sanity/lib/queries");
-      posts = await client.fetch(allPostsQuery);
-    }
+    const { client } = await import("@/sanity/lib/client");
+    const { allPostsQuery } = await import("@/sanity/lib/queries");
+    posts = await client.fetch(allPostsQuery);
   } catch {
-    // Sanity not configured — show placeholder
+    // Sanity fetch failed — show placeholder
   }
 
   return (

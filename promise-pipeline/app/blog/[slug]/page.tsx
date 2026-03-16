@@ -11,13 +11,11 @@ export default async function BlogPostPage({
   let post: any = null;
 
   try {
-    if (process.env.NEXT_PUBLIC_SANITY_PROJECT_ID && process.env.NEXT_PUBLIC_SANITY_PROJECT_ID !== "placeholder") {
-      const { client } = await import("@/sanity/lib/client");
-      const { postBySlugQuery } = await import("@/sanity/lib/queries");
-      post = await client.fetch(postBySlugQuery, { slug: params.slug });
-    }
+    const { client } = await import("@/sanity/lib/client");
+    const { postBySlugQuery } = await import("@/sanity/lib/queries");
+    post = await client.fetch(postBySlugQuery, { slug: params.slug });
   } catch {
-    // Sanity not configured
+    // Sanity fetch failed
   }
 
   if (!post) {

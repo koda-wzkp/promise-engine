@@ -6,7 +6,7 @@ import bcrypt
 import jwt
 from datetime import datetime
 
-from app.database import get_db
+from app.database import get_db, transaction
 from app.models import User
 from app.utils.exceptions import ValidationError
 
@@ -28,20 +28,28 @@ def register():
     if not data or not data.get("email") or not data.get("password"):
         raise ValidationError(message="Email and password required", code="INVALID_INPUT")
 
-    with get_db() as db:
+    email = data["email"].strip()
+    if not email or "@" not in email:
+        raise ValidationError(message="A valid email address is required", code="INVALID_EMAIL")
+
+    password = data["password"].strip()
+    if len(password) < 8:
+        raise ValidationError(message="Password must be at least 8 characters", code="WEAK_PASSWORD")
+
+    with transaction() as db:
         # Check if email already exists
-        existing = db.query(User).filter_by(email=data["email"]).first()
+        existing = db.query(User).filter_by(email=email).first()
         if existing:
             raise ValidationError(
-                message="Email already registered", code="EMAIL_EXISTS", details={"email": data["email"]}
+                message="Email already registered", code="EMAIL_EXISTS", details={"email": email}
             )
 
         # Hash password
-        password_hash = bcrypt.hashpw(data["password"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
         # Create user
         user = User(
-            email=data["email"],
+            email=email,
             password_hash=password_hash,
             first_name=data.get("first_name"),
             last_name=data.get("last_name"),
@@ -50,7 +58,7 @@ def register():
         )
 
         db.add(user)
-        db.commit()
+        db.flush()
         db.refresh(user)
 
         # Generate JWT token

@@ -36,6 +36,7 @@ def require_api_key(f):
 
     return decorated
 
+
 # Initialize Promise Engine (will be set on app startup)
 _engine: Optional[PromiseEngine] = None
 

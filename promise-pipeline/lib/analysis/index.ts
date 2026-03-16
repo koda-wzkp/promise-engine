@@ -15,6 +15,7 @@ export { computeReliabilityMetrics } from "./reliability";
 export { computeInformationMetrics } from "./information";
 export { computeStrategyMetrics } from "./strategy";
 export { computeHeuristicCPTs, simulateProbabilisticCascade } from "./probabilistic";
+export { computeFactoryStatus, computeFactoryProgress, generateFactoryNarrative } from "./factory";
 
 export type {
   EpidemiologyMetrics,

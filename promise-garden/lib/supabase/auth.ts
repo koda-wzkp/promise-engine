@@ -1,10 +1,10 @@
 import { supabase, isSupabaseConfigured } from "./client";
 import type { Session, User } from "@supabase/supabase-js";
 
-/** Use NEXT_PUBLIC_APP_URL in production, fall back to window.location.origin for local dev. */
+/** Prefer window.location.origin so auth redirects always match the current host. */
 function getBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   if (typeof window !== "undefined") return window.location.origin;
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   return "http://localhost:3000";
 }
 

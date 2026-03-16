@@ -32,7 +32,11 @@ def create_app(config=None):
         app.config.from_object(config)
 
     # Enable CORS
-    cors_origins = app.config.get("CORS_ORIGINS", "*")
+    cors_config = app.config.get("CORS_ORIGINS", "")
+    if cors_config:
+        cors_origins = [o.strip() for o in cors_config.split(",") if o.strip()]
+    else:
+        cors_origins = ["https://promisepipeline.com", "http://localhost:3000"]
     CORS(
         app,
         resources={

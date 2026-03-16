@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import PortableTextRenderer from "@/components/blog/PortableTextRenderer";
 
 // Individual blog post page — renders Portable Text from Sanity
 
@@ -68,10 +69,13 @@ export default async function BlogPostPage({
 
           {/* Body content rendered via Portable Text */}
           <div className="prose prose-gray max-w-none">
-            <p className="text-gray-500 italic">
-              Content rendered from Sanity CMS. Configure your Sanity project
-              to see blog post content here.
-            </p>
+            {post.body ? (
+              <PortableTextRenderer value={post.body} />
+            ) : (
+              <p className="text-gray-500 italic">
+                This post has no content yet.
+              </p>
+            )}
           </div>
 
           {/* Related promises */}

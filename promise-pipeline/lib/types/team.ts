@@ -1,4 +1,4 @@
-import { Promise, Agent, PromiseStatus, PromiseOrigin } from "./promise";
+import { Promise, Agent, PromiseStatus, PromiseOrigin, PromiseFactory } from "./promise";
 import { NetworkHealthScore } from "./simulation";
 
 export interface TeamMember extends Agent {
@@ -31,6 +31,30 @@ export interface TeamDashboardData {
     timestamp: string;
     memberId: string;
   }[];
+}
+
+/**
+ * A team objective — a promise factory at the team scale.
+ * OKRs: the objective is the factory, key results are children.
+ * Status computed from weighted KRs, not assigned directly.
+ *
+ * Examples:
+ *   "Improve customer retention" → reduce churn to 3%, launch onboarding, weekly check-ins
+ *   "Ship v2.0" → complete auth, migrate DB, update docs, pass load test
+ */
+export interface TeamObjective extends PromiseFactory {
+  isTeam: true;
+  isFactory: true;
+  /** The team member or leader who owns this objective */
+  owner: string; // TeamMember ID
+  /** Quarter/period this objective covers */
+  period?: string; // e.g., "2026-Q2"
+  /** Key Results are the child promises */
+  // childPromises inherited from PromiseFactory
+  completionCondition: {
+    type: "weighted"; // OKRs typically use weighted KRs
+    weights: Record<string, number>; // Per-KR importance
+  };
 }
 
 export interface CapacityQuery {

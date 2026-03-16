@@ -1,9 +1,10 @@
 "use client";
 
 import { CascadeResult } from "@/lib/types/simulation";
-import { Promise as PromiseType, Agent, PromiseStatus } from "@/lib/types/promise";
+import { Promise as PromiseType, Agent, PromiseStatus, isPromiseFactory } from "@/lib/types/promise";
 import { StatusBadge } from "@/components/promise/StatusBadge";
 import { ProbabilisticCascadeResult, StatusDistribution } from "@/lib/types/analysis";
+import { generateFactoryNarrative } from "@/lib/analysis/factory";
 
 interface CascadeResultsProps {
   result: CascadeResult;
@@ -206,6 +207,11 @@ export function CascadeResults({
               );
               const probDist = probabilistic?.posteriors[ap.promiseId];
 
+              const isFactory = promise && isPromiseFactory(promise);
+              const factoryNarrative = isFactory
+                ? generateFactoryNarrative(promise, promises, ap.newStatus)
+                : null;
+
               return (
                 <div
                   key={ap.promiseId}
@@ -216,9 +222,15 @@ export function CascadeResults({
                       {ap.promiseId}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-600 truncate">
-                        {promise?.body}
-                      </p>
+                      {factoryNarrative ? (
+                        <p className="text-xs text-amber-700 font-medium">
+                          {factoryNarrative}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-600 truncate">
+                          {promise?.body}
+                        </p>
+                      )}
                       <div className="flex items-center gap-1 mt-1">
                         <StatusBadge status={ap.originalStatus} size="xs" />
                         <span className="text-xs text-gray-400">→</span>

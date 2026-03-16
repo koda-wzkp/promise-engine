@@ -93,6 +93,48 @@ export interface Promise {
   violationType?: ViolationType;
 }
 
+// ─── PROMISE FACTORY ───
+// A promise whose primary function is to generate and track child promises.
+// First identified: Paris Agreement analysis (treaty as meta-promise architecture).
+// Also applies at personal scale (goals) and team scale (OKRs/objectives).
+//
+// The factory's status is COMPUTED from its children's statuses,
+// not assigned directly. The factory has no check-in of its own.
+//
+// Examples:
+//   Civic:    Paris Agreement → NDCs → state legislation → utility plans
+//   Personal: "Lose 30 pounds" → gym 3x/week, meal prep, sleep by 11pm
+//   Team:     "Improve retention" → reduce churn to 3%, launch onboarding, weekly check-ins
+
+export type FactoryCompletionType =
+  | "all"        // All children must be verified for factory to be verified
+  | "threshold"  // A percentage of children must be verified
+  | "weighted";  // Children have different weights; weighted average determines status
+
+export interface PromiseFactory extends Promise {
+  /** Discriminant flag */
+  isFactory: true;
+
+  /** IDs of promises this factory has generated */
+  childPromises: string[];
+
+  /** How the factory's status is computed from its children */
+  completionCondition: {
+    type: FactoryCompletionType;
+    /** For "threshold": fraction of children that must be verified (0–1). e.g., 0.7 = 70% */
+    threshold?: number;
+    /** For "weighted": per-child importance weights. Keys are child promise IDs. */
+    weights?: Record<string, number>;
+  };
+}
+
+/**
+ * Type guard: is this promise a factory?
+ */
+export function isPromiseFactory(promise: Promise): promise is PromiseFactory {
+  return "isFactory" in promise && (promise as PromiseFactory).isFactory === true;
+}
+
 // ─── THREAT (v2.1) ───
 export interface Threat {
   id: string;

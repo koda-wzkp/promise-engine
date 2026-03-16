@@ -1,7 +1,13 @@
-import post from "./post";
-import author from "./author";
-import category from "./category";
-import caseStudy from "./caseStudy";
-import blockContent from "./blockContent";
+import { blockContentType } from './blockContent'
+import { categoryType } from './category'
+import { authorType } from './author'
+import { postType } from './post'
+import { caseStudyType } from './caseStudy'
 
-export const schemaTypes = [post, author, category, caseStudy, blockContent];
+export const schemaTypes = [
+  blockContentType,
+  categoryType,
+  authorType,
+  postType,
+  caseStudyType,
+]

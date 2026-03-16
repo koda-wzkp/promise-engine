@@ -440,7 +440,7 @@ async function importFile(filePath: string): Promise<boolean> {
     doc.relatedPromises = frontmatter.relatedPromises;
 
   try {
-    await client.createOrReplace(doc);
+    await client.createOrReplace(doc as any);
     console.log(`  + Imported: ${frontmatter.title}`);
     return true;
   } catch (err: any) {

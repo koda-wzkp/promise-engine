@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import PortableTextRenderer from "@/components/blog/PortableTextRenderer";
+import MarkdownRenderer from "@/components/blog/MarkdownRenderer";
+import { getPostBySlug } from "@/lib/blog";
 
-// Individual blog post page — renders Portable Text from Sanity
+// Individual blog post page — tries Sanity first, falls back to local markdown.
 
 export default async function BlogPostPage({
   params,
@@ -10,13 +11,31 @@ export default async function BlogPostPage({
   params: { slug: string };
 }) {
   let post: any = null;
+  let isLocalMarkdown = false;
 
+  // Try Sanity first
   try {
     const { client } = await import("@/sanity/lib/client");
     const { postBySlugQuery } = await import("@/sanity/lib/queries");
     post = await client.fetch(postBySlugQuery, { slug: params.slug });
   } catch {
-    // Sanity fetch failed
+    // Sanity not configured
+  }
+
+  // Fall back to local markdown
+  if (!post) {
+    const localPost = getPostBySlug(params.slug);
+    if (localPost) {
+      post = {
+        title: localPost.title,
+        slug: { current: localPost.slug },
+        body: localPost.body,
+        publishedAt: localPost.publishedAt,
+        author: localPost.author ? { name: localPost.author } : null,
+        vertical: localPost.vertical,
+      };
+      isLocalMarkdown = true;
+    }
   }
 
   if (!post) {
@@ -27,7 +46,7 @@ export default async function BlogPostPage({
             Post Not Found
           </h1>
           <p className="text-gray-500 mb-4">
-            This post doesn&apos;t exist yet, or Sanity CMS is not configured.
+            This post doesn&apos;t exist.
           </p>
           <Link
             href="/blog"
@@ -56,7 +75,9 @@ export default async function BlogPostPage({
           </h1>
 
           <div className="flex items-center gap-3 text-sm text-gray-500 mb-8">
-            {post.author?.name && <span>By {post.author.name}</span>}
+            {(post.author?.name || post.author) && (
+              <span>By {post.author?.name || post.author}</span>
+            )}
             {post.publishedAt && (
               <span>{new Date(post.publishedAt).toLocaleDateString()}</span>
             )}
@@ -67,9 +88,10 @@ export default async function BlogPostPage({
             )}
           </div>
 
-          {/* Body content rendered via Portable Text */}
           <div className="prose prose-gray max-w-none">
-            {post.body ? (
+            {isLocalMarkdown ? (
+              <MarkdownRenderer content={post.body} />
+            ) : post.body ? (
               <PortableTextRenderer value={post.body} />
             ) : (
               <p className="text-gray-500 italic">
@@ -78,7 +100,7 @@ export default async function BlogPostPage({
             )}
           </div>
 
-          {/* Related promises */}
+          {/* Related promises (Sanity posts only) */}
           {post.relatedPromises && post.relatedPromises.length > 0 && (
             <div className="mt-8 p-4 bg-gray-50 rounded-xl border">
               <h3 className="font-serif font-semibold text-gray-900 mb-2">

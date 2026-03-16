@@ -1,12 +1,11 @@
 import { defineType, defineArrayMember } from 'sanity'
-
 export const blockContentType = defineType({
-  name: 'blockContent',
   title: 'Block Content',
+  name: 'blockContent',
   type: 'array',
   of: [
-    // Standard rich text blocks
     defineArrayMember({
+      title: 'Block',
       type: 'block',
       styles: [
         { title: 'Normal', value: 'normal' },
@@ -17,140 +16,64 @@ export const blockContentType = defineType({
       ],
       lists: [
         { title: 'Bullet', value: 'bullet' },
-        { title: 'Numbered', value: 'number' },
+        { title: 'Number', value: 'number' },
       ],
       marks: {
         decorators: [
-          { title: 'Bold', value: 'strong' },
-          { title: 'Italic', value: 'em' },
+          { title: 'Strong', value: 'strong' },
+          { title: 'Emphasis', value: 'em' },
           { title: 'Code', value: 'code' },
         ],
         annotations: [
-          // External links
           {
+            title: 'URL',
             name: 'link',
             type: 'object',
-            title: 'Link',
             fields: [
-              {
-                name: 'href',
-                type: 'url',
-                title: 'URL',
-                validation: (Rule) =>
-                  Rule.uri({ allowRelative: true, scheme: ['http', 'https', 'mailto'] }),
-              },
-              {
-                name: 'blank',
-                type: 'boolean',
-                title: 'Open in new tab',
-                initialValue: true,
-              },
+              { title: 'URL', name: 'href', type: 'url' },
+              { title: 'Open in new tab', name: 'blank', type: 'boolean', initialValue: true },
             ],
           },
-          // Internal promise references (links to dashboard promise IDs)
           {
+            title: 'Promise Reference',
             name: 'promiseRef',
             type: 'object',
-            title: 'Promise Reference',
             fields: [
+              { title: 'Promise ID', name: 'promiseId', type: 'string', description: 'e.g., P001, AI-003' },
               {
-                name: 'promiseId',
-                type: 'string',
-                title: 'Promise ID',
-                description: 'e.g. P001, AI-003',
-              },
-              {
-                name: 'vertical',
-                type: 'string',
-                title: 'Vertical',
-                options: {
-                  list: ['hb2021', 'ai', 'infrastructure', 'supply-chain'],
-                },
+                title: 'Vertical', name: 'vertical', type: 'string',
+                options: { list: ['hb2021', 'ai', 'infrastructure', 'supply-chain'] },
               },
             ],
           },
         ],
       },
     }),
-
-    // Images with alt text and captions
     defineArrayMember({
       type: 'image',
       options: { hotspot: true },
       fields: [
-        {
-          name: 'alt',
-          type: 'string',
-          title: 'Alt text',
-          description: 'Required for accessibility',
-          validation: (Rule) => Rule.required(),
-        },
-        {
-          name: 'caption',
-          type: 'string',
-          title: 'Caption',
-        },
+        { name: 'alt', type: 'string', title: 'Alt text', validation: (R: any) => R.required() },
+        { name: 'caption', type: 'string', title: 'Caption' },
       ],
     }),
-
-    // Code blocks
     defineArrayMember({
-      type: 'object',
-      name: 'codeBlock',
       title: 'Code Block',
-      fields: [
-        {
-          name: 'code',
-          type: 'text',
-          title: 'Code',
-        },
-        {
-          name: 'language',
-          type: 'string',
-          title: 'Language',
-          options: {
-            list: ['typescript', 'javascript', 'python', 'bash', 'json', 'sql'],
-          },
-        },
-      ],
-      preview: {
-        select: { language: 'language', code: 'code' },
-        prepare({ language, code }) {
-          return { title: `Code: ${language ?? 'unknown'}`, subtitle: code?.slice(0, 60) }
-        },
-      },
-    }),
-
-    // Callout / insight card (styled like dashboard insight cards)
-    defineArrayMember({
+      name: 'codeBlock',
       type: 'object',
-      name: 'callout',
-      title: 'Callout',
       fields: [
-        {
-          name: 'type',
-          type: 'string',
-          title: 'Type',
-          options: {
-            list: [
-              { title: 'Key Finding', value: 'finding' },
-              { title: 'Warning', value: 'warning' },
-              { title: 'Promise Insight', value: 'insight' },
-            ],
-          },
-        },
-        {
-          name: 'body',
-          type: 'text',
-          title: 'Body',
-        },
+        { title: 'Language', name: 'language', type: 'string', options: { list: ['typescript', 'javascript', 'python', 'bash', 'json', 'sql'] } },
+        { title: 'Code', name: 'code', type: 'text' },
       ],
-      preview: {
-        select: { type: 'type', body: 'body' },
-        prepare({ type, body }) {
-          return { title: `Callout: ${type}`, subtitle: body?.slice(0, 60) }
-        },
-      },
+    }),
+    defineArrayMember({
+      title: 'Callout',
+      name: 'callout',
+      type: 'object',
+      fields: [
+        { title: 'Type', name: 'type', type: 'string', options: { list: ['finding', 'warning', 'insight'] } },
+        { title: 'Body', name: 'body', type: 'text' },
+      ],
     }),
   ],
 })

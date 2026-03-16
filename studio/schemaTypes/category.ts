@@ -1,11 +1,10 @@
-const category = {
-  name: "category",
-  title: "Category",
-  type: "document",
+import { defineType, defineField } from 'sanity'
+export const categoryType = defineType({
+  name: 'category',
+  title: 'Category',
+  type: 'document',
   fields: [
-    { name: "title", title: "Title", type: "string" },
-    { name: "description", title: "Description", type: "text" },
+    defineField({ name: 'title', title: 'Title', type: 'string' }),
+    defineField({ name: 'description', title: 'Description', type: 'text' }),
   ],
-};
-
-export default category;
+})

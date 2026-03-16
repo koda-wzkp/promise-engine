@@ -1,13 +1,12 @@
-const author = {
-  name: "author",
-  title: "Author",
-  type: "document",
+import { defineType, defineField } from 'sanity'
+export const authorType = defineType({
+  name: 'author',
+  title: 'Author',
+  type: 'document',
   fields: [
-    { name: "name", title: "Name", type: "string" },
-    { name: "slug", title: "Slug", type: "slug", options: { source: "name" } },
-    { name: "image", title: "Image", type: "image", options: { hotspot: true } },
-    { name: "bio", title: "Bio", type: "text" },
+    defineField({ name: 'name', title: 'Name', type: 'string' }),
+    defineField({ name: 'slug', title: 'Slug', type: 'slug', options: { source: 'name' } }),
+    defineField({ name: 'image', title: 'Image', type: 'image', options: { hotspot: true } }),
+    defineField({ name: 'bio', title: 'Bio', type: 'text' }),
   ],
-};
-
-export default author;
+})

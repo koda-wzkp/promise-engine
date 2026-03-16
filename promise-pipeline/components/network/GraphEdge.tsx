@@ -1,12 +1,14 @@
 "use client";
 
 import { GraphEdge as GraphEdgeType, GraphNode } from "@/lib/types/simulation";
+import type { EdgeVisualEncoding } from "@/lib/utils/visual-encoding";
 
 interface GraphEdgeProps {
   edge: GraphEdgeType;
   sourceNode: GraphNode;
   targetNode: GraphNode;
   isActive: boolean;
+  encoding?: EdgeVisualEncoding;
 }
 
 export function GraphEdgeComponent({
@@ -14,6 +16,7 @@ export function GraphEdgeComponent({
   sourceNode,
   targetNode,
   isActive,
+  encoding,
 }: GraphEdgeProps) {
   const sx = sourceNode.x || 0;
   const sy = sourceNode.y || 0;
@@ -25,6 +28,7 @@ export function GraphEdgeComponent({
   const isVerificationDep = edge.type === "verification_dependency";
   const isAgentEdge = edge.type === "promiser" || edge.type === "promisee";
 
+  // Base color from edge type
   const color = isThreat
     ? "#b91c1c"
     : isVerificationDep
@@ -35,8 +39,20 @@ export function GraphEdgeComponent({
     ? "#6b7280"
     : "#d1d5db";
 
-  const strokeWidth = isThreat ? 1.5 : isVerificationDep ? 1.5 : isDependency ? 1.5 : 0.75;
-  const opacity = isAgentEdge ? 0.3 : isActive ? 1 : 0.6;
+  // Apply encoding for dependency edges, fallback for others
+  let strokeWidth: number;
+  let dashArray: string;
+  let opacity: number;
+
+  if (isDependency && encoding) {
+    strokeWidth = encoding.thickness;
+    dashArray = encoding.dashArray;
+    opacity = isActive ? 1 : encoding.opacity;
+  } else {
+    strokeWidth = isThreat ? 1.5 : isVerificationDep ? 1.5 : isDependency ? 1.5 : 0.75;
+    dashArray = isThreat ? "4,3" : isVerificationDep ? "6,3" : "none";
+    opacity = isAgentEdge ? 0.3 : isActive ? 1 : 0.6;
+  }
 
   // Calculate arrow position (slightly before target)
   const dx = tx - sx;
@@ -64,7 +80,7 @@ export function GraphEdgeComponent({
       y2={arrowY}
       stroke={color}
       strokeWidth={strokeWidth}
-      strokeDasharray={isThreat ? "4,3" : isVerificationDep ? "6,3" : "none"}
+      strokeDasharray={dashArray}
       opacity={opacity}
       markerEnd={isDependency || isThreat || isVerificationDep ? `url(#${markerId})` : undefined}
       className={isActive ? "cascade-pulse" : ""}

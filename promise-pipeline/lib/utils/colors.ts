@@ -72,6 +72,38 @@ export function getStatusBgColor(status: string): string {
   return statusBgColors[status as keyof typeof statusBgColors] || "#f3f4f6";
 }
 
+// ── RPN priority colors (for pulse border on reduced-motion) ──
+export const rpnColors = {
+  critical: "#991b1b",
+  high: "#78350f",
+  medium: "#1e40af",
+  low: "#1a5f4a",
+} as const;
+
+// ── Incentive compatibility colors ──
+export const incentiveColors = {
+  yes: "#1a5f4a",
+  partial: "#78350f",
+  no: "#991b1b",
+} as const;
+
+// ── Cascade ripple colors ──
+export const cascadeRippleColors = {
+  depth1: "hsla(40, 80%, 50%, 0.6)",
+  depth2: "hsla(25, 80%, 50%, 0.4)",
+  depth3: "hsla(10, 80%, 50%, 0.25)",
+  depth4: "hsla(0, 80%, 45%, 0.15)",
+} as const;
+
+// ── Status color RGB values (for glow filters) ──
+export const statusColorRgb: Record<string, string> = {
+  verified: "26, 95, 74",
+  declared: "37, 99, 235",
+  degraded: "180, 83, 9",
+  violated: "185, 28, 28",
+  unverifiable: "124, 58, 237",
+} as const;
+
 export function getDomainColor(domain: string, vertical: string = "hb2021"): string {
   if (vertical === "hb2021") {
     return hb2021DomainColors[domain] || "#6b7280";

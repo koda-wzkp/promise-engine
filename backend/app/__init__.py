@@ -32,7 +32,8 @@ def create_app(config=None):
         app.config.from_object(config)
 
     # Enable CORS
-    cors_origins = app.config.get("CORS_ORIGINS", "*")
+    cors_config = app.config.get("CORS_ORIGINS", "")
+    cors_origins = [o.strip() for o in cors_config.split(",") if o.strip()] if cors_config else []
     CORS(
         app,
         resources={

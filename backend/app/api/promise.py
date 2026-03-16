@@ -4,6 +4,8 @@ External systems can verify promises, log events, and query integrity scores.
 This is the public interface to the Promise Engine kernel.
 """
 
+import os
+from functools import wraps
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from typing import Optional
@@ -37,6 +39,20 @@ def get_engine() -> PromiseEngine:
     if _engine is None:
         return init_promise_engine()
     return _engine
+
+
+def require_api_key(f):
+    """Require a valid API key for access to sensitive endpoints."""
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        api_key = request.headers.get("X-API-Key")
+        expected = os.environ.get("EXPORT_API_KEY")
+        if not expected or api_key != expected:
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+
+    return decorated
 
 
 # ============================================================
@@ -696,6 +712,7 @@ def log_recovery():
 
 
 @promise_bp.route("/export", methods=["GET"])
+@require_api_key
 def export_training_data():
     """Export unexported training data as JSONL.
 
@@ -773,6 +790,7 @@ def export_training_data():
 
 
 @promise_bp.route("/export/stats", methods=["GET"])
+@require_api_key
 def export_stats():
     """Get training data export statistics.
 

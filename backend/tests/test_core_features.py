@@ -13,16 +13,21 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 from app.promise_engine.core.models import (
-    Agent, AgentType, PromiseEvent, PromiseResult,
-    PromiseSchema, SignalStrength, VerificationResult,
+    Agent,
+    AgentType,
+    PromiseEvent,
+    PromiseResult,
+    PromiseSchema,
+    SignalStrength,
+    VerificationResult,
     IntegrityScore,
 )
 from app.promise_engine.storage.repository import PromiseRepository
 
-
 # ============================================================
 # FIXTURES
 # ============================================================
+
 
 @pytest.fixture
 def db_session():
@@ -122,10 +127,15 @@ def low_stakes_schema(repo, db_session):
 
 
 def _make_event(
-    promiser, promisee, schema_id="hb2021.emissions_target",
-    result=PromiseResult.KEPT, vertical="hb2021",
-    training_eligible=True, exported_at=None,
-    timestamp=None, due_by=None,
+    promiser,
+    promisee,
+    schema_id="hb2021.emissions_target",
+    result=PromiseResult.KEPT,
+    vertical="hb2021",
+    training_eligible=True,
+    exported_at=None,
+    timestamp=None,
+    due_by=None,
 ):
     """Helper to create a test PromiseEvent."""
     return PromiseEvent(
@@ -149,6 +159,7 @@ def _make_event(
 # ============================================================
 # TRAINING DATA EXPORT
 # ============================================================
+
 
 class TestTrainingDataExport:
     """POD's core promise: every event becomes a labeled training signal."""
@@ -275,6 +286,7 @@ class TestTrainingDataExport:
 # TRUST CAPITAL (Stakes-Weighted Scoring)
 # ============================================================
 
+
 class TestTrustCapital:
     """Trust capital weights integrity by promise stakes."""
 
@@ -300,22 +312,29 @@ class TestTrustCapital:
         score = repo.compute_integrity(pge)
         assert score.trust_capital == 0.0
 
-    def test_high_stakes_weighted_more(
-        self, repo, pge, ratepayers, high_stakes_schema, low_stakes_schema
-    ):
+    def test_high_stakes_weighted_more(self, repo, pge, ratepayers, high_stakes_schema, low_stakes_schema):
         """High-stakes broken should hurt more than low-stakes broken."""
         repo.save_agent(pge)
         repo.save_agent(ratepayers)
 
         # 1 high-stakes kept + 1 low-stakes broken
-        repo.save_event(_make_event(
-            pge, ratepayers, schema_id="hb2021.emissions_target",
-            result=PromiseResult.KEPT,
-        ))
-        repo.save_event(_make_event(
-            pge, ratepayers, schema_id="codec.grind_check",
-            vertical="codec", result=PromiseResult.BROKEN,
-        ))
+        repo.save_event(
+            _make_event(
+                pge,
+                ratepayers,
+                schema_id="hb2021.emissions_target",
+                result=PromiseResult.KEPT,
+            )
+        )
+        repo.save_event(
+            _make_event(
+                pge,
+                ratepayers,
+                schema_id="codec.grind_check",
+                vertical="codec",
+                result=PromiseResult.BROKEN,
+            )
+        )
 
         score = repo.compute_integrity(pge)
         # high kept: weight 3, low broken: weight 1
@@ -342,6 +361,7 @@ class TestTrustCapital:
 # ============================================================
 # RECOVERY WORKFLOW
 # ============================================================
+
 
 class TestRecovery:
     """Recovery turns broken promises into renegotiated ones."""
@@ -434,6 +454,7 @@ class TestRecovery:
 # EVENTS QUERY
 # ============================================================
 
+
 class TestEventsQuery:
     """Test event querying with filters."""
 
@@ -509,6 +530,7 @@ class TestEventsQuery:
 # OVERDUE PROMISES
 # ============================================================
 
+
 class TestOverdue:
     """Overdue detection: pending promises past their due_by date."""
 
@@ -518,7 +540,9 @@ class TestOverdue:
         repo.save_agent(ratepayers)
 
         past_due = _make_event(
-            pge, ratepayers, result=PromiseResult.PENDING,
+            pge,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=datetime(2024, 1, 1),
         )
         repo.save_event(past_due)
@@ -533,7 +557,9 @@ class TestOverdue:
         repo.save_agent(ratepayers)
 
         future = _make_event(
-            pge, ratepayers, result=PromiseResult.PENDING,
+            pge,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=datetime(2099, 12, 31),
         )
         repo.save_event(future)
@@ -547,7 +573,9 @@ class TestOverdue:
         repo.save_agent(ratepayers)
 
         no_deadline = _make_event(
-            pge, ratepayers, result=PromiseResult.PENDING,
+            pge,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=None,
         )
         repo.save_event(no_deadline)
@@ -561,7 +589,9 @@ class TestOverdue:
         repo.save_agent(ratepayers)
 
         kept = _make_event(
-            pge, ratepayers, result=PromiseResult.KEPT,
+            pge,
+            ratepayers,
+            result=PromiseResult.KEPT,
             due_by=datetime(2020, 1, 1),
         )
         repo.save_event(kept)
@@ -575,11 +605,15 @@ class TestOverdue:
         repo.save_agent(ratepayers)
 
         old = _make_event(
-            pge, ratepayers, result=PromiseResult.PENDING,
+            pge,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=datetime(2022, 1, 1),
         )
         newer = _make_event(
-            pge, ratepayers, result=PromiseResult.PENDING,
+            pge,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=datetime(2024, 6, 1),
         )
         repo.save_event(newer)
@@ -597,11 +631,15 @@ class TestOverdue:
         repo.save_agent(ratepayers)
 
         pge_event = _make_event(
-            pge, ratepayers, result=PromiseResult.PENDING,
+            pge,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=datetime(2023, 1, 1),
         )
         other_event = _make_event(
-            other, ratepayers, result=PromiseResult.PENDING,
+            other,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=datetime(2023, 1, 1),
         )
         repo.save_event(pge_event)
@@ -616,11 +654,15 @@ class TestOverdue:
         repo.save_agent(ratepayers)
 
         soon = _make_event(
-            pge, ratepayers, result=PromiseResult.PENDING,
+            pge,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=datetime(2025, 6, 1),
         )
         later = _make_event(
-            pge, ratepayers, result=PromiseResult.PENDING,
+            pge,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=datetime(2030, 1, 1),
         )
         repo.save_event(soon)
@@ -636,7 +678,9 @@ class TestOverdue:
         repo.save_agent(ratepayers)
 
         event = _make_event(
-            pge, ratepayers, result=PromiseResult.PENDING,
+            pge,
+            ratepayers,
+            result=PromiseResult.PENDING,
             due_by=datetime(2025, 6, 1),
         )
         repo.save_event(event)
@@ -653,6 +697,7 @@ class TestOverdue:
 # ============================================================
 # VOUCHING NETWORK
 # ============================================================
+
 
 class TestVouching:
     """Trust network: agents vouch for each other."""
@@ -776,6 +821,7 @@ class TestVouching:
 # ============================================================
 # PROMISE VERSIONING
 # ============================================================
+
 
 class TestVersioning:
     """Schema version tracking preserves history on material changes."""

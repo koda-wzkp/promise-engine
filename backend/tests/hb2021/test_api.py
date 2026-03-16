@@ -14,10 +14,10 @@ from app.promise_engine.verticals.hb2021.verification import EmissionsTrajectory
 from app.promise_engine.verticals.hb2021.schemas import HB2021_SCHEMAS
 from app.promise_engine.verticals.hb2021.agents import HB2021_AGENTS
 
-
 # ============================================================
 # DASHBOARD ENDPOINT — Unit tests (no Flask needed)
 # ============================================================
+
 
 class TestDashboardData:
     """Test the dashboard data assembly logic."""
@@ -25,6 +25,7 @@ class TestDashboardData:
     def test_dashboard_has_all_utilities(self):
         """Dashboard should include PGE, PacifiCorp, and ESS."""
         from app.api.hb2021 import _build_utility_summaries
+
         summaries, data_source = _build_utility_summaries()
         ids = [s["id"] for s in summaries]
         assert "pge" in ids
@@ -34,6 +35,7 @@ class TestDashboardData:
     def test_utility_summary_structure(self):
         """Each utility summary has required fields."""
         from app.api.hb2021 import _build_utility_summaries
+
         summaries, _ = _build_utility_summaries()
         for summary in summaries:
             assert "id" in summary
@@ -47,6 +49,7 @@ class TestDashboardData:
     def test_emissions_data_is_consistent(self):
         """Emissions data in dashboard matches verifier output."""
         from app.api.hb2021 import _build_utility_summaries
+
         verifier = EmissionsTrajectoryVerifier()
         summaries, _ = _build_utility_summaries()
 
@@ -58,12 +61,12 @@ class TestDashboardData:
             # Verify independently
             result = verifier.verify(actual, year, uid)
             assert summary["emissions"]["gap_pct"] == result.details["gap_pct"]
-            assert summary["emissions"]["expected_reduction_pct"] == \
-                result.details["expected_reduction_pct"]
+            assert summary["emissions"]["expected_reduction_pct"] == result.details["expected_reduction_pct"]
 
     def test_projections_match_verifier(self):
         """Dashboard projections must match standalone verifier output."""
         from app.api.hb2021 import _build_utility_summaries
+
         verifier = EmissionsTrajectoryVerifier()
         summaries, _ = _build_utility_summaries()
 
@@ -81,6 +84,7 @@ class TestDashboardData:
     def test_trajectory_expected_covers_full_range(self):
         """Trajectory expected data should cover 2020-2040."""
         from app.api.hb2021 import _build_utility_summaries
+
         summaries, _ = _build_utility_summaries()
         for summary in summaries:
             trajectory = summary["emissions"]["trajectory_expected"]
@@ -92,6 +96,7 @@ class TestDashboardData:
     def test_data_source_reported(self):
         """Build function reports whether data is from DB or static."""
         from app.api.hb2021 import _build_utility_summaries
+
         _, data_source = _build_utility_summaries()
         assert data_source in ("database", "static")
 
@@ -99,6 +104,7 @@ class TestDashboardData:
 # ============================================================
 # TRAJECTORY ENDPOINT — Unit tests
 # ============================================================
+
 
 class TestTrajectoryEndpoint:
     """Test trajectory calculation logic."""
@@ -128,6 +134,7 @@ class TestTrajectoryEndpoint:
 # ============================================================
 # VERIFY-EMISSIONS ENDPOINT — Unit tests
 # ============================================================
+
 
 class TestVerifyEmissionsEndpoint:
     """Test emissions verification logic used by the endpoint."""
@@ -162,33 +169,29 @@ class TestVerifyEmissionsEndpoint:
 # AGENTS ENDPOINT — Unit tests
 # ============================================================
 
+
 class TestAgentsEndpoint:
     """Test agent listing and filtering logic."""
 
     def test_filter_by_role(self):
         """Filtering by hb2021_role works correctly."""
-        promisers = [a for a in HB2021_AGENTS.values()
-                     if a.metadata.get("hb2021_role") == "promiser"]
+        promisers = [a for a in HB2021_AGENTS.values() if a.metadata.get("hb2021_role") == "promiser"]
         assert len(promisers) == 3  # pge, pacificorp, ess
 
-        verifiers = [a for a in HB2021_AGENTS.values()
-                     if a.metadata.get("hb2021_role") == "verifier"]
+        verifiers = [a for a in HB2021_AGENTS.values() if a.metadata.get("hb2021_role") == "verifier"]
         assert len(verifiers) == 2  # puc, deq
 
     def test_filter_by_type(self):
         """Filtering by agent type works correctly."""
         from app.promise_engine.core.models import AgentType
 
-        businesses = [a for a in HB2021_AGENTS.values()
-                      if a.type == AgentType.BUSINESS]
+        businesses = [a for a in HB2021_AGENTS.values() if a.type == AgentType.BUSINESS]
         assert len(businesses) == 3
 
-        communities = [a for a in HB2021_AGENTS.values()
-                       if a.type == AgentType.COMMUNITY]
+        communities = [a for a in HB2021_AGENTS.values() if a.type == AgentType.COMMUNITY]
         assert len(communities) == 4
 
-        platforms = [a for a in HB2021_AGENTS.values()
-                     if a.type == AgentType.PLATFORM]
+        platforms = [a for a in HB2021_AGENTS.values() if a.type == AgentType.PLATFORM]
         assert len(platforms) == 4  # puc, deq, legislature, cub
 
     def test_agent_lookup_by_id(self):
@@ -205,6 +208,7 @@ class TestAgentsEndpoint:
 # ============================================================
 # SCHEMAS ENDPOINT — Unit tests
 # ============================================================
+
 
 class TestSchemasEndpoint:
     """Test schema listing logic."""
@@ -241,6 +245,7 @@ class TestSchemasEndpoint:
 # ============================================================
 # RESPONSE FORMAT CONSISTENCY
 # ============================================================
+
 
 class TestResponseFormat:
     """Verify API response format conventions."""

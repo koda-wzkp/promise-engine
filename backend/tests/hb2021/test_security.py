@@ -17,10 +17,10 @@ from app.promise_engine.verticals.hb2021.verification import (
 from app.promise_engine.verticals.hb2021.schemas import HB2021_SCHEMAS
 from app.promise_engine.verticals.hb2021.agents import HB2021_AGENTS
 
-
 # ============================================================
 # INPUT VALIDATION — Malicious inputs to verification
 # ============================================================
+
 
 class TestInputValidation:
     """Verify the verifier handles malicious/malformed inputs safely."""
@@ -61,8 +61,9 @@ class TestInputValidation:
     def test_nan_reduction_does_not_crash(self, verifier):
         """NaN input should not produce NaN output or crash."""
         import math
+
         try:
-            result = verifier.verify(float('nan'), 2025, "pge")
+            result = verifier.verify(float("nan"), 2025, "pge")
             # If it doesn't crash, the result should be deterministic
             assert result is not None
         except (ValueError, TypeError):
@@ -72,7 +73,7 @@ class TestInputValidation:
     def test_infinity_reduction(self, verifier):
         """Infinity input should not cause infinite loops."""
         try:
-            result = verifier.verify(float('inf'), 2025, "pge")
+            result = verifier.verify(float("inf"), 2025, "pge")
             assert result is not None
         except (ValueError, TypeError, OverflowError):
             pass
@@ -88,6 +89,7 @@ class TestInputValidation:
 # INJECTION ATTACKS — SQL/XSS/Command via string fields
 # ============================================================
 
+
 class TestInjection:
     """Test that string inputs cannot be used for injection attacks."""
 
@@ -101,7 +103,7 @@ class TestInjection:
 
     XSS_PAYLOADS = [
         '<script>alert("xss")</script>',
-        '<img src=x onerror=alert(1)>',
+        "<img src=x onerror=alert(1)>",
         '"><svg onload=alert(1)>',
         "javascript:alert(document.cookie)",
         '<iframe src="https://evil.com">',
@@ -140,23 +142,24 @@ class TestInjection:
     def test_agent_ids_are_safe_strings(self, agents):
         """All agent IDs should be simple alphanumeric + underscore."""
         import re
-        safe_pattern = re.compile(r'^[a-z][a-z0-9_]*$')
+
+        safe_pattern = re.compile(r"^[a-z][a-z0-9_]*$")
         for agent_id in agents:
-            assert safe_pattern.match(agent_id), \
-                f"Agent ID '{agent_id}' contains unsafe characters"
+            assert safe_pattern.match(agent_id), f"Agent ID '{agent_id}' contains unsafe characters"
 
     def test_schema_ids_are_safe_strings(self, schemas):
         """All schema IDs should be safe namespace.name format."""
         import re
-        safe_pattern = re.compile(r'^[a-z][a-z0-9]*\.[a-z][a-z0-9_]*$')
+
+        safe_pattern = re.compile(r"^[a-z][a-z0-9]*\.[a-z][a-z0-9_]*$")
         for schema_id in schemas:
-            assert safe_pattern.match(schema_id), \
-                f"Schema ID '{schema_id}' contains unsafe characters"
+            assert safe_pattern.match(schema_id), f"Schema ID '{schema_id}' contains unsafe characters"
 
 
 # ============================================================
 # TYPE CONFUSION
 # ============================================================
+
 
 class TestTypeConfusion:
     """Ensure the system handles wrong types gracefully."""
@@ -189,6 +192,7 @@ class TestTypeConfusion:
 # SCHEMA BYPASS — Can verification rules be circumvented?
 # ============================================================
 
+
 class TestSchemaBypass:
     """Test that verification rules cannot be bypassed."""
 
@@ -196,8 +200,7 @@ class TestSchemaBypass:
         """Every schema has required fields that can't be omitted."""
         for schema_id, schema in schemas.items():
             required = schema.schema_json.get("required", [])
-            assert len(required) >= 1, \
-                f"Schema {schema_id} has no required fields — can be submitted empty"
+            assert len(required) >= 1, f"Schema {schema_id} has no required fields — can be submitted empty"
 
     def test_utility_id_is_enum_constrained(self, schemas):
         """Utility IDs are constrained to known values — can't invent new ones."""
@@ -238,6 +241,7 @@ class TestSchemaBypass:
 # DATA INTEGRITY — Can results be forged?
 # ============================================================
 
+
 class TestDataIntegrity:
     """Verify that verification results are trustworthy."""
 
@@ -245,13 +249,18 @@ class TestDataIntegrity:
         """Every result must include complete audit trail."""
         result = verifier.verify(27.0, 2022, "pge")
         required_fields = [
-            "utility_id", "reporting_year", "actual_reduction_pct",
-            "expected_reduction_pct", "gap_pct", "next_target_year",
-            "next_target_pct", "years_remaining", "tolerance_pct",
+            "utility_id",
+            "reporting_year",
+            "actual_reduction_pct",
+            "expected_reduction_pct",
+            "gap_pct",
+            "next_target_year",
+            "next_target_pct",
+            "years_remaining",
+            "tolerance_pct",
         ]
         for field in required_fields:
-            assert field in result.details, \
-                f"Missing field in verification details: {field}"
+            assert field in result.details, f"Missing field in verification details: {field}"
 
     def test_gap_calculation_is_correct(self, verifier):
         """Gap = expected - actual. Verify the math."""
@@ -281,6 +290,7 @@ class TestDataIntegrity:
 # ============================================================
 # RESOURCE EXHAUSTION / DoS
 # ============================================================
+
 
 class TestResourceExhaustion:
     """Verify the system handles resource-intensive requests safely."""
@@ -317,6 +327,7 @@ class TestResourceExhaustion:
 # INFORMATION LEAKAGE
 # ============================================================
 
+
 class TestInformationLeakage:
     """Verify the system doesn't leak sensitive information."""
 
@@ -333,8 +344,9 @@ class TestInformationLeakage:
         sensitive_keys = {"password", "secret", "api_key", "token", "credential"}
         for agent_id, agent in agents.items():
             for key in agent.metadata:
-                assert key.lower() not in sensitive_keys, \
-                    f"Agent {agent_id} has potentially sensitive metadata key: {key}"
+                assert (
+                    key.lower() not in sensitive_keys
+                ), f"Agent {agent_id} has potentially sensitive metadata key: {key}"
 
     def test_schema_rules_dont_contain_secrets(self, schemas):
         """Schema verification rules should not contain secrets."""

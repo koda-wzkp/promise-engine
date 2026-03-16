@@ -232,10 +232,7 @@ class PromiseEngine:
         for rule in rules:
             # Check if rule applies
             if_condition = rule.get("if", {})
-            applies = all(
-                input_context.get(key) == value
-                for key, value in if_condition.items()
-            )
+            applies = all(input_context.get(key) == value for key, value in if_condition.items())
 
             if applies:
                 # Check then condition
@@ -249,7 +246,7 @@ class PromiseEngine:
                             return VerificationResult.failure(
                                 f"{key}={value} not compatible with {if_condition}",
                                 expected=constraints["enum"],
-                                actual=value
+                                actual=value,
                             )
 
         return VerificationResult.success()
@@ -289,11 +286,7 @@ class PromiseEngine:
     # ============================================================
 
     def get_integrity(
-        self,
-        agent: Agent,
-        vertical: Optional[str] = None,
-        since: Optional[datetime] = None,
-        refresh: bool = False
+        self, agent: Agent, vertical: Optional[str] = None, since: Optional[datetime] = None, refresh: bool = False
     ) -> IntegrityScore:
         """Get integrity score for an agent.
 
@@ -344,11 +337,7 @@ class PromiseEngine:
 
         return score
 
-    def get_pending(
-        self,
-        promiser: Agent,
-        due_before: Optional[datetime] = None
-    ) -> List[PromiseEvent]:
+    def get_pending(self, promiser: Agent, due_before: Optional[datetime] = None) -> List[PromiseEvent]:
         """Get pending promises for an agent.
 
         Args:
@@ -395,14 +384,8 @@ class PromiseEngine:
             vertical=db_event.vertical,
             promise_schema_id=db_event.promise_schema_id,
             promise_version=db_event.promise_version,
-            promiser=Agent(
-                type=AgentType(db_event.promiser_type),
-                id=db_event.promiser_id
-            ),
-            promisee=Agent(
-                type=AgentType(db_event.promisee_type),
-                id=db_event.promisee_id
-            ),
+            promiser=Agent(type=AgentType(db_event.promiser_type), id=db_event.promiser_id),
+            promisee=Agent(type=AgentType(db_event.promisee_type), id=db_event.promisee_id),
             input_context=db_event.input_context,
             output=db_event.output,
             result=PromiseResult(db_event.result),

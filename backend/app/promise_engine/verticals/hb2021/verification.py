@@ -12,7 +12,6 @@ from typing import Dict, Optional
 
 from app.promise_engine.core.models import VerificationResult, PromiseResult
 
-
 # Statutory targets from HB 2021 §3(1)
 TARGETS = [
     (2030, 80.0),
@@ -27,6 +26,7 @@ BASELINE_REDUCTION = 0.0
 @dataclass
 class TrajectoryPoint:
     """A point on the expected emissions reduction trajectory."""
+
     year: int
     expected_reduction_pct: float
     next_target_year: int

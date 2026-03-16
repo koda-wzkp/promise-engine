@@ -14,18 +14,22 @@ promises and that the verification logic produces consistent results.
 
 import pytest
 from app.promise_engine.core.models import (
-    PromiseResult, AgentType, VerificationResult,
+    PromiseResult,
+    AgentType,
+    VerificationResult,
 )
 from app.promise_engine.verticals.hb2021.verification import (
-    EmissionsTrajectoryVerifier, TARGETS, BASELINE_YEAR,
+    EmissionsTrajectoryVerifier,
+    TARGETS,
+    BASELINE_YEAR,
 )
 from app.promise_engine.verticals.hb2021.schemas import HB2021_SCHEMAS
 from app.promise_engine.verticals.hb2021.agents import HB2021_AGENTS
 
-
 # ============================================================
 # AXIOM 1: AUTONOMY — Only the promiser can make a promise
 # ============================================================
+
 
 class TestAutonomy:
     """Verify that each schema has a clear promiser role and
@@ -68,6 +72,7 @@ class TestAutonomy:
 # AXIOM 2: VOLUNTARY — Promises cannot be imposed
 # ============================================================
 
+
 class TestVoluntary:
     """In HB 2021, promises are imposed by statute — which creates a tension
     with Promise Theory. The schemas should make this explicit."""
@@ -78,9 +83,9 @@ class TestVoluntary:
         for schema_id, schema in schemas.items():
             assert schema.vertical == "hb2021"
             # The description should reference statutory context
-            assert any(word in schema.description.lower() for word in
-                       ["utility", "ban", "must", "require", "promise"]), \
-                f"Schema {schema_id} should reference statutory obligation"
+            assert any(
+                word in schema.description.lower() for word in ["utility", "ban", "must", "require", "promise"]
+            ), f"Schema {schema_id} should reference statutory obligation"
 
     def test_rate_impact_has_escape_valve(self, schemas):
         """The 6% rate cap is the law's acknowledgment that imposed promises
@@ -98,6 +103,7 @@ class TestVoluntary:
 # AXIOM 3: OBSERVABLE — Promises must be verifiable
 # ============================================================
 
+
 class TestObservable:
     """Each promise must have a defined verification method."""
 
@@ -105,15 +111,17 @@ class TestObservable:
         """Every schema specifies how it gets verified."""
         for schema_id, schema in schemas.items():
             assert schema.verification_type in (
-                "automatic", "reported", "witnessed", "inferred"
+                "automatic",
+                "reported",
+                "witnessed",
+                "inferred",
             ), f"Schema {schema_id} has invalid verification_type"
 
     def test_all_schemas_have_verification_rules(self, schemas):
         """Every schema has at least one verification rule."""
         for schema_id, schema in schemas.items():
             rules = schema.verification_rules.get("rules", [])
-            assert len(rules) >= 1, \
-                f"Schema {schema_id} has no verification rules"
+            assert len(rules) >= 1, f"Schema {schema_id} has no verification rules"
 
     def test_emissions_is_automatic(self, schemas):
         """Emissions targets can be automatically verified against trajectory."""
@@ -132,20 +140,19 @@ class TestObservable:
         valid_results = {"kept", "broken", "pending", "blocked", "renegotiated"}
         for schema_id, schema in schemas.items():
             for rule in schema.verification_rules.get("rules", []):
-                assert rule.get("result") in valid_results, \
-                    f"Schema {schema_id} has rule with invalid result: {rule}"
+                assert rule.get("result") in valid_results, f"Schema {schema_id} has rule with invalid result: {rule}"
 
     def test_every_rule_has_a_reason(self, schemas):
         """Each rule must explain WHY the promise is in that state."""
         for schema_id, schema in schemas.items():
             for rule in schema.verification_rules.get("rules", []):
-                assert rule.get("reason"), \
-                    f"Schema {schema_id} has rule without reason: {rule}"
+                assert rule.get("reason"), f"Schema {schema_id} has rule without reason: {rule}"
 
 
 # ============================================================
 # AXIOM 4: IDEMPOTENT — Same inputs → same result
 # ============================================================
+
 
 class TestIdempotent:
     """Verification must be deterministic."""
@@ -185,6 +192,7 @@ class TestIdempotent:
 # AXIOM 5: COMPOSABLE — Promises form directed graphs
 # ============================================================
 
+
 class TestComposable:
     """HB 2021 has cascading promises: emissions → CEP → community → rates.
     If upstream breaks, downstream is affected."""
@@ -197,8 +205,7 @@ class TestComposable:
         if not r2030.kept:
             proj = verifier.project_trajectory(27.0, 2022)
             for year in [2030, 2035, 2040]:
-                assert not proj[year]["on_track"], \
-                    f"PGE projected on track for {year} despite being behind now"
+                assert not proj[year]["on_track"], f"PGE projected on track for {year} despite being behind now"
 
     def test_pacificorp_total_cascade_failure(self, verifier):
         """PacifiCorp at 13% fails all three targets — cascade collapse."""
@@ -229,13 +236,13 @@ class TestComposable:
             utility_prop = props.get("utility_id", {})
             if "enum" in utility_prop:
                 for uid in utility_prop["enum"]:
-                    assert uid in agents, \
-                        f"Schema {schema_id} references unknown agent: {uid}"
+                    assert uid in agents, f"Schema {schema_id} references unknown agent: {uid}"
 
 
 # ============================================================
 # AXIOM 6: FALSIFIABLE — Clear failure conditions
 # ============================================================
+
 
 class TestFalsifiable:
     """Every promise must have at least one way to be broken."""
@@ -245,8 +252,7 @@ class TestFalsifiable:
         for schema_id, schema in schemas.items():
             rules = schema.verification_rules.get("rules", [])
             broken_rules = [r for r in rules if r.get("result") == "broken"]
-            assert len(broken_rules) >= 1, \
-                f"Schema {schema_id} has no 'broken' state — not falsifiable"
+            assert len(broken_rules) >= 1, f"Schema {schema_id} has no 'broken' state — not falsifiable"
 
     def test_emissions_broken_when_behind_trajectory(self, verifier):
         """Emissions promise breaks when actual < expected - tolerance."""
@@ -263,13 +269,13 @@ class TestFalsifiable:
         """If new_gas_plants_permitted > 0, the ban is broken."""
         rules = schemas["hb2021.fossil_fuel_ban"].verification_rules["rules"]
         broken_rule = next(r for r in rules if r["result"] == "broken")
-        assert "new_gas_plants_permitted > 0" in broken_rule["condition"] or \
-               "new gas" in broken_rule["reason"].lower()
+        assert "new_gas_plants_permitted > 0" in broken_rule["condition"] or "new gas" in broken_rule["reason"].lower()
 
 
 # ============================================================
 # TRAJECTORY VERIFICATION — The core math
 # ============================================================
+
 
 class TestTrajectoryMath:
     """Verify the linear interpolation is correct against statutory targets."""
@@ -327,8 +333,9 @@ class TestTrajectoryMath:
         prev = 0.0
         for year in range(BASELINE_YEAR, 2041):
             tp = verifier.expected_reduction(year)
-            assert tp.expected_reduction_pct >= prev, \
-                f"Trajectory decreased at {year}: {prev} → {tp.expected_reduction_pct}"
+            assert (
+                tp.expected_reduction_pct >= prev
+            ), f"Trajectory decreased at {year}: {prev} → {tp.expected_reduction_pct}"
             prev = tp.expected_reduction_pct
 
     def test_years_remaining_decreases(self, verifier):
@@ -341,6 +348,7 @@ class TestTrajectoryMath:
 # ============================================================
 # VERIFICATION OUTCOMES
 # ============================================================
+
 
 class TestVerificationOutcomes:
     """Test all possible verification outcomes."""
@@ -387,9 +395,7 @@ class TestVerificationOutcomes:
     def test_zero_tolerance_strict_mode(self, strict_verifier):
         """With zero tolerance, any gap breaks the promise."""
         tp = strict_verifier.expected_reduction(2025)
-        result = strict_verifier.verify(
-            tp.expected_reduction_pct - 0.1, 2025, "pge"
-        )
+        result = strict_verifier.verify(tp.expected_reduction_pct - 0.1, 2025, "pge")
         assert not result.kept
 
     def test_severity_classification(self, verifier):
@@ -413,6 +419,7 @@ class TestVerificationOutcomes:
 # ============================================================
 # PROJECTIONS
 # ============================================================
+
 
 class TestProjections:
     """Test forward projections from current pace."""
@@ -472,6 +479,7 @@ class TestProjections:
 # SCHEMA INTEGRITY
 # ============================================================
 
+
 class TestSchemaIntegrity:
     """Verify the structural integrity of all HB2021 schemas."""
 
@@ -482,34 +490,32 @@ class TestSchemaIntegrity:
     def test_schema_ids_are_namespaced(self, schemas):
         """All schema IDs must be prefixed with 'hb2021.'."""
         for schema_id in schemas:
-            assert schema_id.startswith("hb2021."), \
-                f"Schema ID not namespaced: {schema_id}"
+            assert schema_id.startswith("hb2021."), f"Schema ID not namespaced: {schema_id}"
 
     def test_all_schemas_are_high_or_medium_stakes(self, schemas):
         """HB 2021 is serious legislation — no low-stakes schemas."""
         for schema_id, schema in schemas.items():
-            assert schema.stakes in ("high", "medium"), \
-                f"Schema {schema_id} has unexpectedly low stakes: {schema.stakes}"
+            assert schema.stakes in (
+                "high",
+                "medium",
+            ), f"Schema {schema_id} has unexpectedly low stakes: {schema.stakes}"
 
     def test_all_schemas_have_required_fields(self, schemas):
         """Each schema must define required fields in its JSON schema."""
         for schema_id, schema in schemas.items():
-            assert "required" in schema.schema_json, \
-                f"Schema {schema_id} has no required fields"
+            assert "required" in schema.schema_json, f"Schema {schema_id} has no required fields"
             assert len(schema.schema_json["required"]) >= 1
 
     def test_all_schemas_have_domain_tags(self, schemas):
         """Each schema should be tagged for discoverability."""
         for schema_id, schema in schemas.items():
-            assert len(schema.domain_tags) >= 2, \
-                f"Schema {schema_id} needs more domain tags"
+            assert len(schema.domain_tags) >= 2, f"Schema {schema_id} needs more domain tags"
             assert "climate" in schema.domain_tags or "energy" in schema.domain_tags
 
     def test_all_schemas_are_training_eligible(self, schemas):
         """HB 2021 data should train the model on regulatory compliance."""
         for schema_id, schema in schemas.items():
-            assert schema.training_eligible, \
-                f"Schema {schema_id} should be training_eligible"
+            assert schema.training_eligible, f"Schema {schema_id} should be training_eligible"
 
     def test_schema_json_is_valid_structure(self, schemas):
         """Each schema_json should be a valid JSON Schema object."""
@@ -521,6 +527,7 @@ class TestSchemaIntegrity:
 # ============================================================
 # AGENT INTEGRITY
 # ============================================================
+
 
 class TestAgentIntegrity:
     """Verify the agent registry is complete and consistent."""
@@ -536,14 +543,12 @@ class TestAgentIntegrity:
 
     def test_at_least_two_utilities(self, agents):
         """At least PGE and PacifiCorp as utility promisers."""
-        utilities = [a for a in agents.values()
-                     if a.metadata.get("hb2021_role") == "promiser"]
+        utilities = [a for a in agents.values() if a.metadata.get("hb2021_role") == "promiser"]
         assert len(utilities) >= 2
 
     def test_at_least_two_regulators(self, agents):
         """At least PUC and DEQ as regulators."""
-        regulators = [a for a in agents.values()
-                      if a.metadata.get("hb2021_role") == "verifier"]
+        regulators = [a for a in agents.values() if a.metadata.get("hb2021_role") == "verifier"]
         assert len(regulators) >= 2
 
     def test_agent_ids_are_unique(self, agents):
@@ -554,11 +559,9 @@ class TestAgentIntegrity:
     def test_every_agent_has_name(self, agents):
         """Every agent must have a human-readable name."""
         for agent_id, agent in agents.items():
-            assert agent.metadata.get("name"), \
-                f"Agent {agent_id} has no name"
+            assert agent.metadata.get("name"), f"Agent {agent_id} has no name"
 
     def test_every_agent_has_short_code(self, agents):
         """Every agent must have a short code for display."""
         for agent_id, agent in agents.items():
-            assert agent.metadata.get("short"), \
-                f"Agent {agent_id} has no short code"
+            assert agent.metadata.get("short"), f"Agent {agent_id} has no short code"

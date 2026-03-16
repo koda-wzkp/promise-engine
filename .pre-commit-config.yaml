@@ -1,0 +1,54 @@
+# Pre-commit hooks for Promise Engine
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # General file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: detect-private-key
+
+  # Black — auto-format Python (fixes in place, then passes)
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        files: ^backend/
+        args: ['--config', 'backend/pyproject.toml']
+
+  # Flake8 — linting
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        files: ^backend/app/
+        args: ['--max-line-length=120', '--extend-ignore=E203,W503']
+
+  # Mypy — type checking (local hook reads pyproject.toml)
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: bash -c 'cd backend && python -m mypy app/ --config-file pyproject.toml'
+        language: system
+        files: ^backend/app/
+        pass_filenames: false
+        types: [python]
+
+  # Pytest — run tests on backend changes
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: bash -c 'cd backend && python -m pytest tests/ -x -q --tb=short 2>&1 | tail -20'
+        language: system
+        pass_filenames: false
+        files: ^backend/
+        always_run: false

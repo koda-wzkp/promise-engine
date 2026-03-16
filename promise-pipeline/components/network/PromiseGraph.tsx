@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { Promise as PromiseType, Agent, Threat } from "@/lib/types/promise";
 import { buildPromiseGraph, layoutGraph } from "@/lib/simulation/graph";
+import { layoutWatershed, layoutCanopy, layoutStrata } from "@/lib/simulation/layouts";
 import type { FiveFieldDiagnostic, HeuristicCPTEntry, ProbabilisticCascadeResult } from "@/lib/types/analysis";
 import {
   precomputeNodeEncodings,
@@ -13,6 +14,7 @@ import { GraphNodeComponent } from "./GraphNode";
 import { GraphEdgeComponent } from "./GraphEdge";
 import { EnrichedTooltip } from "./EnrichedTooltip";
 import { CascadeRipple } from "./CascadeRipple";
+import type { ViewMode } from "./ViewSwitcher";
 
 interface PromiseGraphProps {
   promises: PromiseType[];
@@ -35,6 +37,8 @@ interface PromiseGraphProps {
   cascadeActive?: boolean;
   /** Source promise ID for cascade ripple */
   cascadeSourceId?: string;
+  /** Visualization mode */
+  viewMode?: ViewMode;
 }
 
 export function PromiseGraphView({
@@ -53,14 +57,24 @@ export function PromiseGraphView({
   probabilistic,
   cascadeActive = false,
   cascadeSourceId,
+  viewMode,
 }: PromiseGraphProps) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [legendExpanded, setLegendExpanded] = useState(false);
 
   const graph = useMemo(() => {
     const raw = buildPromiseGraph(promises, agents, threats);
-    return layoutGraph(raw, width, height);
-  }, [promises, agents, threats, width, height]);
+    switch (viewMode) {
+      case "watershed":
+        return layoutWatershed(raw, promises, width, height);
+      case "canopy":
+        return layoutCanopy(raw, promises, width, height);
+      case "strata":
+        return layoutStrata(raw, promises, width, height);
+      default:
+        return layoutGraph(raw, width, height);
+    }
+  }, [promises, agents, threats, width, height, viewMode]);
 
   const nodeMap = useMemo(
     () => new Map(graph.nodes.map((n) => [n.id, n])),

@@ -21,10 +21,9 @@ import {
   calculateTrend,
 } from "@/lib/simulation/scoring";
 import { isPromiseDueToday, todayISO, daysAgo } from "@/lib/utils/formatting";
-import GardenCanvas from "@/components/garden/GardenCanvas";
+import GardenView from "@/components/garden/GardenView";
 import PlantInfoCard from "@/components/garden/PlantInfoCard";
 import GardenOverlay from "@/components/garden/GardenOverlay";
-import AccessibleGardenDOM from "@/components/shared/AccessibleGardenDOM";
 import type { PersonalDomain } from "@/lib/types/personal";
 
 const EMPTY_GARDEN: GardenState = {
@@ -248,17 +247,13 @@ export default function GardenPage() {
         />
       )}
 
-      {/* Garden canvas */}
-      <GardenCanvas
-        gardenState={gardenState}
-        onPlantTap={setSelectedPlant}
-      />
-
-      {/* Accessible DOM layer */}
-      <AccessibleGardenDOM
+      {/* Procedural pixel garden */}
+      <GardenView
         gardenState={gardenState}
         promises={promises}
-        onPlantFocus={setSelectedPlant}
+        checkIns={checkIns}
+        onPlantSelect={setSelectedPlant}
+        className="absolute inset-0"
       />
 
       {/* Plant info card */}

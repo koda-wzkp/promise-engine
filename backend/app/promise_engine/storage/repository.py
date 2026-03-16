@@ -76,7 +76,7 @@ class PromiseRepository:
         schema_id: Optional[str] = None,
         result: Optional[PromiseResult] = None,
         since: Optional[datetime] = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[PromiseEventDB]:
         """Query promise events."""
         query = self.db.query(PromiseEventDB)
@@ -84,14 +84,8 @@ class PromiseRepository:
         if agent:
             query = query.filter(
                 or_(
-                    and_(
-                        PromiseEventDB.promiser_type == agent.type.value,
-                        PromiseEventDB.promiser_id == agent.id
-                    ),
-                    and_(
-                        PromiseEventDB.promisee_type == agent.type.value,
-                        PromiseEventDB.promisee_id == agent.id
-                    )
+                    and_(PromiseEventDB.promiser_type == agent.type.value, PromiseEventDB.promiser_id == agent.id),
+                    and_(PromiseEventDB.promisee_type == agent.type.value, PromiseEventDB.promisee_id == agent.id),
                 )
             )
 
@@ -109,16 +103,12 @@ class PromiseRepository:
 
         return query.order_by(PromiseEventDB.timestamp.desc()).limit(limit).all()
 
-    def get_pending(
-        self,
-        promiser: Agent,
-        due_before: Optional[datetime] = None
-    ) -> List[PromiseEventDB]:
+    def get_pending(self, promiser: Agent, due_before: Optional[datetime] = None) -> List[PromiseEventDB]:
         """Get pending promises for an agent."""
         query = self.db.query(PromiseEventDB).filter(
             PromiseEventDB.promiser_type == promiser.type.value,
             PromiseEventDB.promiser_id == promiser.id,
-            PromiseEventDB.result == PromiseResult.PENDING.value
+            PromiseEventDB.result == PromiseResult.PENDING.value,
         )
 
         if due_before:
@@ -133,13 +123,18 @@ class PromiseRepository:
     ) -> List[PromiseEventDB]:
         """Get overdue promises — pending events past their due_by date."""
         now = as_of or datetime.utcnow()
-        return self.db.query(PromiseEventDB).filter(
-            PromiseEventDB.promiser_type == promiser.type.value,
-            PromiseEventDB.promiser_id == promiser.id,
-            PromiseEventDB.result == PromiseResult.PENDING.value,
-            PromiseEventDB.due_by.isnot(None),
-            PromiseEventDB.due_by < now,
-        ).order_by(PromiseEventDB.due_by.asc()).all()
+        return (
+            self.db.query(PromiseEventDB)
+            .filter(
+                PromiseEventDB.promiser_type == promiser.type.value,
+                PromiseEventDB.promiser_id == promiser.id,
+                PromiseEventDB.result == PromiseResult.PENDING.value,
+                PromiseEventDB.due_by.isnot(None),
+                PromiseEventDB.due_by < now,
+            )
+            .order_by(PromiseEventDB.due_by.asc())
+            .all()
+        )
 
     # ============================================================
     # PROMISE SCHEMAS
@@ -152,16 +147,14 @@ class PromiseRepository:
         verification_rules, stakes), the old version is archived and
         the version number is auto-incremented.
         """
-        existing = self.db.query(PromiseSchemaDB).filter(
-            PromiseSchemaDB.id == schema.id
-        ).first()
+        existing = self.db.query(PromiseSchemaDB).filter(PromiseSchemaDB.id == schema.id).first()
 
         if existing:
             # Detect material changes that warrant a new version
             changed = (
-                existing.schema_json != schema.schema_json or
-                existing.verification_rules != schema.verification_rules or
-                existing.stakes != schema.stakes
+                existing.schema_json != schema.schema_json
+                or existing.verification_rules != schema.verification_rules
+                or existing.stakes != schema.stakes
             )
 
             if changed:
@@ -220,10 +213,14 @@ class PromiseRepository:
 
         Idempotent — skips if this exact version is already archived.
         """
-        existing = self.db.query(PromiseSchemaVersionDB).filter(
-            PromiseSchemaVersionDB.schema_id == db_schema.id,
-            PromiseSchemaVersionDB.version == db_schema.version,
-        ).first()
+        existing = (
+            self.db.query(PromiseSchemaVersionDB)
+            .filter(
+                PromiseSchemaVersionDB.schema_id == db_schema.id,
+                PromiseSchemaVersionDB.version == db_schema.version,
+            )
+            .first()
+        )
 
         if existing:
             return
@@ -244,15 +241,19 @@ class PromiseRepository:
 
     def get_schema_history(self, schema_id: str) -> List[PromiseSchemaVersionDB]:
         """Get all versions of a schema, newest first."""
-        return self.db.query(PromiseSchemaVersionDB).filter(
-            PromiseSchemaVersionDB.schema_id == schema_id,
-        ).order_by(PromiseSchemaVersionDB.version.desc()).all()
+        return (
+            self.db.query(PromiseSchemaVersionDB)
+            .filter(
+                PromiseSchemaVersionDB.schema_id == schema_id,
+            )
+            .order_by(PromiseSchemaVersionDB.version.desc())
+            .all()
+        )
 
     def get_schema(self, schema_id: str, version: Optional[int] = None) -> Optional[PromiseSchemaDB]:
         """Get a promise schema by ID."""
         query = self.db.query(PromiseSchemaDB).filter(
-            PromiseSchemaDB.id == schema_id,
-            PromiseSchemaDB.deprecated_at.is_(None)
+            PromiseSchemaDB.id == schema_id, PromiseSchemaDB.deprecated_at.is_(None)
         )
 
         if version:
@@ -264,9 +265,7 @@ class PromiseRepository:
 
     def list_schemas(self, vertical: Optional[str] = None) -> List[PromiseSchemaDB]:
         """List all active schemas."""
-        query = self.db.query(PromiseSchemaDB).filter(
-            PromiseSchemaDB.deprecated_at.is_(None)
-        )
+        query = self.db.query(PromiseSchemaDB).filter(PromiseSchemaDB.deprecated_at.is_(None))
 
         if vertical:
             query = query.filter(PromiseSchemaDB.vertical == vertical)
@@ -282,7 +281,7 @@ class PromiseRepository:
         db_score = IntegrityScoreDB(
             agent_type=score.agent.type.value,
             agent_id=score.agent.id,
-            vertical=score.vertical or '_overall_',
+            vertical=score.vertical or "_overall_",
             overall_score=score.overall_score,
             total_promises=score.total_promises,
             kept_count=score.kept_count,
@@ -301,15 +300,19 @@ class PromiseRepository:
         )
 
         # Upsert
-        existing = self.db.query(IntegrityScoreDB).filter(
-            IntegrityScoreDB.agent_type == score.agent.type.value,
-            IntegrityScoreDB.agent_id == score.agent.id,
-            IntegrityScoreDB.vertical == (score.vertical or '_overall_')
-        ).first()
+        existing = (
+            self.db.query(IntegrityScoreDB)
+            .filter(
+                IntegrityScoreDB.agent_type == score.agent.type.value,
+                IntegrityScoreDB.agent_id == score.agent.id,
+                IntegrityScoreDB.vertical == (score.vertical or "_overall_"),
+            )
+            .first()
+        )
 
         if existing:
             for key, value in db_score.__dict__.items():
-                if key != '_sa_instance_state':
+                if key != "_sa_instance_state":
                     setattr(existing, key, value)
             self.db.commit()
             return existing
@@ -319,17 +322,17 @@ class PromiseRepository:
             self.db.refresh(db_score)
             return db_score
 
-    def get_integrity(
-        self,
-        agent: Agent,
-        vertical: Optional[str] = None
-    ) -> Optional[IntegrityScoreDB]:
+    def get_integrity(self, agent: Agent, vertical: Optional[str] = None) -> Optional[IntegrityScoreDB]:
         """Get integrity score for an agent."""
-        return self.db.query(IntegrityScoreDB).filter(
-            IntegrityScoreDB.agent_type == agent.type.value,
-            IntegrityScoreDB.agent_id == agent.id,
-            IntegrityScoreDB.vertical == (vertical or '_overall_')
-        ).first()
+        return (
+            self.db.query(IntegrityScoreDB)
+            .filter(
+                IntegrityScoreDB.agent_type == agent.type.value,
+                IntegrityScoreDB.agent_id == agent.id,
+                IntegrityScoreDB.vertical == (vertical or "_overall_"),
+            )
+            .first()
+        )
 
     # ============================================================
     # AGENTS
@@ -337,21 +340,14 @@ class PromiseRepository:
 
     def save_agent(self, agent: Agent) -> AgentDB:
         """Save or update an agent."""
-        existing = self.db.query(AgentDB).filter(
-            AgentDB.type == agent.type.value,
-            AgentDB.id == agent.id
-        ).first()
+        existing = self.db.query(AgentDB).filter(AgentDB.type == agent.type.value, AgentDB.id == agent.id).first()
 
         if existing:
             existing.agent_metadata = agent.metadata
             self.db.commit()
             return existing
         else:
-            db_agent = AgentDB(
-                type=agent.type.value,
-                id=agent.id,
-                agent_metadata=agent.metadata
-            )
+            db_agent = AgentDB(type=agent.type.value, id=agent.id, agent_metadata=agent.metadata)
             self.db.add(db_agent)
             self.db.commit()
             self.db.refresh(db_agent)
@@ -383,11 +379,10 @@ class PromiseRepository:
         if not event_ids:
             return 0
         ts = exported_at or datetime.utcnow()
-        count = self.db.query(PromiseEventDB).filter(
-            PromiseEventDB.id.in_(event_ids)
-        ).update(
-            {PromiseEventDB.exported_at: ts},
-            synchronize_session='fetch'
+        count = (
+            self.db.query(PromiseEventDB)
+            .filter(PromiseEventDB.id.in_(event_ids))
+            .update({PromiseEventDB.exported_at: ts}, synchronize_session="fetch")
         )
         self.db.commit()
         return count
@@ -424,9 +419,7 @@ class PromiseRepository:
         recovery_outcome: str,
     ) -> Optional[PromiseEventDB]:
         """Log a recovery action for a broken promise."""
-        event = self.db.query(PromiseEventDB).filter(
-            PromiseEventDB.id == event_id
-        ).first()
+        event = self.db.query(PromiseEventDB).filter(PromiseEventDB.id == event_id).first()
 
         if not event:
             return None
@@ -449,15 +442,11 @@ class PromiseRepository:
     # ============================================================
 
     def compute_integrity(
-        self,
-        agent: Agent,
-        vertical: Optional[str] = None,
-        since: Optional[datetime] = None
+        self, agent: Agent, vertical: Optional[str] = None, since: Optional[datetime] = None
     ) -> IntegrityScore:
         """Compute integrity score from promise events."""
         query = self.db.query(PromiseEventDB).filter(
-            PromiseEventDB.promiser_type == agent.type.value,
-            PromiseEventDB.promiser_id == agent.id
+            PromiseEventDB.promiser_type == agent.type.value, PromiseEventDB.promiser_id == agent.id
         )
 
         if vertical:
@@ -477,7 +466,7 @@ class PromiseRepository:
                 broken_count=0,
                 renegotiated_count=0,
                 pending_count=0,
-                vertical=vertical
+                vertical=vertical,
             )
 
         # Count by result
@@ -516,7 +505,7 @@ class PromiseRepository:
             recovery_rate=round(recovery_rate, 4),
             trend_30d=trend_30d,
             trend_90d=trend_90d,
-            vertical=vertical
+            vertical=vertical,
         )
 
     def _compute_trust_capital(self, events: List) -> float:
@@ -534,9 +523,7 @@ class PromiseRepository:
         schema_stakes = {}
         schema_ids = {e.promise_schema_id for e in events}
         for sid in schema_ids:
-            schema = self.db.query(PromiseSchemaDB).filter(
-                PromiseSchemaDB.id == sid
-            ).first()
+            schema = self.db.query(PromiseSchemaDB).filter(PromiseSchemaDB.id == sid).first()
             if schema:
                 schema_stakes[sid] = STAKES_WEIGHT.get(schema.stakes, 1)
             else:
@@ -601,12 +588,16 @@ class PromiseRepository:
         """
         strength = max(0.0, min(1.0, strength))
 
-        existing = self.db.query(VouchingDB).filter(
-            VouchingDB.voucher_type == voucher.type.value,
-            VouchingDB.voucher_id == voucher.id,
-            VouchingDB.vouchee_type == vouchee.type.value,
-            VouchingDB.vouchee_id == vouchee.id,
-        ).first()
+        existing = (
+            self.db.query(VouchingDB)
+            .filter(
+                VouchingDB.voucher_type == voucher.type.value,
+                VouchingDB.voucher_id == voucher.id,
+                VouchingDB.vouchee_type == vouchee.type.value,
+                VouchingDB.vouchee_id == vouchee.id,
+            )
+            .first()
+        )
 
         if existing:
             existing.strength = strength
@@ -629,13 +620,17 @@ class PromiseRepository:
 
     def revoke_vouch(self, voucher: Agent, vouchee: Agent) -> bool:
         """Revoke a vouch. Returns True if vouch existed."""
-        existing = self.db.query(VouchingDB).filter(
-            VouchingDB.voucher_type == voucher.type.value,
-            VouchingDB.voucher_id == voucher.id,
-            VouchingDB.vouchee_type == vouchee.type.value,
-            VouchingDB.vouchee_id == vouchee.id,
-            VouchingDB.revoked_at.is_(None),
-        ).first()
+        existing = (
+            self.db.query(VouchingDB)
+            .filter(
+                VouchingDB.voucher_type == voucher.type.value,
+                VouchingDB.voucher_id == voucher.id,
+                VouchingDB.vouchee_type == vouchee.type.value,
+                VouchingDB.vouchee_id == vouchee.id,
+                VouchingDB.revoked_at.is_(None),
+            )
+            .first()
+        )
 
         if not existing:
             return False
@@ -646,19 +641,29 @@ class PromiseRepository:
 
     def get_vouches_for(self, vouchee: Agent) -> List[VouchingDB]:
         """Get all active vouches FOR an agent (who vouches for them)."""
-        return self.db.query(VouchingDB).filter(
-            VouchingDB.vouchee_type == vouchee.type.value,
-            VouchingDB.vouchee_id == vouchee.id,
-            VouchingDB.revoked_at.is_(None),
-        ).order_by(VouchingDB.strength.desc()).all()
+        return (
+            self.db.query(VouchingDB)
+            .filter(
+                VouchingDB.vouchee_type == vouchee.type.value,
+                VouchingDB.vouchee_id == vouchee.id,
+                VouchingDB.revoked_at.is_(None),
+            )
+            .order_by(VouchingDB.strength.desc())
+            .all()
+        )
 
     def get_vouches_by(self, voucher: Agent) -> List[VouchingDB]:
         """Get all active vouches BY an agent (who they vouch for)."""
-        return self.db.query(VouchingDB).filter(
-            VouchingDB.voucher_type == voucher.type.value,
-            VouchingDB.voucher_id == voucher.id,
-            VouchingDB.revoked_at.is_(None),
-        ).order_by(VouchingDB.strength.desc()).all()
+        return (
+            self.db.query(VouchingDB)
+            .filter(
+                VouchingDB.voucher_type == voucher.type.value,
+                VouchingDB.voucher_id == voucher.id,
+                VouchingDB.revoked_at.is_(None),
+            )
+            .order_by(VouchingDB.strength.desc())
+            .all()
+        )
 
     def compute_vouching_score(self, agent: Agent) -> Dict:
         """Compute vouching network metrics for an agent.
@@ -675,9 +680,7 @@ class PromiseRepository:
         vouched_by_count = len(incoming)
         vouching_strength = 0.0
         if incoming:
-            vouching_strength = round(
-                sum(v.strength for v in incoming) / len(incoming), 4
-            )
+            vouching_strength = round(sum(v.strength for v in incoming) / len(incoming), 4)
 
         # Outgoing vouches — compute accuracy
         outgoing = self.get_vouches_by(agent)
@@ -703,4 +706,5 @@ class PromiseRepository:
     def _parse_agent_type(type_str: str):
         """Parse agent type string to AgentType enum."""
         from app.promise_engine.core.models import AgentType
+
         return AgentType(type_str)

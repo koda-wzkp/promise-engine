@@ -8,6 +8,7 @@ from alembic import context
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Import Base and all models for autogenerate
@@ -71,14 +72,13 @@ def run_migrations_online() -> None:
     """
     # Use the database URL from environment or config
     from sqlalchemy import create_engine
+
     url = config.get_main_option("sqlalchemy.url")
 
     connectable = create_engine(url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

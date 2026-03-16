@@ -23,9 +23,13 @@ from app.promise_engine.storage.repository import PromiseRepository
 from app.promise_engine.verticals.hb2021.schemas import HB2021_SCHEMAS
 from app.promise_engine.verticals.hb2021.agents import HB2021_AGENTS
 from app.promise_engine.core.models import (
-    Agent, AgentType, PromiseEvent, PromiseResult, PromiseSchema, SignalStrength,
+    Agent,
+    AgentType,
+    PromiseEvent,
+    PromiseResult,
+    PromiseSchema,
+    SignalStrength,
 )
-
 
 # ============================================================
 # SEED DATA: Known HB 2021 filings and compliance records
@@ -241,8 +245,7 @@ def seed():
         print("Seeding fossil fuel ban reviews...")
         for review in FOSSIL_FUEL_REVIEWS:
             utility = HB2021_AGENTS[review["utility"]]
-            compliant = (review["new_gas_plants_permitted"] == 0 and
-                        review["existing_gas_expansions_permitted"] == 0)
+            compliant = review["new_gas_plants_permitted"] == 0 and review["existing_gas_expansions_permitted"] == 0
             result = PromiseResult.KEPT if compliant else PromiseResult.BROKEN
             event = PromiseEvent(
                 id=uuid4(),

@@ -9,7 +9,6 @@ Maps the real-world actors to Promise Theory agents:
 
 from app.promise_engine.core.models import Agent, AgentType
 
-
 # ============================================================
 # UTILITIES (Promisers)
 # ============================================================
@@ -27,7 +26,7 @@ PGE = Agent(
         "baseline_emissions_mtco2e_per_mwh": 0.428,
         "latest_reduction_pct": 27,
         "latest_reduction_year": 2022,
-    }
+    },
 )
 
 PACIFICORP = Agent(
@@ -44,7 +43,7 @@ PACIFICORP = Agent(
         "latest_reduction_pct": 13,
         "latest_reduction_year": 2022,
         "note": "Multi-state utility — Oregon targets conflict with other state policies",
-    }
+    },
 )
 
 ESS = Agent(
@@ -56,7 +55,7 @@ ESS = Agent(
         "role": "electricity_service_supplier",
         "hb2021_role": "promiser",
         "note": "Serve commercial/industrial customers under direct access. Same targets, lighter oversight.",
-    }
+    },
 )
 
 
@@ -74,7 +73,7 @@ OREGON_PUC = Agent(
         "hb2021_role": "verifier",
         "authority": "Reviews and acknowledges Clean Energy Plans; grants exemptions; sets rate policy",
         "url": "https://www.oregon.gov/puc",
-    }
+    },
 )
 
 OREGON_DEQ = Agent(
@@ -87,7 +86,7 @@ OREGON_DEQ = Agent(
         "hb2021_role": "verifier",
         "authority": "Establishes emissions baselines; verifies reported emissions; determines required reductions",
         "url": "https://www.oregon.gov/deq",
-    }
+    },
 )
 
 
@@ -103,7 +102,7 @@ RATEPAYERS = Agent(
         "short": "RP",
         "hb2021_role": "promisee",
         "note": "Residential, commercial, and industrial electricity customers",
-    }
+    },
 )
 
 EJ_COMMUNITIES = Agent(
@@ -114,10 +113,9 @@ EJ_COMMUNITIES = Agent(
         "short": "EJ",
         "hb2021_role": "promisee",
         "definition": (
-            "Communities of color, low-income, tribal, rural, coastal, "
-            "and limited-infrastructure communities (§2)"
+            "Communities of color, low-income, tribal, rural, coastal, " "and limited-infrastructure communities (§2)"
         ),
-    }
+    },
 )
 
 TRIBES = Agent(
@@ -128,7 +126,7 @@ TRIBES = Agent(
         "short": "TRB",
         "hb2021_role": "promisee",
         "note": "HB 2021 §2(3) promises meaningful consultation on energy facility siting",
-    }
+    },
 )
 
 WORKERS = Agent(
@@ -139,7 +137,7 @@ WORKERS = Agent(
         "short": "WRK",
         "hb2021_role": "promisee",
         "note": "Workers on renewable energy projects covered by §26 labor standards",
-    }
+    },
 )
 
 
@@ -155,7 +153,7 @@ OREGON_LEGISLATURE = Agent(
         "short": "LEG",
         "hb2021_role": "legislator",
         "note": "Enacted HB 2021 in 2021. Source of the statutory promises that bind utilities.",
-    }
+    },
 )
 
 
@@ -173,7 +171,7 @@ CUB = Agent(
         "hb2021_role": "auditor",
         "note": "Independent consumer advocacy. Found PacifiCorp overstates future emissions reductions.",
         "url": "https://oregoncub.org",
-    }
+    },
 )
 
 

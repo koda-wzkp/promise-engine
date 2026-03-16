@@ -57,8 +57,8 @@ class PromiseSchemaDB(Base):
     deprecated_at = Column(DateTime)
 
     __table_args__ = (
-        Index('idx_schemas_vertical', 'vertical'),
-        Index('idx_schemas_active', 'deprecated_at'),
+        Index("idx_schemas_vertical", "vertical"),
+        Index("idx_schemas_active", "deprecated_at"),
     )
 
 
@@ -87,9 +87,7 @@ class PromiseSchemaVersionDB(Base):
     change_summary = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    __table_args__ = (
-        Index('idx_schema_versions_id', 'schema_id'),
-    )
+    __table_args__ = (Index("idx_schema_versions_id", "schema_id"),)
 
 
 class PromiseEventDB(Base):
@@ -132,7 +130,7 @@ class PromiseEventDB(Base):
     # User signals
     user_confirmed = Column(Boolean)
     user_feedback = Column(Text)
-    signal_strength = Column(String(20), default='inferred')
+    signal_strength = Column(String(20), default="inferred")
 
     # Journey tracking (CX)
     touchpoint_id = Column(String(100), index=True)
@@ -146,15 +144,15 @@ class PromiseEventDB(Base):
     exported_at = Column(DateTime)
 
     __table_args__ = (
-        Index('idx_events_promiser', 'promiser_type', 'promiser_id'),
-        Index('idx_events_promisee', 'promisee_type', 'promisee_id'),
-        Index('idx_events_schema', 'promise_schema_id'),
-        Index('idx_events_result', 'result'),
-        Index('idx_events_touchpoint', 'touchpoint_id'),
-        Index('idx_events_journey', 'journey_id'),
-        Index('idx_events_training', 'training_eligible', 'exported_at'),
-        Index('idx_events_pending', 'promiser_id', 'result'),
-        Index('idx_events_overdue', 'promiser_id', 'result', 'due_by'),
+        Index("idx_events_promiser", "promiser_type", "promiser_id"),
+        Index("idx_events_promisee", "promisee_type", "promisee_id"),
+        Index("idx_events_schema", "promise_schema_id"),
+        Index("idx_events_result", "result"),
+        Index("idx_events_touchpoint", "touchpoint_id"),
+        Index("idx_events_journey", "journey_id"),
+        Index("idx_events_training", "training_eligible", "exported_at"),
+        Index("idx_events_pending", "promiser_id", "result"),
+        Index("idx_events_overdue", "promiser_id", "result", "due_by"),
     )
 
 
@@ -169,7 +167,7 @@ class IntegrityScoreDB(Base):
     # Primary key: agent + vertical (NULL vertical = overall)
     agent_type = Column(String(50), primary_key=True)
     agent_id = Column(String(100), primary_key=True)
-    vertical = Column(String(50), primary_key=True, default='_overall_')
+    vertical = Column(String(50), primary_key=True, default="_overall_")
 
     # Core metrics
     overall_score = Column(Float)
@@ -197,8 +195,8 @@ class IntegrityScoreDB(Base):
     computed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
-        Index('idx_integrity_agent', 'agent_type', 'agent_id'),
-        Index('idx_integrity_score', 'overall_score'),
+        Index("idx_integrity_agent", "agent_type", "agent_id"),
+        Index("idx_integrity_score", "overall_score"),
     )
 
 
@@ -212,9 +210,7 @@ class AgentDB(Base):
     agent_metadata = Column(JSONB, default={})
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    __table_args__ = (
-        Index('idx_agents_type', 'type'),
-    )
+    __table_args__ = (Index("idx_agents_type", "type"),)
 
 
 class TouchpointDB(Base):
@@ -244,9 +240,7 @@ class JourneyDB(Base):
     completed_at = Column(DateTime)
     outcome = Column(String(50))  # 'converted', 'churned', 'ongoing'
 
-    __table_args__ = (
-        Index('idx_journeys_agent', 'agent_type', 'agent_id'),
-    )
+    __table_args__ = (Index("idx_journeys_agent", "agent_type", "agent_id"),)
 
 
 class VouchingDB(Base):
@@ -265,6 +259,6 @@ class VouchingDB(Base):
     revoked_at = Column(DateTime)
 
     __table_args__ = (
-        Index('idx_vouching_voucher', 'voucher_type', 'voucher_id'),
-        Index('idx_vouching_vouchee', 'vouchee_type', 'vouchee_id'),
+        Index("idx_vouching_voucher", "voucher_type", "voucher_id"),
+        Index("idx_vouching_vouchee", "vouchee_type", "vouchee_id"),
     )

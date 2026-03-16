@@ -29,6 +29,7 @@ const post = {
           { title: "Infrastructure", value: "infrastructure" },
           { title: "Supply Chain", value: "supply-chain" },
           { title: "Teams", value: "teams" },
+          { title: "International", value: "international" },
           { title: "General", value: "general" },
         ],
       },

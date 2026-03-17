@@ -1,23 +1,20 @@
 /**
- * Strata View Renderer — Procedural geological cross-section visualization.
+ * Strata View — Pixel Art Geological Layers Visualization
  *
- * Promise network as geological layers: each domain is a horizontal stratum.
- * Promises are mineral deposits/formations within their domain layer.
- * Edges are fault lines and pressure connections between strata.
+ * Domains are horizontal geological strata. Foundational promises are deep
+ * bedrock. Surface promises rest on top. Violations create fracture lines
+ * that propagate upward. If bedrock cracks, everything above shifts.
  *
- * Visual encoding:
- *   Block width → FMEA severity
- *   Mineral clarity → channel capacity (verification quality)
- *   Pressure glow → RPN (risk)
- *   Heat halo → superspreader score
- *   Fracture width → cascade probability
- *   Fracture style → incentive compatibility
+ * Layer ordering: domains sorted by how many other domains depend on them
+ * (most depended-on = deepest layer).
  */
 
-import { hashSeed, seededRandom, seededRange } from "./noise";
-import type { NodeVisualEncoding, EdgeVisualEncoding } from "@/lib/utils/visual-encoding";
+import { PixelRenderer } from "@/components/network/PixelRenderer";
+import { pixelPalettes, getStatusPalette } from "@/lib/rendering/pixel-palette";
+import { createSeededRandom } from "@/lib/rendering/pixel-prng";
+import type { NodeVisualEncoding } from "@/lib/utils/visual-encoding";
 
-interface StrataNode {
+export interface StrataPixelNode {
   id: string;
   x: number;
   y: number;
@@ -26,264 +23,244 @@ interface StrataNode {
   encoding: NodeVisualEncoding;
   isSelected: boolean;
   isAffected: boolean;
+  layerIndex: number;
 }
 
-interface StrataEdge {
-  sourceX: number;
-  sourceY: number;
-  targetX: number;
-  targetY: number;
-  encoding?: EdgeVisualEncoding;
-}
-
-interface DomainBand {
+export interface StrataDomainBand {
   domain: string;
   y: number;
   height: number;
-  color: string;
+  layerIndex: number;
+  dependedOnCount: number;
 }
 
-const DOMAIN_STRATA_COLORS: Record<string, { base: string; light: string; dark: string }> = {
-  Emissions: { base: "#8B4513", light: "#A0522D", dark: "#6B3410" },
-  Planning: { base: "#4A6741", light: "#5A7B51", dark: "#3A5231" },
-  Verification: { base: "#5C5080", light: "#6E6292", dark: "#4A3E68" },
-  Equity: { base: "#2E6B5A", light: "#3E7B6A", dark: "#1E5B4A" },
-  Affordability: { base: "#7A6530", light: "#8A7540", dark: "#6A5520" },
-  Tribal: { base: "#6B4A6B", light: "#7B5A7B", dark: "#5B3A5B" },
-  Workforce: { base: "#4A6B7A", light: "#5A7B8A", dark: "#3A5B6A" },
-  Enrichment: { base: "#7A3030", light: "#8A4040", dark: "#6A2020" },
-  Facilities: { base: "#6B5020", light: "#7B6030", dark: "#5B4010" },
-  Sanctions: { base: "#304A7A", light: "#405A8A", dark: "#203A6A" },
-  Cooperation: { base: "#2E6B4A", light: "#3E7B5A", dark: "#1E5B3A" },
-  Governance: { base: "#3A6B7A", light: "#4A7B8A", dark: "#2A5B6A" },
-};
-
-const STATUS_MINERAL_COLORS: Record<string, { fill: string; highlight: string }> = {
-  verified: { fill: "#1a5f4a", highlight: "#4ADE80" },
-  declared: { fill: "#1e40af", highlight: "#93C5FD" },
-  degraded: { fill: "#78350f", highlight: "#FCD34D" },
-  violated: { fill: "#991b1b", highlight: "#FCA5A5" },
-  unverifiable: { fill: "#5b21b6", highlight: "#C4B5FD" },
-};
-
-function getStrataColor(domain: string) {
-  return DOMAIN_STRATA_COLORS[domain] ?? { base: "#5A5A4A", light: "#6A6A5A", dark: "#4A4A3A" };
+interface BlockBounds {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
-function getMineralColor(status: string) {
-  return STATUS_MINERAL_COLORS[status] ?? STATUS_MINERAL_COLORS.declared;
-}
-
-export function renderStrataScene(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  nodes: StrataNode[],
-  edges: StrataEdge[],
-  domainBands: DomainBand[],
-  time: number,
+/**
+ * Render the strata scene. Returns bounding boxes for hit-testing.
+ */
+export function renderStrataPixelScene(
+  r: PixelRenderer,
+  nodes: StrataPixelNode[],
+  domainBands: StrataDomainBand[],
+  violatedIds: Set<string>,
+  spriteFrame: number,
   reducedMotion: boolean
-): void {
-  // Earth background
-  ctx.fillStyle = "#3A3A2E";
-  ctx.fillRect(0, 0, width, height);
+): BlockBounds[] {
+  const { pw, ph } = r;
 
-  // Draw domain strata bands
+  // --- Layer rendering ---
   for (const band of domainBands) {
-    renderStrataBand(ctx, band, width, time);
+    renderStrataLayer(r, band, pw);
   }
 
-  // Fault lines (edges)
-  for (const edge of edges) {
-    renderFaultLine(ctx, edge);
+  // Layer boundaries: 2px horizontal lines of deepStone
+  for (const band of domainBands) {
+    const artY = Math.floor((band.y / r.config.height) * ph);
+    r.rect(0, artY, pw, 2, pixelPalettes.terrain.deepStone);
   }
 
-  // Mineral deposits (nodes)
+  // --- Promise blocks ---
+  const bounds: BlockBounds[] = [];
   for (const node of nodes) {
-    renderMineral(ctx, node, time, reducedMotion);
+    bounds.push(renderStrataBlock(r, node));
   }
 
-  // Surface at top
-  ctx.fillStyle = "#4a7c59";
-  ctx.fillRect(0, 0, width, 8);
-  // Grass
-  ctx.fillStyle = "#5a9a69";
-  for (let x = 0; x < width; x += 6) {
-    const seed = hashSeed(`surface-grass-${x}`);
-    const h = 3 + seededRandom(seed) * 5;
-    ctx.fillRect(x, 8 - h, 2, h);
-  }
-}
-
-function renderStrataBand(
-  ctx: CanvasRenderingContext2D,
-  band: DomainBand,
-  width: number,
-  time: number
-): void {
-  const colors = getStrataColor(band.domain);
-
-  // Main band
-  const grad = ctx.createLinearGradient(0, band.y, 0, band.y + band.height);
-  grad.addColorStop(0, colors.light);
-  grad.addColorStop(0.5, colors.base);
-  grad.addColorStop(1, colors.dark);
-  ctx.fillStyle = grad;
-
-  // Wavy edges for organic look
-  ctx.beginPath();
-  ctx.moveTo(0, band.y);
-  for (let x = 0; x <= width; x += 10) {
-    const seed = hashSeed(`strata-top-${band.domain}-${x}`);
-    ctx.lineTo(x, band.y + seededRange(seed, -3, 3));
-  }
-  for (let x = width; x >= 0; x -= 10) {
-    const seed = hashSeed(`strata-bot-${band.domain}-${x}`);
-    ctx.lineTo(x, band.y + band.height + seededRange(seed, -3, 3));
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  // Sediment texture
-  ctx.save();
-  ctx.globalAlpha = 0.08;
-  ctx.strokeStyle = "#000";
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i < 5; i++) {
-    const ly = band.y + (band.height / 6) * (i + 1);
-    ctx.beginPath();
-    ctx.moveTo(0, ly);
-    for (let x = 0; x < width; x += 15) {
-      const seed = hashSeed(`sed-${band.domain}-${i}-${x}`);
-      ctx.lineTo(x, ly + seededRange(seed, -2, 2));
+  // --- Fracture lines from violated promises ---
+  for (const node of nodes) {
+    if (node.status === "violated") {
+      renderFractureLine(r, node, domainBands, nodes);
     }
-    ctx.stroke();
   }
-  ctx.restore();
 
-  // Domain label
-  ctx.save();
-  ctx.fillStyle = "rgba(255,255,255,0.2)";
-  ctx.font = "bold 10px 'IBM Plex Mono', monospace";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(band.domain.toUpperCase(), 8, band.y + band.height / 2);
-  ctx.restore();
+  return bounds;
 }
 
-function renderFaultLine(
-  ctx: CanvasRenderingContext2D,
-  edge: StrataEdge
+function renderStrataLayer(
+  r: PixelRenderer,
+  band: StrataDomainBand,
+  canvasWidth: number
 ): void {
-  const thickness = edge.encoding?.thickness ?? 1.5;
-  const dashArray = edge.encoding?.dashArray ?? "none";
-  const opacity = edge.encoding?.opacity ?? 0.5;
+  const { ph } = r;
+  const artY = Math.floor((band.y / r.config.height) * ph);
+  const artH = Math.max(1, Math.floor((band.height / r.config.height) * ph));
+  const rng = createSeededRandom(`layer-${band.domain}`);
 
-  ctx.save();
-  ctx.globalAlpha = opacity * 0.6;
-  ctx.strokeStyle = "#1a1a1a";
-  ctx.lineWidth = thickness;
-  if (dashArray !== "none") {
-    ctx.setLineDash(dashArray.split(/[, ]+/).map(Number));
+  // Deeper layers are darker. layerIndex 0 = surface (light), high = deep (dark).
+  const depthFactor = band.layerIndex / Math.max(1, band.dependedOnCount + 3);
+  const baseGray = Math.floor(100 - depthFactor * 40);
+
+  // Generate 8×8 rock texture pattern
+  for (let dy = 0; dy < artH; dy++) {
+    for (let dx = 0; dx < canvasWidth; dx++) {
+      const v = rng();
+      let r_val = baseGray, g_val = baseGray - 5, b_val = baseGray - 10;
+
+      if (v < 0.05) {
+        // Stone detail
+        r_val -= 20;
+        g_val -= 20;
+        b_val -= 15;
+      } else if (v < 0.1) {
+        // Lighter spot
+        r_val += 10;
+        g_val += 10;
+        b_val += 12;
+      }
+
+      r_val = Math.max(30, Math.min(180, r_val));
+      g_val = Math.max(25, Math.min(175, g_val));
+      b_val = Math.max(20, Math.min(170, b_val));
+
+      r.pixel(dx, artY + dy, `rgb(${r_val},${g_val},${b_val})`);
+    }
   }
 
-  // Jagged fault line
-  ctx.beginPath();
-  ctx.moveTo(edge.sourceX, edge.sourceY);
-  const steps = 5;
-  for (let i = 1; i <= steps; i++) {
-    const t = i / steps;
-    const x = edge.sourceX + (edge.targetX - edge.sourceX) * t;
-    const y = edge.sourceY + (edge.targetY - edge.sourceY) * t;
-    const seed = hashSeed(`fault-${edge.sourceX}-${edge.targetX}-${i}`);
-    const jitter = seededRange(seed, -8, 8);
-    ctx.lineTo(x + jitter, y);
+  // Sediment texture lines
+  const lineRng = createSeededRandom(`sed-${band.domain}`);
+  for (let i = 0; i < 3; i++) {
+    const ly = artY + Math.floor(artH * (i + 1) / 4);
+    for (let x = 0; x < canvasWidth; x++) {
+      if (lineRng() < 0.7) {
+        const jitter = Math.floor(lineRng() * 3) - 1;
+        r.pixel(x, ly + jitter, pixelPalettes.terrain.deepStone);
+      }
+    }
   }
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.restore();
 }
 
-function renderMineral(
-  ctx: CanvasRenderingContext2D,
-  node: StrataNode,
-  time: number,
-  reducedMotion: boolean
-): void {
-  const { encoding } = node;
-  const colors = getMineralColor(node.status);
-  const sat = encoding.saturation / 100;
+function renderStrataBlock(
+  r: PixelRenderer,
+  node: StrataPixelNode
+): BlockBounds {
+  const palette = getStatusPalette(node.status);
+  const rng = createSeededRandom(node.id);
+  const { pw, ph } = r;
 
-  // Block dimensions from severity
-  const blockW = 16 + encoding.severity * 4;
-  const blockH = 12 + encoding.severity * 2.5;
+  // Map to art coordinates
+  const cx = Math.floor((node.x / r.config.width) * pw);
+  const cy = Math.floor((node.y / r.config.height) * ph);
 
-  ctx.save();
-  ctx.translate(node.x, node.y);
+  // Width proportional to dependents (min 3, max 8 tiles)
+  const tilePx = r.config.resolution === 32 ? 3 : 5;
+  const depWidth = Math.max(3, Math.min(8, 3 + node.encoding.directDependents));
+  const blockW = depWidth * tilePx;
+  const blockH = Math.floor(blockW * 0.6);
+
+  const bx = cx - Math.floor(blockW / 2);
+  const by = cy - Math.floor(blockH / 2);
 
   // Selection
   if (node.isSelected) {
-    ctx.strokeStyle = "#2563eb";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(-blockW / 2 - 4, -blockH / 2 - 4, blockW + 8, blockH + 8);
+    r.outline(bx - 2, by - 2, blockW + 4, blockH + 4, "#2563eb");
   }
 
-  // Heat halo for superspreaders
-  if (encoding.glowFilter) {
-    ctx.shadowColor = colors.highlight;
-    ctx.shadowBlur = encoding.glowRadius * 2;
+  switch (node.status) {
+    case "verified":
+      // Solid clean fill
+      r.rect(bx, by, blockW, blockH, palette.mid);
+      break;
+
+    case "degraded":
+      // Fill with 25% weathered pixels
+      for (let dy = 0; dy < blockH; dy++) {
+        for (let dx = 0; dx < blockW; dx++) {
+          const color = rng() < 0.25 ? palette.shadow : palette.mid;
+          r.pixel(bx + dx, by + dy, color);
+        }
+      }
+      break;
+
+    case "violated":
+      // Fill with crack pattern
+      r.rect(bx, by, blockW, blockH, palette.mid);
+      // Diagonal crack lines
+      for (let i = 0; i < 3; i++) {
+        const startX = Math.floor(rng() * blockW);
+        const startY = Math.floor(rng() * blockH);
+        for (let s = 0; s < Math.min(blockW, blockH); s++) {
+          const crackX = bx + ((startX + s) % blockW);
+          const crackY = by + ((startY + s) % blockH);
+          r.pixel(crackX, crackY, palette.shadow);
+        }
+      }
+      break;
+
+    case "unverifiable":
+      // Outline only — the "fossil" that might not be real
+      r.outline(bx, by, blockW, blockH, palette.mid);
+      break;
+
+    case "declared":
+      // Light fill with dashed border
+      r.rect(bx, by, blockW, blockH, palette.highlight);
+      // Dashed border (every other pixel)
+      for (let dx = 0; dx < blockW; dx++) {
+        if (dx % 2 === 0) {
+          r.pixel(bx + dx, by, palette.mid);
+          r.pixel(bx + dx, by + blockH - 1, palette.mid);
+        }
+      }
+      for (let dy = 0; dy < blockH; dy++) {
+        if (dy % 2 === 0) {
+          r.pixel(bx, by + dy, palette.mid);
+          r.pixel(bx + blockW - 1, by + dy, palette.mid);
+        }
+      }
+      break;
+
+    default:
+      r.rect(bx, by, blockW, blockH, palette.mid);
   }
 
-  // Pressure glow from RPN
-  if (!reducedMotion && encoding.pulse.period > 0) {
-    const speed = 0.002 / (encoding.pulse.period / 1000);
-    const glowPhase = (Math.sin(time * speed) + 1) / 2;
-    ctx.fillStyle = colors.highlight;
-    ctx.globalAlpha = glowPhase * 0.15;
-    ctx.fillRect(-blockW / 2 - 3, -blockH / 2 - 3, blockW + 6, blockH + 6);
-    ctx.globalAlpha = 1;
-  }
-
-  // Mineral block
-  ctx.fillStyle = colors.fill;
-  ctx.globalAlpha = sat;
-
-  // Slightly irregular shape
-  const seed = hashSeed(node.id);
-  ctx.beginPath();
-  ctx.moveTo(-blockW / 2 + seededRange(seed, 0, 3), -blockH / 2);
-  ctx.lineTo(blockW / 2 - seededRange(seed + 1, 0, 3), -blockH / 2 + seededRange(seed + 2, 0, 2));
-  ctx.lineTo(blockW / 2, blockH / 2 - seededRange(seed + 3, 0, 2));
-  ctx.lineTo(-blockW / 2 + seededRange(seed + 4, 0, 2), blockH / 2);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.shadowBlur = 0;
-
-  // Crystal/mineral highlight
-  ctx.fillStyle = colors.highlight;
-  ctx.globalAlpha = sat * 0.3;
-  ctx.beginPath();
-  ctx.moveTo(-blockW * 0.2, -blockH * 0.3);
-  ctx.lineTo(0, -blockH * 0.1);
-  ctx.lineTo(-blockW * 0.1, blockH * 0.1);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.globalAlpha = 1;
-
-  // Affected overlay
+  // Affected stress pixels
   if (node.isAffected) {
-    ctx.fillStyle = "rgba(245, 158, 11, 0.3)";
-    ctx.fillRect(-blockW / 2 - 2, -blockH / 2 - 2, blockW + 4, blockH + 4);
+    const stressRng = createSeededRandom(`stress-${node.id}`);
+    for (let i = 0; i < 3; i++) {
+      const sx = bx + Math.floor(stressRng() * blockW);
+      const sy = by + Math.floor(stressRng() * blockH);
+      r.pixel(sx, sy, pixelPalettes.degraded.mid);
+    }
   }
 
-  // Label
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 8px 'IBM Plex Mono', monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(node.id, 0, 0);
+  return {
+    id: node.id,
+    x: bx * r.ps,
+    y: by * r.ps,
+    w: blockW * r.ps,
+    h: blockH * r.ps,
+  };
+}
 
-  ctx.restore();
+function renderFractureLine(
+  r: PixelRenderer,
+  violatedNode: StrataPixelNode,
+  domainBands: StrataDomainBand[],
+  allNodes: StrataPixelNode[]
+): void {
+  const { pw, ph } = r;
+  const violated = pixelPalettes.violated;
+  const rng = createSeededRandom(`fracture-${violatedNode.id}`);
+
+  // Fracture starts from top edge of violated block and goes upward
+  const cx = Math.floor((violatedNode.x / r.config.width) * pw);
+  const startY = Math.floor((violatedNode.y / r.config.height) * ph);
+
+  // Propagate upward to surface (y = 0)
+  let fracX = cx;
+  for (let y = startY; y > 2; y--) {
+    // Horizontal jitter every 3-4 vertical pixels
+    if (y % (3 + Math.floor(rng() * 2)) === 0) {
+      fracX += Math.floor(rng() * 3) - 1;
+    }
+
+    const color = rng() < 0.7 ? violated.shadow : violated.mid;
+    r.pixel(fracX, y, color);
+  }
 }

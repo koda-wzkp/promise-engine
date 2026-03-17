@@ -1,23 +1,18 @@
 /**
- * Watershed View Renderer — Procedural river system visualization.
+ * Watershed View — Pixel Art River System Visualization
  *
- * Promise network as a watershed: root promises are mountain springs at the top,
- * dependents flow downward as tributaries merging into wider rivers.
- * Nodes are pools/reservoirs where streams converge.
- *
- * Visual encoding:
- *   Pool size → FMEA severity
- *   Water clarity → channel capacity (verification quality)
- *   Ripple rate → RPN (risk)
- *   Pool glow → superspreader (confluence points)
- *   Stream width → cascade probability
- *   Stream style → incentive compatibility
+ * Promises are nodes along a river system. Water flows from upstream
+ * (foundational) promises to downstream (dependent) promises.
+ * Healthy flow is blue-green. Failure turns the water red.
+ * Stream width indicates how many promises depend on the flow.
  */
 
-import { hashSeed, seededRandom, seededRange } from "./noise";
-import type { NodeVisualEncoding, EdgeVisualEncoding } from "@/lib/utils/visual-encoding";
+import { PixelRenderer } from "@/components/network/PixelRenderer";
+import { pixelPalettes, getStatusPalette } from "@/lib/rendering/pixel-palette";
+import { createSeededRandom } from "@/lib/rendering/pixel-prng";
+import type { NodeVisualEncoding } from "@/lib/utils/visual-encoding";
 
-interface WatershedNode {
+export interface WatershedPixelNode {
   id: string;
   x: number;
   y: number;
@@ -25,219 +20,167 @@ interface WatershedNode {
   encoding: NodeVisualEncoding;
   isSelected: boolean;
   isAffected: boolean;
+  downstreamCount: number;
 }
 
-interface WatershedEdge {
+export interface WatershedPixelEdge {
   sourceX: number;
   sourceY: number;
   targetX: number;
   targetY: number;
-  encoding?: EdgeVisualEncoding;
+  sourceStatus: string;
+  edgeId: string;
+  downstreamCount: number;
 }
 
-const STATUS_WATER_COLORS: Record<string, { pool: string; accent: string; depth: string }> = {
-  verified: { pool: "#1a5f4a", accent: "#4ADE80", depth: "#0d3d2e" },
-  declared: { pool: "#1e40af", accent: "#93C5FD", depth: "#0f2666" },
-  degraded: { pool: "#78350f", accent: "#FCD34D", depth: "#4a2008" },
-  violated: { pool: "#991b1b", accent: "#FCA5A5", depth: "#5a1010" },
-  unverifiable: { pool: "#5b21b6", accent: "#C4B5FD", depth: "#3b1280" },
-};
-
-function getWaterColors(status: string) {
-  return STATUS_WATER_COLORS[status] ?? STATUS_WATER_COLORS.declared;
+interface NodeBounds {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
-export function renderWatershedScene(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  nodes: WatershedNode[],
-  edges: WatershedEdge[],
-  time: number,
+/**
+ * Render the watershed scene. Returns bounding boxes for hit-testing.
+ */
+export function renderWatershedPixelScene(
+  r: PixelRenderer,
+  nodes: WatershedPixelNode[],
+  edges: WatershedPixelEdge[],
+  spriteFrame: number,
   reducedMotion: boolean
-): void {
-  // Terrain gradient (mountain top to valley bottom)
-  const terrainGrad = ctx.createLinearGradient(0, 0, 0, height);
-  terrainGrad.addColorStop(0, "#8B9E7A"); // Mountain green
-  terrainGrad.addColorStop(0.3, "#6B8E5E"); // Mid slope
-  terrainGrad.addColorStop(0.7, "#4A7C4A"); // Valley
-  terrainGrad.addColorStop(1, "#3A6A3A"); // Deep valley
-  ctx.fillStyle = terrainGrad;
-  ctx.fillRect(0, 0, width, height);
+): NodeBounds[] {
+  const { pw, ph } = r;
+  const terrain = pixelPalettes.terrain;
 
-  // Terrain texture — contour lines
-  ctx.save();
-  ctx.strokeStyle = "rgba(0,0,0,0.06)";
-  ctx.lineWidth = 1;
-  for (let y = 30; y < height; y += 35) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    for (let x = 0; x < width; x += 20) {
-      const seed = hashSeed(`contour-${y}-${x}`);
-      const offset = seededRange(seed, -6, 6);
-      ctx.lineTo(x, y + offset);
+  // --- Terrain background with elevation gradient ---
+  // Top = lighter (headwaters/mountain), bottom = darker (delta/valley)
+  r.gradient(0, 0, pw, ph, "#7a9a6a", "#3a5a3a");
+
+  // Tiled terrain texture (8×8 patches)
+  const terrainRng = createSeededRandom("terrain-tex");
+  for (let ty = 0; ty < ph; ty += 8) {
+    for (let tx = 0; tx < pw; tx += 8) {
+      // Procedural terrain variation within each 8x8 block
+      for (let dy = 0; dy < 8 && ty + dy < ph; dy++) {
+        for (let dx = 0; dx < 8 && tx + dx < pw; dx++) {
+          const v = terrainRng();
+          if (v < 0.03) {
+            r.pixel(tx + dx, ty + dy, terrain.stone);
+          } else if (v < 0.06) {
+            r.pixel(tx + dx, ty + dy, terrain.dirt);
+          }
+        }
+      }
     }
-    ctx.stroke();
   }
-  ctx.restore();
 
-  // Rocky texture patches
-  ctx.save();
-  ctx.globalAlpha = 0.08;
-  for (let i = 0; i < 30; i++) {
-    const seed = hashSeed(`rock-${i}`);
-    const rx = seededRandom(seed) * width;
-    const ry = seededRandom(seed + 1) * height;
-    const rw = 8 + seededRandom(seed + 2) * 20;
-    ctx.fillStyle = "#4a4a3a";
-    ctx.beginPath();
-    ctx.ellipse(rx, ry, rw, rw * 0.6, seededRange(seed + 3, 0, Math.PI), 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-
-  // Streams (edges) — drawn as flowing water
+  // --- Streams (edges) ---
   for (const edge of edges) {
-    renderStream(ctx, edge, time, reducedMotion);
+    renderPixelStream(r, edge, spriteFrame, reducedMotion);
   }
 
-  // Pools (nodes)
+  // --- Promise nodes ---
+  const bounds: NodeBounds[] = [];
   const sorted = [...nodes].sort((a, b) => a.y - b.y);
   for (const node of sorted) {
-    renderPool(ctx, node, time, reducedMotion);
+    bounds.push(renderPixelNode(r, node));
+  }
+
+  return bounds;
+}
+
+function renderPixelStream(
+  r: PixelRenderer,
+  edge: WatershedPixelEdge,
+  spriteFrame: number,
+  reducedMotion: boolean
+): void {
+  const terrain = pixelPalettes.terrain;
+  const palette = getStatusPalette(edge.sourceStatus);
+
+  // Stream width based on downstream count
+  const streamWidth = Math.min(3, 1 + Math.floor(edge.downstreamCount / 2));
+
+  // Map to art coordinates
+  const sx = Math.floor((edge.sourceX / r.config.width) * r.pw);
+  const sy = Math.floor((edge.sourceY / r.config.height) * r.ph);
+  const tx = Math.floor((edge.targetX / r.config.width) * r.pw);
+  const ty = Math.floor((edge.targetY / r.config.height) * r.ph);
+
+  // Stream color based on upstream status
+  const isFailure = edge.sourceStatus === "violated" || edge.sourceStatus === "degraded";
+  const waterColors = isFailure
+    ? [palette.shadow, palette.mid, palette.highlight]
+    : [terrain.waterDeep, terrain.water, terrain.waterFoam];
+
+  // Draw stepped pixel path with ±1px wobble
+  const rng = createSeededRandom(edge.edgeId);
+  const steps = Math.max(Math.abs(tx - sx), Math.abs(ty - sy), 1);
+  const halfW = Math.floor(streamWidth / 2);
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const px = Math.floor(sx + (tx - sx) * t);
+    const py = Math.floor(sy + (ty - sy) * t);
+
+    // Wobble every 4-8 pixels
+    const wobbleSeed = Math.floor(i / (4 + Math.floor(rng() * 5)));
+    const wobble = (wobbleSeed % 2 === 0) ? Math.floor(rng() * 3) - 1 : 0;
+
+    // Water animation: cycle through 3 frames
+    // Phase offset along stream length creates flow illusion
+    const phaseOffset = reducedMotion ? 0 : Math.floor(i / 3);
+    const colorIdx = (spriteFrame + phaseOffset) % 3;
+    const waterColor = waterColors[colorIdx];
+
+    // Draw stream pixels
+    for (let w = -halfW; w <= halfW; w++) {
+      r.pixel(px + wobble + w, py, waterColor);
+    }
+
+    // Riverbed (sand banks) for streams wider than 1px
+    if (streamWidth > 1) {
+      r.pixel(px + wobble - halfW - 1, py, terrain.sand);
+      r.pixel(px + wobble + halfW + 1, py, terrain.sand);
+    }
   }
 }
 
-function renderStream(
-  ctx: CanvasRenderingContext2D,
-  edge: WatershedEdge,
-  time: number,
-  reducedMotion: boolean
-): void {
-  const thickness = edge.encoding?.thickness ?? 1.5;
-  const dashArray = edge.encoding?.dashArray ?? "none";
-  const opacity = edge.encoding?.opacity ?? 0.6;
+function renderPixelNode(
+  r: PixelRenderer,
+  node: WatershedPixelNode
+): NodeBounds {
+  const palette = getStatusPalette(node.status);
+  const nodeSize = r.config.resolution === 32 ? 5 : 9;
+  const half = Math.floor(nodeSize / 2);
 
-  const midX = (edge.sourceX + edge.targetX) / 2;
-  const midY = (edge.sourceY + edge.targetY) / 2;
-
-  // Water flow offset
-  const waveOffset = reducedMotion ? 0 : Math.sin(time * 0.002 + edge.sourceX * 0.01) * 6;
-
-  // Main water body
-  ctx.save();
-  ctx.globalAlpha = opacity * 0.7;
-  ctx.strokeStyle = "#4A90D9";
-  ctx.lineWidth = thickness * 1.5;
-  ctx.lineCap = "round";
-  if (dashArray !== "none") {
-    ctx.setLineDash(dashArray.split(/[, ]+/).map(Number));
-  }
-  ctx.beginPath();
-  ctx.moveTo(edge.sourceX, edge.sourceY);
-  ctx.quadraticCurveTo(midX + waveOffset, midY, edge.targetX, edge.targetY);
-  ctx.stroke();
-
-  // Shimmer highlight
-  ctx.strokeStyle = "#87CEEB";
-  ctx.lineWidth = Math.max(1, thickness * 0.5);
-  ctx.globalAlpha = opacity * 0.35;
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(edge.sourceX + 1, edge.sourceY - 1);
-  ctx.quadraticCurveTo(midX + waveOffset + 2, midY - 1, edge.targetX + 1, edge.targetY - 1);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function renderPool(
-  ctx: CanvasRenderingContext2D,
-  node: WatershedNode,
-  time: number,
-  reducedMotion: boolean
-): void {
-  const { encoding } = node;
-  const colors = getWaterColors(node.status);
-
-  // Pool size from severity
-  const poolRadius = 12 + encoding.severity * 3.5;
-  const sat = encoding.saturation / 100;
-
-  ctx.save();
-  ctx.translate(node.x, node.y);
+  // Map to art coordinates
+  const cx = Math.floor((node.x / r.config.width) * r.pw);
+  const cy = Math.floor((node.y / r.config.height) * r.ph);
 
   // Selection indicator
   if (node.isSelected) {
-    ctx.strokeStyle = "#2563eb";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, poolRadius + 6, poolRadius * 0.55 + 6, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    r.outline(cx - half - 2, cy - half - 2, nodeSize + 4, nodeSize + 4, "#2563eb");
   }
 
-  // Glow for superspreaders
-  if (encoding.glowFilter) {
-    ctx.shadowColor = colors.accent;
-    ctx.shadowBlur = encoding.glowRadius * 2;
-  }
+  // Node body (filled square)
+  r.rect(cx - half, cy - half, nodeSize, nodeSize, palette.mid);
 
-  // Pool shadow (depth)
-  ctx.fillStyle = colors.depth;
-  ctx.globalAlpha = 0.4;
-  ctx.beginPath();
-  ctx.ellipse(0, 2, poolRadius + 2, (poolRadius + 2) * 0.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Border
+  r.outline(cx - half, cy - half, nodeSize, nodeSize, palette.shadow);
 
-  // Pool body (isometric ellipse)
-  ctx.fillStyle = colors.pool;
-  ctx.globalAlpha = sat;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, poolRadius, poolRadius * 0.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.shadowBlur = 0;
-
-  // Water surface highlight
-  ctx.fillStyle = colors.accent;
-  ctx.globalAlpha = sat * 0.3;
-  ctx.beginPath();
-  ctx.ellipse(-poolRadius * 0.2, -poolRadius * 0.08, poolRadius * 0.5, poolRadius * 0.2, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Ripple rings from RPN
-  if (!reducedMotion && encoding.pulse.period > 0) {
-    const speed = 0.003 / (encoding.pulse.period / 1000);
-    const ripplePhase = (time * speed) % 1;
-    ctx.strokeStyle = colors.accent;
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = sat * (1 - ripplePhase) * 0.3;
-    ctx.beginPath();
-    ctx.ellipse(
-      0, 0,
-      poolRadius * (0.5 + ripplePhase * 0.7),
-      poolRadius * 0.5 * (0.5 + ripplePhase * 0.7),
-      0, 0, Math.PI * 2
-    );
-    ctx.stroke();
-  }
-
-  ctx.globalAlpha = 1;
-
-  // Affected indicator
+  // Cascade source: pulsing highlight ring
   if (node.isAffected) {
-    ctx.fillStyle = "rgba(245, 158, 11, 0.3)";
-    ctx.beginPath();
-    ctx.ellipse(0, 0, poolRadius + 4, (poolRadius + 4) * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
+    r.outline(cx - half - 1, cy - half - 1, nodeSize + 2, nodeSize + 2, palette.highlight);
   }
 
-  // Label
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 9px 'IBM Plex Mono', monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(node.id, 0, 0);
-
-  ctx.restore();
+  return {
+    id: node.id,
+    x: (cx - half) * r.ps,
+    y: (cy - half) * r.ps,
+    w: nodeSize * r.ps,
+    h: nodeSize * r.ps,
+  };
 }

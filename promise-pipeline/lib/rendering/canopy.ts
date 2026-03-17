@@ -1,291 +1,444 @@
 /**
- * Canopy View Renderer — Procedural forest visualization.
+ * Canopy View — Pixel Art Forest Visualization
  *
- * Each promise is a tree. Root promises (no dependencies) are tall trunks
- * at the bottom. Dependent promises branch upward as smaller trees.
- * Edges are underground root networks connecting the trees.
+ * Each promise is a procedurally generated pixel tree. Domains are groves
+ * separated by terrain changes. Sky gradient reflects network health.
  *
- * Visual encoding:
- *   Tree height/size → FMEA severity
- *   Canopy saturation → channel capacity (verification quality)
- *   Canopy sway speed → RPN (risk)
- *   Canopy glow → superspreader score
- *   Root thickness → cascade probability
- *   Root style → incentive compatibility
+ * Tree types by status:
+ *   Verified   → Full canopy tree with sunlight highlights
+ *   Degraded   → Thinning canopy with bare branches poking through
+ *   Violated   → Dead tree, bare branches only
+ *   Unverifiable → Ghost tree, dithered trunk, outline-only canopy
+ *   Declared   → Sapling, small and young
  */
 
-import { hashSeed, seededRandom, seededRange, promiseVariation } from "./noise";
-import type { NodeVisualEncoding, EdgeVisualEncoding } from "@/lib/utils/visual-encoding";
+import { PixelRenderer } from "@/components/network/PixelRenderer";
+import { pixelPalettes, getStatusPalette } from "@/lib/rendering/pixel-palette";
+import { createSeededRandom } from "@/lib/rendering/pixel-prng";
+import type { NodeVisualEncoding } from "@/lib/utils/visual-encoding";
 
-interface CanopyNode {
+export interface CanopyPixelNode {
   id: string;
   x: number;
   y: number;
   status: string;
+  domain: string;
   encoding: NodeVisualEncoding;
   isSelected: boolean;
   isAffected: boolean;
 }
 
-interface CanopyEdge {
+export interface CanopyPixelEdge {
   sourceX: number;
   sourceY: number;
   targetX: number;
   targetY: number;
-  encoding?: EdgeVisualEncoding;
 }
 
-const STATUS_CANOPY_COLORS: Record<string, { trunk: string; canopy: string[]; accent: string }> = {
-  verified: {
-    trunk: "#5C4A32",
-    canopy: ["#1a5f4a", "#22734f", "#2d8a5e"],
-    accent: "#4ADE80",
-  },
-  declared: {
-    trunk: "#5C4A32",
-    canopy: ["#1e40af", "#2563eb", "#3b82f6"],
-    accent: "#93C5FD",
-  },
-  degraded: {
-    trunk: "#5C4A32",
-    canopy: ["#78350f", "#92400e", "#b45309"],
-    accent: "#FCD34D",
-  },
-  violated: {
-    trunk: "#4A3728",
-    canopy: ["#7f1d1d", "#991b1b", "#b91c1c"],
-    accent: "#FCA5A5",
-  },
-  unverifiable: {
-    trunk: "#6B6B6B",
-    canopy: ["#4c1d95", "#5b21b6", "#7c3aed"],
-    accent: "#C4B5FD",
-  },
-};
-
-function getColors(status: string) {
-  return STATUS_CANOPY_COLORS[status] ?? STATUS_CANOPY_COLORS.declared;
+interface TreeBounds {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
-export function renderCanopyScene(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  nodes: CanopyNode[],
-  edges: CanopyEdge[],
-  time: number,
+/**
+ * Render the full canopy scene to a PixelRenderer.
+ * Returns bounding boxes for hit-testing.
+ */
+export function renderCanopyPixelScene(
+  r: PixelRenderer,
+  nodes: CanopyPixelNode[],
+  edges: CanopyPixelEdge[],
+  domains: string[],
+  networkHealth: number,
+  spriteFrame: number,
   reducedMotion: boolean
-): void {
-  // Sky gradient
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
-  skyGrad.addColorStop(0, "#87CEEB");
-  skyGrad.addColorStop(1, "#E0F6FF");
-  ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, width, height);
+): TreeBounds[] {
+  const { pw, ph } = r;
+  const groundY = Math.floor(ph * 0.8);
+  const skyH = groundY;
 
-  // Ground
-  const groundY = height * 0.75;
-  const groundGrad = ctx.createLinearGradient(0, groundY, 0, height);
-  groundGrad.addColorStop(0, "#4a7c59");
-  groundGrad.addColorStop(0.3, "#3d6b4a");
-  groundGrad.addColorStop(1, "#2d4a35");
-  ctx.fillStyle = groundGrad;
-  ctx.fillRect(0, groundY, width, height - groundY);
-
-  // Grass texture
-  ctx.save();
-  ctx.globalAlpha = 0.15;
-  for (let i = 0; i < 60; i++) {
-    const seed = hashSeed(`grass-${i}`);
-    const gx = seededRandom(seed) * width;
-    const gy = groundY + seededRandom(seed + 1) * (height - groundY) * 0.3;
-    const gh = 4 + seededRandom(seed + 2) * 8;
-    ctx.strokeStyle = "#2d5a3a";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(gx, gy);
-    ctx.lineTo(gx + seededRange(seed + 3, -3, 3), gy - gh);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  // Underground root connections (edges)
-  ctx.save();
-  for (const edge of edges) {
-    const rootY = groundY + 15;
-    const thickness = edge.encoding?.thickness ?? 1.5;
-    const dashArray = edge.encoding?.dashArray ?? "none";
-    const opacity = edge.encoding?.opacity ?? 0.4;
-
-    ctx.globalAlpha = opacity * 0.6;
-    ctx.strokeStyle = "#5C4A32";
-    ctx.lineWidth = thickness;
-    if (dashArray !== "none") {
-      ctx.setLineDash(dashArray.split(/[, ]+/).map(Number));
-    } else {
-      ctx.setLineDash([]);
+  // --- Sky gradient based on network health ---
+  if (networkHealth > 70) {
+    r.gradient(0, 0, pw, skyH, pixelPalettes.sky.clearLight, pixelPalettes.sky.clear);
+    // Clouds
+    const cloudRng = createSeededRandom("clouds");
+    for (let i = 0; i < 3; i++) {
+      const cx = Math.floor(cloudRng() * (pw - 12));
+      const cy = Math.floor(cloudRng() * (skyH * 0.4));
+      const cw = 6 + Math.floor(cloudRng() * 8);
+      r.rect(cx, cy, cw, 2, "#ffffff");
+      r.rect(cx + 1, cy - 1, cw - 2, 1, "#ffffff");
     }
-    ctx.beginPath();
-    ctx.moveTo(edge.sourceX, rootY);
-    const midX = (edge.sourceX + edge.targetX) / 2;
-    const dip = 20 + thickness * 5;
-    ctx.quadraticCurveTo(midX, rootY + dip, edge.targetX, rootY);
-    ctx.stroke();
+  } else if (networkHealth > 40) {
+    r.gradient(0, 0, pw, skyH, pixelPalettes.sky.overcast, pixelPalettes.sky.clear);
+    const cloudRng = createSeededRandom("clouds-gray");
+    for (let i = 0; i < 2; i++) {
+      const cx = Math.floor(cloudRng() * (pw - 10));
+      const cy = Math.floor(cloudRng() * (skyH * 0.3));
+      r.rect(cx, cy, 8, 2, pixelPalettes.sky.overcast);
+    }
+  } else {
+    r.gradient(0, 0, pw, skyH, pixelPalettes.sky.stormy, pixelPalettes.sky.overcast);
   }
-  ctx.setLineDash([]);
-  ctx.restore();
 
-  // Sort nodes by y (back to front)
+  // --- Ground layer ---
+  const groundH = ph - groundY;
+
+  // Base ground with domain sections
+  const domainWidth = domains.length > 0 ? Math.floor(pw / domains.length) : pw;
+
+  for (let di = 0; di < Math.max(1, domains.length); di++) {
+    const sx = di * domainWidth;
+    const sw = di === domains.length - 1 ? pw - sx : domainWidth;
+
+    // Base grass
+    r.rect(sx, groundY, sw, groundH, pixelPalettes.terrain.grass);
+
+    // Undulating ground line: ±1-2px
+    const groundRng = createSeededRandom(`ground-${di}`);
+    for (let x = sx; x < sx + sw; x++) {
+      const offset = Math.floor(groundRng() * 3) - 1;
+      if (offset < 0) {
+        // Hill up: fill above groundY
+        r.pixel(x, groundY + offset, pixelPalettes.terrain.grass);
+      } else if (offset > 0) {
+        // Dip: show sky color
+        r.pixel(x, groundY, pixelPalettes.sky.clear);
+      }
+    }
+
+    // Domain-colored ground cover
+    const coverRng = createSeededRandom(`cover-${di}`);
+    for (let i = 0; i < Math.floor(sw / 4); i++) {
+      const fx = sx + Math.floor(coverRng() * sw);
+      const fy = groundY + 2 + Math.floor(coverRng() * (groundH * 0.4));
+      r.pixel(fx, fy, pixelPalettes.terrain.dirt);
+    }
+
+    // Domain separator path
+    if (di > 0) {
+      for (let y = groundY; y < ph; y++) {
+        r.pixel(sx, y, pixelPalettes.terrain.dirt);
+      }
+    }
+  }
+
+  // --- Trees ---
+  // Sort by y so back trees draw first
   const sorted = [...nodes].sort((a, b) => a.y - b.y);
+  const bounds: TreeBounds[] = [];
 
   for (const node of sorted) {
-    renderTree(ctx, node, groundY, time, reducedMotion);
+    const artPos = r.toPixel(node.x, node.y);
+    // Map node y to canvas position above ground
+    const treeX = Math.floor((node.x / r.config.width) * pw);
+    const treeGroundY = groundY - 1;
+    const b = renderPixelTree(r, node, treeX, treeGroundY, spriteFrame, reducedMotion);
+    bounds.push(b);
   }
+
+  return bounds;
 }
 
-function renderTree(
-  ctx: CanvasRenderingContext2D,
-  node: CanopyNode,
+function renderPixelTree(
+  r: PixelRenderer,
+  node: CanopyPixelNode,
+  baseX: number,
   groundY: number,
-  time: number,
+  spriteFrame: number,
   reducedMotion: boolean
-): void {
-  const { encoding } = node;
-  const variation = promiseVariation(node.id);
-  const colors = getColors(node.status);
+): TreeBounds {
+  const palette = getStatusPalette(node.status);
+  const rng = createSeededRandom(node.id);
+  const dependents = node.encoding.directDependents;
 
-  // Tree dimensions from encoding
-  const severity = encoding.severity;
-  const treeHeight = 30 + severity * 12; // 42-150px
-  const trunkWidth = 3 + severity * 0.8;
-  const canopyRadius = 10 + severity * 4;
+  // Tree height scales with dependent count: 0 deps = 30%, 5+ = 60%
+  const heightFraction = 0.3 + Math.min(dependents, 5) / 5 * 0.3;
+  const treeH = Math.max(6, Math.floor(r.ph * 0.4 * heightFraction));
+  const trunkW = node.status === "declared" ? 1 : (dependents > 3 ? 3 : 2);
+  const trunkH = Math.floor(treeH * 0.5);
+  const canopyR = Math.max(3, Math.floor(treeH * 0.35));
 
-  // Base position — trees stand on the ground
-  const baseX = node.x;
-  const baseY = groundY - 2;
+  // Wind sway offset (1px shift for frame 1)
+  const swayOffset = (!reducedMotion && spriteFrame % 2 === 1) ? 1 : 0;
+  // Phase offset per tree so they don't sway in unison
+  const phaseOffset = Math.floor(rng() * 2);
+  const effectiveSway = (!reducedMotion && ((spriteFrame + phaseOffset) % 2 === 1)) ? 1 : 0;
 
-  ctx.save();
-  ctx.translate(baseX, baseY);
-
-  // Sway animation from RPN
-  if (!reducedMotion && encoding.pulse.period > 0) {
-    const swaySpeed = 0.003 / (encoding.pulse.period / 1000);
-    const swayAmount = encoding.pulse.amplitude * 0.4;
-    const sway = Math.sin(time * swaySpeed + hashSeed(node.id)) * swayAmount;
-    ctx.rotate((sway * Math.PI) / 180);
-  }
-
-  // Apply trunk lean
-  ctx.rotate((variation.lean * Math.PI) / 180);
-
-  // Saturation from channel capacity
-  const sat = encoding.saturation / 100;
+  const topY = groundY - treeH;
 
   // Selection ring
   if (node.isSelected) {
-    ctx.strokeStyle = "#2563eb";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(0, -treeHeight, canopyRadius + 6, canopyRadius * 0.7 + 6, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    r.outline(
+      baseX - canopyR - 2,
+      topY - 2,
+      canopyR * 2 + 4,
+      treeH + 4,
+      "#2563eb"
+    );
   }
 
-  // Glow for superspreaders
-  if (encoding.glowFilter) {
-    ctx.shadowColor = colors.accent;
-    ctx.shadowBlur = encoding.glowRadius * 2;
+  switch (node.status) {
+    case "verified":
+      drawVerifiedTree(r, rng, palette, baseX, groundY, trunkW, trunkH, canopyR, effectiveSway, node);
+      break;
+    case "degraded":
+      drawDegradedTree(r, rng, palette, baseX, groundY, trunkW, trunkH, canopyR, effectiveSway);
+      break;
+    case "violated":
+      drawViolatedTree(r, rng, palette, baseX, groundY, trunkW, trunkH);
+      break;
+    case "unverifiable":
+      drawUnverifiableTree(r, rng, palette, baseX, groundY, trunkW, trunkH, canopyR);
+      break;
+    case "declared":
+      drawDeclaredTree(r, rng, palette, baseX, groundY, trunkH, canopyR);
+      break;
+    default:
+      drawDeclaredTree(r, rng, palette, baseX, groundY, trunkH, canopyR);
   }
+
+  // Affected overlay: subtle highlight
+  if (node.isAffected) {
+    r.pixel(baseX - 1, groundY, "#f59e0b");
+    r.pixel(baseX + 1, groundY, "#f59e0b");
+  }
+
+  return {
+    id: node.id,
+    x: (baseX - canopyR) * r.ps,
+    y: topY * r.ps,
+    w: (canopyR * 2) * r.ps,
+    h: treeH * r.ps,
+  };
+}
+
+function drawVerifiedTree(
+  r: PixelRenderer,
+  rng: () => number,
+  palette: { shadow: string; mid: string; light: string; highlight: string },
+  baseX: number,
+  groundY: number,
+  trunkW: number,
+  trunkH: number,
+  canopyR: number,
+  sway: number,
+  node: CanopyPixelNode
+): void {
+  const wood = pixelPalettes.wood;
 
   // Trunk
-  ctx.fillStyle = colors.trunk;
-  ctx.beginPath();
-  ctx.moveTo(-trunkWidth / 2, 0);
-  ctx.quadraticCurveTo(
-    -trunkWidth / 2.5,
-    -treeHeight * 0.4,
-    -trunkWidth / 3,
-    -treeHeight * 0.65
-  );
-  ctx.lineTo(trunkWidth / 3, -treeHeight * 0.65);
-  ctx.quadraticCurveTo(
-    trunkWidth / 2.5,
-    -treeHeight * 0.4,
-    trunkWidth / 2,
-    0
-  );
-  ctx.closePath();
-  ctx.fill();
-
-  // Bark texture
-  ctx.strokeStyle = "rgba(0,0,0,0.12)";
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i < 4; i++) {
-    const seed = hashSeed(node.id + `-bark-${i}`);
-    const bx = (-trunkWidth / 3) + seededRandom(seed) * (trunkWidth * 0.66);
-    ctx.beginPath();
-    ctx.moveTo(bx, -treeHeight * 0.12 * (i + 1));
-    ctx.lineTo(bx + seededRange(seed + 1, -2, 2), -treeHeight * 0.12 * (i + 2));
-    ctx.stroke();
+  const trunkLeft = baseX - Math.floor(trunkW / 2);
+  for (let y = 0; y < trunkH; y++) {
+    for (let x = 0; x < trunkW; x++) {
+      const color = x === 0 ? wood.trunkDark : wood.trunk;
+      r.pixel(trunkLeft + x, groundY - y, color);
+    }
   }
 
-  ctx.shadowBlur = 0;
+  // Canopy — irregular blob via random walk
+  const canopyCenter = groundY - trunkH;
+  const cx = baseX + sway;
+  const canopyPixels: Array<[number, number]> = [];
 
-  // Canopy — multiple ellipses for organic shape
-  const canopyY = -treeHeight;
-
-  // Main canopy body
-  ctx.globalAlpha = sat;
-  ctx.fillStyle = colors.canopy[0];
-  ctx.beginPath();
-  ctx.ellipse(0, canopyY, canopyRadius, canopyRadius * 0.72, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Depth layer
-  ctx.fillStyle = colors.canopy[1] ?? colors.canopy[0];
-  ctx.globalAlpha = sat * 0.4;
-  ctx.beginPath();
-  ctx.ellipse(
-    canopyRadius * 0.1,
-    canopyY + canopyRadius * 0.08,
-    canopyRadius * 0.7,
-    canopyRadius * 0.5,
-    0,
-    0,
-    Math.PI * 2
-  );
-  ctx.fill();
-
-  // Light highlight
-  ctx.fillStyle = colors.canopy[2] ?? colors.canopy[0];
-  ctx.globalAlpha = sat * 0.35;
-  ctx.beginPath();
-  ctx.ellipse(
-    -canopyRadius * 0.2,
-    canopyY - canopyRadius * 0.2,
-    canopyRadius * 0.35,
-    canopyRadius * 0.28,
-    0,
-    0,
-    Math.PI * 2
-  );
-  ctx.fill();
-
-  ctx.globalAlpha = 1;
-
-  // Affected pulse overlay
-  if (node.isAffected) {
-    ctx.fillStyle = "rgba(245, 158, 11, 0.25)";
-    ctx.beginPath();
-    ctx.ellipse(0, canopyY, canopyRadius + 4, canopyRadius * 0.72 + 4, 0, 0, Math.PI * 2);
-    ctx.fill();
+  // Fill canopy using a circle with procedural irregularity
+  for (let dy = -canopyR; dy <= canopyR; dy++) {
+    for (let dx = -canopyR; dx <= canopyR; dx++) {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const wobble = rng() * 1.5;
+      if (dist < canopyR - 0.5 + wobble) {
+        canopyPixels.push([cx + dx, canopyCenter + dy]);
+      }
+    }
   }
 
-  // Label
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 9px 'IBM Plex Mono', monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(node.id, 0, canopyY);
+  // Draw canopy pixels with color variation
+  for (const [px, py] of canopyPixels) {
+    const v = rng();
+    let color: string;
+    if (v < 0.3) color = palette.shadow;
+    else if (v < 0.7) color = palette.mid;
+    else color = palette.light;
+    r.pixel(px, py, color);
+  }
 
-  ctx.restore();
+  // Sunlight highlight spots
+  for (let i = 0; i < 3; i++) {
+    const hx = cx + Math.floor(rng() * canopyR * 1.2) - Math.floor(canopyR * 0.6);
+    const hy = canopyCenter - Math.floor(rng() * canopyR * 0.6);
+    r.pixel(hx, hy, palette.highlight);
+  }
+
+  // Fruit/flower pixels for high progress
+  if (node.encoding.directDependents > 3) {
+    for (let i = 0; i < 2; i++) {
+      const fx = cx + Math.floor(rng() * canopyR) - Math.floor(canopyR / 2);
+      const fy = canopyCenter + Math.floor(rng() * canopyR * 0.5);
+      r.pixel(fx, fy, "#e25555");
+    }
+  }
+}
+
+function drawDegradedTree(
+  r: PixelRenderer,
+  rng: () => number,
+  palette: { shadow: string; mid: string; light: string; highlight: string },
+  baseX: number,
+  groundY: number,
+  trunkW: number,
+  trunkH: number,
+  canopyR: number,
+  sway: number
+): void {
+  const wood = pixelPalettes.wood;
+
+  // Thinner trunk
+  const tw = Math.max(1, trunkW - 1);
+  const trunkLeft = baseX - Math.floor(tw / 2);
+  for (let y = 0; y < trunkH; y++) {
+    for (let x = 0; x < tw; x++) {
+      r.pixel(trunkLeft + x, groundY - y, wood.trunk);
+    }
+  }
+
+  // Thinning canopy (40-60% coverage)
+  const canopyCenter = groundY - trunkH;
+  const cx = baseX + sway;
+  const thinCanopyR = Math.floor(canopyR * 0.8);
+
+  for (let dy = -thinCanopyR; dy <= thinCanopyR; dy++) {
+    for (let dx = -thinCanopyR; dx <= thinCanopyR; dx++) {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < thinCanopyR && rng() < 0.5) {
+        const v = rng();
+        const color = v < 0.5 ? palette.mid : palette.light;
+        r.pixel(cx + dx, canopyCenter + dy, color);
+      }
+    }
+  }
+
+  // Bare branches poking above canopy
+  for (let i = 0; i < 2; i++) {
+    const bx = cx + Math.floor(rng() * 4) - 2;
+    const by = canopyCenter - thinCanopyR - 1;
+    r.pixel(bx, by, wood.branch);
+    r.pixel(bx + (rng() > 0.5 ? 1 : -1), by - 1, wood.branch);
+  }
+}
+
+function drawViolatedTree(
+  r: PixelRenderer,
+  rng: () => number,
+  palette: { shadow: string; mid: string; light: string; highlight: string },
+  baseX: number,
+  groundY: number,
+  trunkW: number,
+  trunkH: number
+): void {
+  const wood = pixelPalettes.wood;
+
+  // Trunk in dark wood
+  const trunkLeft = baseX - Math.floor(trunkW / 2);
+  for (let y = 0; y < trunkH; y++) {
+    for (let x = 0; x < trunkW; x++) {
+      r.pixel(trunkLeft + x, groundY - y, wood.trunkDark);
+    }
+  }
+
+  // Bare branches (3-5) at procedural angles
+  const branchCount = 3 + Math.floor(rng() * 3);
+  const branchTop = groundY - trunkH;
+  for (let i = 0; i < branchCount; i++) {
+    const angle = (rng() - 0.5) * 1.2; // -0.6 to 0.6
+    const length = 3 + Math.floor(rng() * 4);
+    let bx = baseX;
+    let by = branchTop;
+    for (let s = 0; s < length; s++) {
+      bx += angle > 0 ? 1 : -1;
+      by -= 1;
+      r.pixel(Math.floor(bx), by, wood.branch);
+    }
+  }
+
+  // Dark pixels at base
+  r.pixel(baseX - 1, groundY, palette.shadow);
+  r.pixel(baseX, groundY + 1, palette.shadow);
+  r.pixel(baseX + 1, groundY, palette.shadow);
+}
+
+function drawUnverifiableTree(
+  r: PixelRenderer,
+  rng: () => number,
+  palette: { shadow: string; mid: string; light: string; highlight: string },
+  baseX: number,
+  groundY: number,
+  trunkW: number,
+  trunkH: number,
+  canopyR: number
+): void {
+  // Dithered trunk (every other pixel)
+  const trunkLeft = baseX - Math.floor(trunkW / 2);
+  for (let y = 0; y < trunkH; y++) {
+    for (let x = 0; x < trunkW; x++) {
+      if ((x + y) % 2 === 0) {
+        r.pixel(trunkLeft + x, groundY - y, palette.shadow);
+      }
+    }
+  }
+
+  // Canopy outline only
+  const canopyCenter = groundY - trunkH;
+  for (let dy = -canopyR; dy <= canopyR; dy++) {
+    for (let dx = -canopyR; dx <= canopyR; dx++) {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Only boundary pixels
+      if (dist >= canopyR - 1.2 && dist < canopyR + 0.5) {
+        r.pixel(baseX + dx, canopyCenter + dy, palette.light);
+      }
+    }
+  }
+}
+
+function drawDeclaredTree(
+  r: PixelRenderer,
+  rng: () => number,
+  palette: { shadow: string; mid: string; light: string; highlight: string },
+  baseX: number,
+  groundY: number,
+  trunkH: number,
+  canopyR: number
+): void {
+  // Thin trunk (1px), short
+  const shortTrunk = Math.max(3, Math.floor(trunkH * 0.6));
+  for (let y = 0; y < shortTrunk; y++) {
+    r.pixel(baseX, groundY - y, pixelPalettes.wood.trunk);
+  }
+
+  // Small canopy cluster: 4-8 pixels
+  const top = groundY - shortTrunk;
+  const clusterSize = 4 + Math.floor(rng() * 5);
+  const placed: Array<[number, number]> = [[baseX, top]];
+
+  for (let i = 1; i < clusterSize; i++) {
+    const base = placed[Math.floor(rng() * placed.length)];
+    const dx = Math.floor(rng() * 3) - 1;
+    const dy = Math.floor(rng() * 2) - 1;
+    const nx = base[0] + dx;
+    const ny = base[1] + dy;
+    placed.push([nx, ny]);
+  }
+
+  for (const [px, py] of placed) {
+    const color = rng() > 0.5 ? palette.light : palette.highlight;
+    r.pixel(px, py, color);
+  }
+
+  // 1-2 side leaf pixels
+  r.pixel(baseX + 1, top + 1, palette.light);
+  if (rng() > 0.5) {
+    r.pixel(baseX - 1, top, palette.highlight);
+  }
 }

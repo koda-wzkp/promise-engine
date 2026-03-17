@@ -32,20 +32,24 @@ def create_app(config=None):
         app.config.from_object(config)
 
     # Enable CORS
-    cors_origins = app.config.get("CORS_ORIGINS", "*")
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": cors_origins,
-            "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS", "PUT"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        }
-    })
+    cors_config = app.config.get("CORS_ORIGINS", "")
+    if cors_config:
+        cors_origins = [o.strip() for o in cors_config.split(",") if o.strip()]
+    else:
+        cors_origins = ["https://promisepipeline.com", "http://localhost:3000"]
+    CORS(
+        app,
+        resources={
+            r"/api/*": {
+                "origins": cors_origins,
+                "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS", "PUT"],
+                "allow_headers": ["Content-Type", "Authorization"],
+            }
+        },
+    )
 
     # Initialize database
-    init_database(
-        database_url=app.config["DATABASE_URL"],
-        echo=app.config.get("SQL_ECHO", False)
-    )
+    init_database(database_url=app.config["DATABASE_URL"], echo=app.config.get("SQL_ECHO", False))
 
     # Register error handlers
     register_error_handlers(app)
@@ -75,13 +79,7 @@ def register_error_handlers(app):
     @app.errorhandler(404)
     def handle_not_found(error):
         """Handle 404 errors."""
-        return jsonify({
-            "error": {
-                "code": "NOT_FOUND",
-                "message": "Resource not found",
-                "details": {}
-            }
-        }), 404
+        return jsonify({"error": {"code": "NOT_FOUND", "message": "Resource not found", "details": {}}}), 404
 
     @app.errorhandler(500)
     def handle_internal_error(error):
@@ -92,13 +90,12 @@ def register_error_handlers(app):
         logger.error(f"Internal server error: {error}")
         logger.error(traceback.format_exc())
 
-        return jsonify({
-            "error": {
-                "code": "INTERNAL_ERROR",
-                "message": "An internal server error occurred",
-                "details": {}
-            }
-        }), 500
+        return (
+            jsonify(
+                {"error": {"code": "INTERNAL_ERROR", "message": "An internal server error occurred", "details": {}}}
+            ),
+            500,
+        )
 
 
 def register_blueprints(app):

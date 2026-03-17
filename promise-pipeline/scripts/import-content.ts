@@ -1,6 +1,7 @@
 import { createClient } from "@sanity/client";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 
 // Load .env.local from promise-pipeline root
 dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
@@ -13,9 +14,335 @@ const client = createClient({
   useCdn: false,
 });
 
-// --- Seed Data ---
+// --- Helpers ---
+
+function genKey(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 96);
+}
+
+// --- Markdown to Portable Text ---
+
+interface MarkDef {
+  _key: string;
+  _type: string;
+  href?: string;
+}
+
+interface Span {
+  _type: "span";
+  _key: string;
+  text: string;
+  marks: string[];
+}
+
+function parseInlineMarks(text: string): { children: Span[]; markDefs: MarkDef[] } {
+  const children: Span[] = [];
+  const markDefs: MarkDef[] = [];
+
+  // Process inline markdown: **bold**, *italic*, `code`, [links](url)
+  // Use a regex-based state machine to handle nested marks
+  let remaining = text;
+  let currentMarks: string[] = [];
+
+  const pushSpan = (t: string, marks: string[]) => {
+    if (t) {
+      children.push({
+        _type: "span",
+        _key: genKey(),
+        text: t,
+        marks: [...marks],
+      });
+    }
+  };
+
+  // Simple approach: process patterns left to right
+  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = pattern.exec(remaining)) !== null) {
+    // Push text before this match
+    if (match.index > lastIndex) {
+      pushSpan(remaining.slice(lastIndex, match.index), currentMarks);
+    }
+
+    if (match[2]) {
+      // **bold**
+      pushSpan(match[2], [...currentMarks, "strong"]);
+    } else if (match[3]) {
+      // *italic*
+      pushSpan(match[3], [...currentMarks, "em"]);
+    } else if (match[4]) {
+      // `code`
+      pushSpan(match[4], [...currentMarks, "code"]);
+    } else if (match[5] && match[6]) {
+      // [text](url)
+      const linkKey = genKey();
+      markDefs.push({ _key: linkKey, _type: "link", href: match[6] });
+      pushSpan(match[5], [...currentMarks, linkKey]);
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Push remaining text
+  if (lastIndex < remaining.length) {
+    pushSpan(remaining.slice(lastIndex), currentMarks);
+  }
+
+  // If nothing was parsed, return the whole text as a single span
+  if (children.length === 0) {
+    pushSpan(text, []);
+  }
+
+  return { children, markDefs };
+}
+
+function markdownToPortableText(markdown: string): any[] {
+  const blocks: any[] = [];
+  const lines = markdown.split("\n");
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Skip empty lines
+    if (line.trim() === "") {
+      i++;
+      continue;
+    }
+
+    // Skip horizontal rules
+    if (/^-{3,}$/.test(line.trim()) || /^\*{3,}$/.test(line.trim())) {
+      i++;
+      continue;
+    }
+
+    // Skip image/figure placeholders
+    if (line.trim().startsWith("*[Figure") || line.trim().startsWith("![")) {
+      i++;
+      continue;
+    }
+
+    // Headings
+    const headingMatch = line.match(/^(#{1,4})\s+(.+)/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const style = level === 1 ? "h2" : level === 2 ? "h2" : level === 3 ? "h3" : "h4";
+      const { children, markDefs } = parseInlineMarks(headingMatch[2]);
+      blocks.push({
+        _type: "block",
+        _key: genKey(),
+        style,
+        children,
+        markDefs,
+      });
+      i++;
+      continue;
+    }
+
+    // Blockquote
+    if (line.startsWith(">")) {
+      // Collect consecutive blockquote lines
+      let quoteText = "";
+      while (i < lines.length && lines[i].startsWith(">")) {
+        quoteText += (quoteText ? " " : "") + lines[i].replace(/^>\s*/, "");
+        i++;
+      }
+      const { children, markDefs } = parseInlineMarks(quoteText);
+      blocks.push({
+        _type: "block",
+        _key: genKey(),
+        style: "blockquote",
+        children,
+        markDefs,
+      });
+      continue;
+    }
+
+    // Ordered list
+    if (/^\d+\.\s/.test(line.trim())) {
+      while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
+        const itemText = lines[i].trim().replace(/^\d+\.\s+/, "");
+        const { children, markDefs } = parseInlineMarks(itemText);
+        blocks.push({
+          _type: "block",
+          _key: genKey(),
+          style: "normal",
+          listItem: "number",
+          level: 1,
+          children,
+          markDefs,
+        });
+        i++;
+      }
+      continue;
+    }
+
+    // Unordered list
+    if (/^[-*]\s/.test(line.trim()) || /^•\s/.test(line.trim())) {
+      while (
+        i < lines.length &&
+        (/^[-*]\s/.test(lines[i].trim()) || /^•\s/.test(lines[i].trim()))
+      ) {
+        const itemText = lines[i].trim().replace(/^[-*•]\s+/, "");
+        const { children, markDefs } = parseInlineMarks(itemText);
+        blocks.push({
+          _type: "block",
+          _key: genKey(),
+          style: "normal",
+          listItem: "bullet",
+          level: 1,
+          children,
+          markDefs,
+        });
+        i++;
+      }
+      continue;
+    }
+
+    // Normal paragraph — collect lines until blank line or special line
+    let paraText = "";
+    while (
+      i < lines.length &&
+      lines[i].trim() !== "" &&
+      !/^#{1,4}\s/.test(lines[i]) &&
+      !/^-{3,}$/.test(lines[i].trim()) &&
+      !/^\*{3,}$/.test(lines[i].trim()) &&
+      !lines[i].startsWith(">") &&
+      !/^\d+\.\s/.test(lines[i].trim()) &&
+      !/^[-*]\s/.test(lines[i].trim())
+    ) {
+      paraText += (paraText ? " " : "") + lines[i].trim();
+      i++;
+    }
+
+    if (paraText) {
+      const { children, markDefs } = parseInlineMarks(paraText);
+      blocks.push({
+        _type: "block",
+        _key: genKey(),
+        style: "normal",
+        children,
+        markDefs,
+      });
+    }
+  }
+
+  return blocks;
+}
+
+// --- Content file metadata ---
+
+interface ContentMeta {
+  file: string;
+  id: string;
+  title: string;
+  excerpt: string;
+  vertical: string;
+  categories: string[];
+  publishedAt: string;
+  relatedPromises: string[];
+}
+
+const contentFiles: ContentMeta[] = [
+  {
+    file: "welcome.md",
+    id: "post-welcome",
+    title: "Welcome to the Promise Pipeline Blog",
+    excerpt:
+      "Dashboards show you what's broken. Promise graphs show you what breaks next and why. The simulation engine lets you ask 'what if' before anything breaks at all.",
+    vertical: "general",
+    categories: ["category-engineering"],
+    publishedAt: "2026-03-01T12:00:00Z",
+    relatedPromises: [],
+  },
+  {
+    file: "trust-primitive.md",
+    id: "post-trust-primitive",
+    title: "The Trust Primitive: What It Means for Commitments to Nest, Compose, and Scale",
+    excerpt:
+      "Every institution runs on promises. Promise Pipeline treats the promise as a trust primitive — a basic building block that nests, composes, and scales.",
+    vertical: "general",
+    categories: ["category-promise-theory"],
+    publishedAt: "2026-03-04T12:00:00Z",
+    relatedPromises: ["P001"],
+  },
+  {
+    file: "entropy-problem.md",
+    id: "post-entropy-problem",
+    title: "Your Promise Network Has an Entropy Problem",
+    excerpt:
+      "Two networks can have the same health score but completely different epistemic situations. Network entropy tells you how much you should trust the assessment.",
+    vertical: "general",
+    categories: ["category-promise-theory", "category-engineering"],
+    publishedAt: "2026-03-06T12:00:00Z",
+    relatedPromises: [],
+  },
+  {
+    file: "agents-break-promises.md",
+    id: "post-agents-break-promises",
+    title: "When Agents Break Promises Nobody Made",
+    excerpt:
+      "Truffle Security found Claude agents autonomously exploiting SQL injection to complete research tasks. Five implicit promises, zero verification. A Promise Theory analysis.",
+    vertical: "ai",
+    categories: ["category-case-study", "category-promise-theory"],
+    publishedAt: "2026-03-08T12:00:00Z",
+    relatedPromises: ["P-SAFETY-001", "P-BOUND-002", "P-VERIFY-003"],
+  },
+  {
+    file: "aca-hb2021-analysis.md",
+    id: "post-aca-hb2021",
+    title: "Did They Keep Their Promises? The ACA and Oregon HB 2021",
+    excerpt:
+      "Two laws, two scales, one framework. We applied Promise Pipeline to the Affordable Care Act and Oregon HB 2021 — both are experiencing active cascades right now.",
+    vertical: "civic",
+    categories: ["category-case-study", "category-civic"],
+    publishedAt: "2026-03-10T12:00:00Z",
+    relatedPromises: ["P-ACA-001", "HB2021-001"],
+  },
+  {
+    file: "jcpoa-promise-network.md",
+    id: "post-jcpoa",
+    title: "The JCPOA Promise Network: When Verification Is a Promise That Can Break",
+    excerpt:
+      "22 promises. 11 agents. 8 domains. The most precisely specified multinational promise network in modern diplomatic history — and what happened when the cascade source was pulled.",
+    vertical: "general",
+    categories: ["category-case-study", "category-promise-theory"],
+    publishedAt: "2026-03-12T12:00:00Z",
+    relatedPromises: ["JCPOA-001", "JCPOA-011"],
+  },
+  {
+    file: "anakin-cascade-v2.md",
+    id: "post-anakin-cascade",
+    title: "The Anakin Cascade: A Promise Theory Analysis of the Fall of the Galactic Republic",
+    excerpt:
+      "The Star Wars prequel trilogy is, structurally, a cascade failure across a promise network. 13 promises, 9 agents, network health score 12/100.",
+    vertical: "general",
+    categories: ["category-case-study", "category-promise-theory"],
+    publishedAt: "2026-03-14T12:00:00Z",
+    relatedPromises: [],
+  },
+];
+
+// --- Seed Data (authors, categories) ---
 
 const authors = [
+  {
+    _id: "author-conor",
+    _type: "author",
+    name: "Conor Nolan-Finkel",
+    slug: { _type: "slug", current: "conor-nolan-finkel" },
+    bio: "Creator of Promise Pipeline. Applies Promise Theory to civic accountability, AI safety, and organizational health.",
+  },
   {
     _id: "author-promise-team",
     _type: "author",
@@ -53,180 +380,43 @@ const categories = [
   },
 ];
 
-// Helper to create portable text blocks
-function textBlock(text: string, style = "normal"): any {
-  return {
-    _type: "block",
-    _key: Math.random().toString(36).slice(2, 10),
-    style,
-    children: [
-      {
-        _type: "span",
-        _key: Math.random().toString(36).slice(2, 10),
-        text,
-        marks: [],
-      },
-    ],
-    markDefs: [],
-  };
+// --- Build posts from markdown files ---
+
+function buildPostsFromMarkdown(): any[] {
+  const contentDir = path.resolve(__dirname, "../../content");
+  const posts: any[] = [];
+
+  for (const meta of contentFiles) {
+    const filePath = path.join(contentDir, meta.file);
+    if (!fs.existsSync(filePath)) {
+      console.warn(`  ! File not found: ${meta.file}, skipping`);
+      continue;
+    }
+
+    const markdown = fs.readFileSync(filePath, "utf-8");
+    const body = markdownToPortableText(markdown);
+
+    posts.push({
+      _id: meta.id,
+      _type: "post",
+      title: meta.title,
+      slug: { _type: "slug", current: slugify(meta.title) },
+      author: { _type: "reference", _ref: "author-conor" },
+      publishedAt: meta.publishedAt,
+      excerpt: meta.excerpt,
+      vertical: meta.vertical,
+      categories: meta.categories.map((catId, i) => ({
+        _type: "reference",
+        _ref: catId,
+        _key: `cat${i}`,
+      })),
+      relatedPromises: meta.relatedPromises,
+      body,
+    });
+  }
+
+  return posts;
 }
-
-const posts = [
-  {
-    _id: "post-what-is-promise-theory",
-    _type: "post",
-    title: "What is Promise Theory?",
-    slug: { _type: "slug", current: "what-is-promise-theory" },
-    author: { _type: "reference", _ref: "author-promise-team" },
-    publishedAt: "2026-03-10T12:00:00Z",
-    excerpt:
-      "Promise Theory gives us a rigorous framework for understanding commitments — from AI systems to legislation. Here's why it matters for accountability.",
-    vertical: "general",
-    categories: [
-      { _type: "reference", _ref: "category-promise-theory", _key: "pt1" },
-    ],
-    relatedPromises: ["P001"],
-    body: [
-      textBlock("What is Promise Theory?", "h2"),
-      textBlock(
-        "Promise Theory, originally developed by Mark Burgess, models autonomous agents that make voluntary commitments. Unlike obligation-based frameworks that impose top-down rules, Promise Theory starts from what each agent can actually deliver."
-      ),
-      textBlock(
-        "This distinction matters enormously when we try to hold AI systems, businesses, or governments accountable. You can't audit an obligation — you can only audit a promise."
-      ),
-      textBlock("Why Promises Beat Obligations", "h3"),
-      textBlock(
-        "An obligation says 'you must do X.' A promise says 'I will do X.' The difference is agency. Promises are made by the agent that will keep them, which means they carry real information about capability and intent."
-      ),
-      textBlock(
-        "When a promise is broken, that's not just an error — it's a training signal. It tells us something about the gap between stated capability and actual performance."
-      ),
-      textBlock("Promises as Training Data", "h3"),
-      textBlock(
-        "Every promise verification generates a labeled data point: KEPT, BROKEN, PENDING, BLOCKED, or RENEGOTIATED. This is the foundation of Promise Engine — turning accountability into structured, machine-readable data."
-      ),
-    ],
-  },
-  {
-    _id: "post-oregon-hb-2021",
-    _type: "post",
-    title: "Oregon HB 2021: 20 Promises, 5 Years Later",
-    slug: { _type: "slug", current: "oregon-hb-2021-five-years" },
-    author: { _type: "reference", _ref: "author-promise-team" },
-    publishedAt: "2026-03-12T12:00:00Z",
-    excerpt:
-      "Oregon's landmark clean energy bill made 20 distinct promises. We tracked every one. Here's what we found.",
-    vertical: "civic",
-    categories: [
-      { _type: "reference", _ref: "category-case-study", _key: "cs1" },
-      { _type: "reference", _ref: "category-civic", _key: "cv1" },
-    ],
-    relatedPromises: ["HB2021-001", "HB2021-002", "HB2021-003"],
-    body: [
-      textBlock("Oregon HB 2021: 20 Promises, 5 Years Later", "h2"),
-      textBlock(
-        "In 2021, Oregon passed House Bill 2021, one of the most ambitious clean energy laws in the United States. It promised 100% clean electricity by 2040, with intermediate targets along the way."
-      ),
-      textBlock(
-        "We used Promise Engine to decompose HB 2021 into 20 discrete, verifiable promises — and tracked each one against public data."
-      ),
-      textBlock("The Methodology", "h3"),
-      textBlock(
-        "Each section of the bill was analyzed for concrete commitments. Aspirational language was separated from binding promises. Each promise was assigned a schema, verification rules, and data sources."
-      ),
-      textBlock("Key Findings", "h3"),
-      textBlock(
-        "Of the 20 promises extracted, 12 are currently KEPT, 3 are BROKEN, 2 are BLOCKED, and 3 remain PENDING their target dates. The broken promises cluster around environmental justice provisions — the hardest commitments to verify and the easiest to deprioritize."
-      ),
-      textBlock(
-        "This pattern — structural promises kept, equity promises broken — appears across civic verticals and deserves its own analysis."
-      ),
-    ],
-  },
-  {
-    _id: "post-simulation-engine",
-    _type: "post",
-    title: "Why We Built a Simulation Engine for Promises",
-    slug: { _type: "slug", current: "why-simulation-engine" },
-    author: { _type: "reference", _ref: "author-promise-team" },
-    publishedAt: "2026-03-14T12:00:00Z",
-    excerpt:
-      "Promises don't exist in isolation — they interact, conflict, and cascade. Simulation lets us see the second-order effects before they happen.",
-    vertical: "ai",
-    categories: [
-      { _type: "reference", _ref: "category-engineering", _key: "en1" },
-    ],
-    relatedPromises: ["AI-001", "AI-002"],
-    body: [
-      textBlock("Why We Built a Simulation Engine for Promises", "h2"),
-      textBlock(
-        "When you track promises at scale, patterns emerge. Some promises reinforce each other. Others conflict. And some create cascading failures when broken."
-      ),
-      textBlock(
-        "We built a simulation engine to model these interactions before they play out in the real world."
-      ),
-      textBlock("Promise Graphs", "h3"),
-      textBlock(
-        "Each promise connects to others through dependency, conflict, or reinforcement edges. An AI system promising 'fast responses' and 'thorough analysis' creates a tension that the simulation can surface before deployment."
-      ),
-      textBlock("Monte Carlo Promise Verification", "h3"),
-      textBlock(
-        "By running thousands of scenarios with varying conditions, we can estimate the probability that a promise will be kept under different circumstances. This transforms accountability from binary pass/fail into a probabilistic integrity score."
-      ),
-    ],
-  },
-  {
-    _id: "post-v2-changelog",
-    _type: "post",
-    title: "Promise Pipeline Changelog: v2 Launch",
-    slug: { _type: "slug", current: "v2-changelog" },
-    author: { _type: "reference", _ref: "author-promise-team" },
-    publishedAt: "2026-03-16T12:00:00Z",
-    excerpt:
-      "Promise Pipeline v2 is live — with Sanity CMS, vertical-specific dashboards, and a new integrity visualization engine.",
-    vertical: "general",
-    categories: [
-      { _type: "reference", _ref: "category-engineering", _key: "en2" },
-    ],
-    relatedPromises: [],
-    body: [
-      textBlock("Promise Pipeline v2 Launch", "h2"),
-      textBlock(
-        "Today we're launching Promise Pipeline v2 — a major upgrade to our public-facing infrastructure for promise tracking and accountability."
-      ),
-      textBlock("What's New", "h3"),
-      textBlock(
-        "Sanity CMS integration for blog and case study content. Vertical-specific dashboards showing promise integrity across civic, AI, infrastructure, and supply chain domains. A new visualization engine for integrity scores over time."
-      ),
-      textBlock("What's Next", "h3"),
-      textBlock(
-        "Public API access for promise verification. Embeddable integrity badges. And a community-driven promise schema registry so anyone can define accountability standards for their domain."
-      ),
-    ],
-  },
-];
-
-const caseStudies = [
-  {
-    _id: "case-study-hb2021",
-    _type: "caseStudy",
-    title: "Oregon HB 2021 Clean Energy Accountability",
-    slug: { _type: "slug", current: "oregon-hb-2021" },
-    vertical: "civic",
-    promiseCount: 20,
-    agentCount: 5,
-    domainCount: 3,
-    keyFinding:
-      "Structural promises (grid targets, timelines) are largely kept. Equity and environmental justice promises show the highest breakage rate — suggesting accountability gaps in harder-to-measure commitments.",
-    publishedAt: "2026-03-12T12:00:00Z",
-    body: [
-      textBlock("Oregon HB 2021: Full Case Study", "h2"),
-      textBlock(
-        "This case study tracks 20 promises extracted from Oregon's House Bill 2021, covering clean energy targets, environmental justice provisions, and utility compliance requirements."
-      ),
-    ],
-  },
-];
 
 // --- Import Logic ---
 
@@ -254,11 +444,19 @@ async function main() {
   console.log(`Project: ${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}`);
   console.log(`Dataset: ${process.env.NEXT_PUBLIC_SANITY_DATASET || "production"}\n`);
 
+  if (!process.env.SANITY_API_TOKEN) {
+    console.error("Error: SANITY_API_TOKEN is required in .env.local");
+    console.error("Get a token at: https://www.sanity.io/manage/project/cwvex1ty/api#tokens");
+    process.exit(1);
+  }
+
+  const posts = buildPostsFromMarkdown();
+  console.log(`Found ${posts.length} markdown articles to import.\n`);
+
   let total = 0;
   total += await importDocuments("Author", authors);
   total += await importDocuments("Category", categories);
   total += await importDocuments("Post", posts);
-  total += await importDocuments("Case Study", caseStudies);
 
   console.log(`\nDone! Imported ${total} documents.\n`);
 }

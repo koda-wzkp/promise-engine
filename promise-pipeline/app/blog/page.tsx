@@ -1,20 +1,32 @@
 import Link from "next/link";
+import { getAllPosts, type BlogPost } from "@/lib/blog";
 
-// Blog index page — fetches from Sanity when configured.
-// Shows placeholder content when Sanity is not set up.
+// Blog index page — loads from local markdown in content/,
+// falls back to Sanity when configured.
 
 export default async function BlogPage() {
   let posts: any[] = [];
 
+  // Try Sanity first
   try {
-    // Only fetch if Sanity is configured
-    if (process.env.NEXT_PUBLIC_SANITY_PROJECT_ID && process.env.NEXT_PUBLIC_SANITY_PROJECT_ID !== "placeholder") {
-      const { client } = await import("@/sanity/lib/client");
-      const { allPostsQuery } = await import("@/sanity/lib/queries");
-      posts = await client.fetch(allPostsQuery);
-    }
+    const { client } = await import("@/sanity/lib/client");
+    const { allPostsQuery } = await import("@/sanity/lib/queries");
+    posts = await client.fetch(allPostsQuery);
   } catch {
-    // Sanity not configured — show placeholder
+    // Sanity not configured — fall through to local content
+  }
+
+  // Fall back to local markdown files
+  if (posts.length === 0) {
+    const localPosts = getAllPosts();
+    posts = localPosts.map((p: BlogPost) => ({
+      title: p.title,
+      slug: { current: p.slug },
+      excerpt: p.excerpt,
+      publishedAt: p.publishedAt,
+      author: p.author,
+      vertical: p.vertical,
+    }));
   }
 
   return (
@@ -57,17 +69,8 @@ export default async function BlogPage() {
               Coming Soon
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              Blog posts will appear here once the Sanity CMS is configured.
-              Check back soon for articles on Promise Theory, case studies, and
-              project updates.
+              Blog posts will appear here once content is added.
             </p>
-            <div className="text-sm text-gray-400 space-y-1">
-              <p>Planned articles:</p>
-              <p>&bull; What is Promise Theory?</p>
-              <p>&bull; Oregon HB 2021: 20 Promises, 5 Years Later</p>
-              <p>&bull; Why We Built a Simulation Engine for Promises</p>
-              <p>&bull; Promise Pipeline Changelog: v2 Launch</p>
-            </div>
           </div>
         )}
       </div>

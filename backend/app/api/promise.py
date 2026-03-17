@@ -4,6 +4,8 @@ External systems can verify promises, log events, and query integrity scores.
 This is the public interface to the Promise Engine kernel.
 """
 
+import os
+from functools import wraps
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from typing import Optional
@@ -19,6 +21,21 @@ from app.promise_engine.core.models import (
 
 # Create blueprint
 promise_bp = Blueprint("promise", __name__, url_prefix="/api/v1/promise")
+
+
+def require_api_key(f):
+    """Require a valid API key for data export endpoints."""
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        api_key = request.headers.get("X-API-Key")
+        expected = os.environ.get("EXPORT_API_KEY")
+        if not expected or api_key != expected:
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+
+    return decorated
+
 
 # Initialize Promise Engine (will be set on app startup)
 _engine: Optional[PromiseEngine] = None
@@ -42,6 +59,7 @@ def get_engine() -> PromiseEngine:
 # ============================================================
 # VERIFICATION
 # ============================================================
+
 
 @promise_bp.route("/verify", methods=["POST"])
 def verify_promise():
@@ -81,26 +99,14 @@ def verify_promise():
         required = ["schema_id", "promiser", "promisee", "input_context"]
         missing = [f for f in required if f not in data]
         if missing:
-            return jsonify({
-                "success": False,
-                "error": f"Missing required fields: {', '.join(missing)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Missing required fields: {', '.join(missing)}"}), 400
 
         # Parse agents
         try:
-            promiser = Agent(
-                type=AgentType(data["promiser"]["type"]),
-                id=data["promiser"]["id"]
-            )
-            promisee = Agent(
-                type=AgentType(data["promisee"]["type"]),
-                id=data["promisee"]["id"]
-            )
+            promiser = Agent(type=AgentType(data["promiser"]["type"]), id=data["promiser"]["id"])
+            promisee = Agent(type=AgentType(data["promisee"]["type"]), id=data["promisee"]["id"])
         except (KeyError, ValueError) as e:
-            return jsonify({
-                "success": False,
-                "error": f"Invalid agent format: {str(e)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Invalid agent format: {str(e)}"}), 400
 
         # Verify promise
         engine = get_engine()
@@ -111,33 +117,36 @@ def verify_promise():
             input_context=data["input_context"],
             output=data.get("output", {}),
             touchpoint_id=data.get("touchpoint_id"),
-            journey_id=data.get("journey_id")
+            journey_id=data.get("journey_id"),
         )
 
         # Get the logged event (most recent for this verification)
         # In production, we'd return the event_id from verify()
 
-        return jsonify({
-            "success": True,
-            "result": {
-                "kept": result.kept,
-                "result": result.result.value,
-                "violation": result.violation,
-                "details": result.details
-            },
-            "timestamp": datetime.utcnow().isoformat()
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "result": {
+                        "kept": result.kept,
+                        "result": result.result.value,
+                        "violation": result.violation,
+                        "details": result.details,
+                    },
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ============================================================
 # MANUAL LOGGING
 # ============================================================
+
 
 @promise_bp.route("/log", methods=["POST"])
 def log_promise():
@@ -174,41 +183,30 @@ def log_promise():
 
         # Validate required fields
         required = [
-            "vertical", "schema_id", "promiser", "promisee",
-            "input_context", "result",
+            "vertical",
+            "schema_id",
+            "promiser",
+            "promisee",
+            "input_context",
+            "result",
         ]
         missing = [f for f in required if f not in data]
         if missing:
-            return jsonify({
-                "success": False,
-                "error": f"Missing required fields: {', '.join(missing)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Missing required fields: {', '.join(missing)}"}), 400
 
         # Parse agents
         try:
-            promiser = Agent(
-                type=AgentType(data["promiser"]["type"]),
-                id=data["promiser"]["id"]
-            )
-            promisee = Agent(
-                type=AgentType(data["promisee"]["type"]),
-                id=data["promisee"]["id"]
-            )
+            promiser = Agent(type=AgentType(data["promiser"]["type"]), id=data["promiser"]["id"])
+            promisee = Agent(type=AgentType(data["promisee"]["type"]), id=data["promisee"]["id"])
         except (KeyError, ValueError) as e:
-            return jsonify({
-                "success": False,
-                "error": f"Invalid agent format: {str(e)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Invalid agent format: {str(e)}"}), 400
 
         # Parse result and signal strength
         try:
             result = PromiseResult(data["result"])
             signal_strength = SignalStrength(data.get("signal_strength", "inferred"))
         except ValueError as e:
-            return jsonify({
-                "success": False,
-                "error": f"Invalid enum value: {str(e)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Invalid enum value: {str(e)}"}), 400
 
         # Create event
         event = PromiseEvent.create(
@@ -223,29 +221,23 @@ def log_promise():
             violation_detail=data.get("violation_detail"),
             signal_strength=signal_strength,
             touchpoint_id=data.get("touchpoint_id"),
-            journey_id=data.get("journey_id")
+            journey_id=data.get("journey_id"),
         )
 
         # Log to database
         engine = get_engine()
         engine.log(event)
 
-        return jsonify({
-            "success": True,
-            "event_id": str(event.id),
-            "timestamp": event.timestamp.isoformat()
-        }), 201
+        return jsonify({"success": True, "event_id": str(event.id), "timestamp": event.timestamp.isoformat()}), 201
 
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ============================================================
 # INTEGRITY SCORES
 # ============================================================
+
 
 @promise_bp.route("/integrity/<agent_type>/<agent_id>", methods=["GET"])
 def get_integrity(agent_type: str, agent_id: str):
@@ -279,15 +271,9 @@ def get_integrity(agent_type: str, agent_id: str):
     try:
         # Parse agent
         try:
-            agent = Agent(
-                type=AgentType(agent_type),
-                id=agent_id
-            )
+            agent = Agent(type=AgentType(agent_type), id=agent_id)
         except ValueError as e:
-            return jsonify({
-                "success": False,
-                "error": f"Invalid agent type: {str(e)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Invalid agent type: {str(e)}"}), 400
 
         # Parse query params
         vertical = request.args.get("vertical")
@@ -299,49 +285,44 @@ def get_integrity(agent_type: str, agent_id: str):
             try:
                 since = datetime.fromisoformat(since_str.replace("Z", "+00:00"))
             except ValueError:
-                return jsonify({
-                    "success": False,
-                    "error": "Invalid 'since' timestamp format. Use ISO 8601."
-                }), 400
+                return jsonify({"success": False, "error": "Invalid 'since' timestamp format. Use ISO 8601."}), 400
 
         # Get integrity score
         engine = get_engine()
-        score = engine.get_integrity(
-            agent=agent,
-            vertical=vertical,
-            since=since,
-            refresh=refresh
+        score = engine.get_integrity(agent=agent, vertical=vertical, since=since, refresh=refresh)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "integrity": {
+                        "agent": {"type": agent.type.value, "id": agent.id},
+                        "overall_score": score.overall_score,
+                        "total_promises": score.total_promises,
+                        "kept_count": score.kept_count,
+                        "broken_count": score.broken_count,
+                        "renegotiated_count": score.renegotiated_count,
+                        "pending_count": score.pending_count,
+                        "trend_30d": score.trend_30d,
+                        "trend_90d": score.trend_90d,
+                        "trust_capital": score.trust_capital,
+                        "recovery_rate": score.recovery_rate,
+                        "computed_at": score.computed_at.isoformat(),
+                        "vertical": score.vertical,
+                    },
+                }
+            ),
+            200,
         )
 
-        return jsonify({
-            "success": True,
-            "integrity": {
-                "agent": {"type": agent.type.value, "id": agent.id},
-                "overall_score": score.overall_score,
-                "total_promises": score.total_promises,
-                "kept_count": score.kept_count,
-                "broken_count": score.broken_count,
-                "renegotiated_count": score.renegotiated_count,
-                "pending_count": score.pending_count,
-                "trend_30d": score.trend_30d,
-                "trend_90d": score.trend_90d,
-                "trust_capital": score.trust_capital,
-                "recovery_rate": score.recovery_rate,
-                "computed_at": score.computed_at.isoformat(),
-                "vertical": score.vertical
-            }
-        }), 200
-
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ============================================================
 # SCHEMAS
 # ============================================================
+
 
 @promise_bp.route("/schemas", methods=["GET"])
 def list_schemas():
@@ -376,31 +357,33 @@ def list_schemas():
         engine = get_engine()
         schemas = engine.list_schemas(vertical=vertical)
 
-        return jsonify({
-            "success": True,
-            "schemas": [
+        return (
+            jsonify(
                 {
-                    "id": s.id,
-                    "version": s.version,
-                    "vertical": s.vertical,
-                    "name": s.name,
-                    "description": s.description,
-                    "commitment_type": s.commitment_type,
-                    "stakes": s.stakes,
-                    "verification_type": s.verification_type,
-                    "training_eligible": s.training_eligible,
-                    "domain_tags": s.domain_tags,
-                    "created_at": s.created_at.isoformat()
+                    "success": True,
+                    "schemas": [
+                        {
+                            "id": s.id,
+                            "version": s.version,
+                            "vertical": s.vertical,
+                            "name": s.name,
+                            "description": s.description,
+                            "commitment_type": s.commitment_type,
+                            "stakes": s.stakes,
+                            "verification_type": s.verification_type,
+                            "training_eligible": s.training_eligible,
+                            "domain_tags": s.domain_tags,
+                            "created_at": s.created_at.isoformat(),
+                        }
+                        for s in schemas
+                    ],
                 }
-                for s in schemas
-            ]
-        }), 200
+            ),
+            200,
+        )
 
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @promise_bp.route("/schemas/<schema_id>", methods=["GET"])
@@ -432,40 +415,40 @@ def get_schema(schema_id: str):
         schema = engine.get_schema(schema_id)
 
         if not schema:
-            return jsonify({
-                "success": False,
-                "error": f"Schema not found: {schema_id}"
-            }), 404
+            return jsonify({"success": False, "error": f"Schema not found: {schema_id}"}), 404
 
-        return jsonify({
-            "success": True,
-            "schema": {
-                "id": schema.id,
-                "version": schema.version,
-                "vertical": schema.vertical,
-                "name": schema.name,
-                "description": schema.description,
-                "commitment_type": schema.commitment_type,
-                "stakes": schema.stakes,
-                "schema_json": schema.schema_json,
-                "verification_type": schema.verification_type,
-                "verification_rules": schema.verification_rules,
-                "training_eligible": schema.training_eligible,
-                "domain_tags": schema.domain_tags,
-                "created_at": schema.created_at.isoformat()
-            }
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "schema": {
+                        "id": schema.id,
+                        "version": schema.version,
+                        "vertical": schema.vertical,
+                        "name": schema.name,
+                        "description": schema.description,
+                        "commitment_type": schema.commitment_type,
+                        "stakes": schema.stakes,
+                        "schema_json": schema.schema_json,
+                        "verification_type": schema.verification_type,
+                        "verification_rules": schema.verification_rules,
+                        "training_eligible": schema.training_eligible,
+                        "domain_tags": schema.domain_tags,
+                        "created_at": schema.created_at.isoformat(),
+                    },
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ============================================================
 # PENDING PROMISES
 # ============================================================
+
 
 @promise_bp.route("/pending/<agent_type>/<agent_id>", methods=["GET"])
 def get_pending(agent_type: str, agent_id: str):
@@ -492,15 +475,9 @@ def get_pending(agent_type: str, agent_id: str):
     try:
         # Parse agent
         try:
-            agent = Agent(
-                type=AgentType(agent_type),
-                id=agent_id
-            )
+            agent = Agent(type=AgentType(agent_type), id=agent_id)
         except ValueError as e:
-            return jsonify({
-                "success": False,
-                "error": f"Invalid agent type: {str(e)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Invalid agent type: {str(e)}"}), 400
 
         # Parse query params
         due_before_str = request.args.get("due_before")
@@ -509,40 +486,40 @@ def get_pending(agent_type: str, agent_id: str):
             try:
                 due_before = datetime.fromisoformat(due_before_str.replace("Z", "+00:00"))
             except ValueError:
-                return jsonify({
-                    "success": False,
-                    "error": "Invalid 'due_before' timestamp format. Use ISO 8601."
-                }), 400
+                return jsonify({"success": False, "error": "Invalid 'due_before' timestamp format. Use ISO 8601."}), 400
 
         # Get pending promises
         engine = get_engine()
         pending = engine.get_pending(agent, due_before=due_before)
 
-        return jsonify({
-            "success": True,
-            "pending": [
+        return (
+            jsonify(
                 {
-                    "id": str(e.id),
-                    "timestamp": e.timestamp.isoformat(),
-                    "schema_id": e.promise_schema_id,
-                    "promisee": {"type": e.promisee.type.value, "id": e.promisee.id},
-                    "input_context": e.input_context,
-                    "result": e.result.value
+                    "success": True,
+                    "pending": [
+                        {
+                            "id": str(e.id),
+                            "timestamp": e.timestamp.isoformat(),
+                            "schema_id": e.promise_schema_id,
+                            "promisee": {"type": e.promisee.type.value, "id": e.promisee.id},
+                            "input_context": e.input_context,
+                            "result": e.result.value,
+                        }
+                        for e in pending
+                    ],
                 }
-                for e in pending
-            ]
-        }), 200
+            ),
+            200,
+        )
 
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ============================================================
 # HEALTH CHECK
 # ============================================================
+
 
 @promise_bp.route("/health", methods=["GET"])
 def health():
@@ -557,22 +534,24 @@ def health():
     """
     try:
         engine = get_engine()
-        return jsonify({
-            "status": "healthy",
-            "engine": "initialized" if engine else "not_initialized",
-            "timestamp": datetime.utcnow().isoformat()
-        }), 200
+        return (
+            jsonify(
+                {
+                    "status": "healthy",
+                    "engine": "initialized" if engine else "not_initialized",
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            ),
+            200,
+        )
     except Exception as e:
-        return jsonify({
-            "status": "unhealthy",
-            "error": str(e),
-            "timestamp": datetime.utcnow().isoformat()
-        }), 500
+        return jsonify({"status": "unhealthy", "error": str(e), "timestamp": datetime.utcnow().isoformat()}), 500
 
 
 # ============================================================
 # EVENTS QUERY
 # ============================================================
+
 
 @promise_bp.route("/events", methods=["GET"])
 def query_events():
@@ -623,32 +602,41 @@ def query_events():
         with get_db() as db:
             repo = PromiseRepository(db)
             events = repo.get_events(
-                agent=agent, vertical=vertical, schema_id=schema_id,
-                result=result, since=since, limit=limit,
+                agent=agent,
+                vertical=vertical,
+                schema_id=schema_id,
+                result=result,
+                since=since,
+                limit=limit,
             )
 
-            return jsonify({
-                "success": True,
-                "events": [
+            return (
+                jsonify(
                     {
-                        "id": str(e.id),
-                        "timestamp": e.timestamp.isoformat(),
-                        "vertical": e.vertical,
-                        "schema_id": e.promise_schema_id,
-                        "promiser": {"type": e.promiser_type, "id": e.promiser_id},
-                        "promisee": {"type": e.promisee_type, "id": e.promisee_id},
-                        "result": e.result,
-                        "violation_type": e.violation_type,
-                        "signal_strength": e.signal_strength,
-                        "recovery_action": e.recovery_action,
-                        "recovery_outcome": e.recovery_outcome,
-                        "recovery_at": e.recovery_at.isoformat() if e.recovery_at else None,
+                        "success": True,
+                        "events": [
+                            {
+                                "id": str(e.id),
+                                "timestamp": e.timestamp.isoformat(),
+                                "vertical": e.vertical,
+                                "schema_id": e.promise_schema_id,
+                                "promiser": {"type": e.promiser_type, "id": e.promiser_id},
+                                "promisee": {"type": e.promisee_type, "id": e.promisee_id},
+                                "result": e.result,
+                                "violation_type": e.violation_type,
+                                "signal_strength": e.signal_strength,
+                                "recovery_action": e.recovery_action,
+                                "recovery_outcome": e.recovery_outcome,
+                                "recovery_at": e.recovery_at.isoformat() if e.recovery_at else None,
+                            }
+                            for e in events
+                        ],
+                        "count": len(events),
+                        "limit": limit,
                     }
-                    for e in events
-                ],
-                "count": len(events),
-                "limit": limit,
-            }), 200
+                ),
+                200,
+            )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -657,6 +645,7 @@ def query_events():
 # ============================================================
 # RECOVERY
 # ============================================================
+
 
 @promise_bp.route("/recovery", methods=["POST"])
 def log_recovery():
@@ -675,17 +664,16 @@ def log_recovery():
         required = ["event_id", "recovery_action", "recovery_outcome"]
         missing = [f for f in required if f not in data]
         if missing:
-            return jsonify({
-                "success": False,
-                "error": f"Missing required fields: {', '.join(missing)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Missing required fields: {', '.join(missing)}"}), 400
 
         valid_outcomes = {"resolved", "compensated", "renegotiated", "failed"}
         if data["recovery_outcome"] not in valid_outcomes:
-            return jsonify({
-                "success": False,
-                "error": f"Invalid outcome. Must be one of: {', '.join(sorted(valid_outcomes))}"
-            }), 400
+            return (
+                jsonify(
+                    {"success": False, "error": f"Invalid outcome. Must be one of: {', '.join(sorted(valid_outcomes))}"}
+                ),
+                400,
+            )
 
         from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
@@ -699,19 +687,21 @@ def log_recovery():
             )
 
             if not event:
-                return jsonify({
-                    "success": False,
-                    "error": "Event not found or not in 'broken' state"
-                }), 404
+                return jsonify({"success": False, "error": "Event not found or not in 'broken' state"}), 404
 
-            return jsonify({
-                "success": True,
-                "event_id": str(event.id),
-                "recovery_action": event.recovery_action,
-                "recovery_outcome": event.recovery_outcome,
-                "recovery_at": event.recovery_at.isoformat(),
-                "new_result": event.result,
-            }), 200
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "event_id": str(event.id),
+                        "recovery_action": event.recovery_action,
+                        "recovery_outcome": event.recovery_outcome,
+                        "recovery_at": event.recovery_at.isoformat(),
+                        "new_result": event.result,
+                    }
+                ),
+                200,
+            )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -721,7 +711,9 @@ def log_recovery():
 # TRAINING DATA EXPORT
 # ============================================================
 
+
 @promise_bp.route("/export", methods=["GET"])
+@require_api_key
 def export_training_data():
     """Export unexported training data as JSONL.
 
@@ -760,38 +752,46 @@ def export_training_data():
             event_ids = []
 
             for e in events:
-                training_data.append({
-                    "id": str(e.id),
-                    "schema_id": e.promise_schema_id,
-                    "vertical": e.vertical,
-                    "input": e.input_context,
-                    "output": e.output,
-                    "label": e.result,
-                    "signal_strength": e.signal_strength,
-                    "promiser": {"type": e.promiser_type, "id": e.promiser_id},
-                    "promisee": {"type": e.promisee_type, "id": e.promisee_id},
-                    "violation_type": e.violation_type,
-                    "timestamp": e.timestamp.isoformat(),
-                })
+                training_data.append(
+                    {
+                        "id": str(e.id),
+                        "schema_id": e.promise_schema_id,
+                        "vertical": e.vertical,
+                        "input": e.input_context,
+                        "output": e.output,
+                        "label": e.result,
+                        "signal_strength": e.signal_strength,
+                        "promiser": {"type": e.promiser_type, "id": e.promiser_id},
+                        "promisee": {"type": e.promisee_type, "id": e.promisee_id},
+                        "violation_type": e.violation_type,
+                        "timestamp": e.timestamp.isoformat(),
+                    }
+                )
                 event_ids.append(e.id)
 
             # Mark as exported
             if mark and event_ids:
                 repo.mark_exported(event_ids)
 
-            return jsonify({
-                "success": True,
-                "format": "jsonl",
-                "count": len(training_data),
-                "marked_exported": mark,
-                "data": training_data,
-            }), 200
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "format": "jsonl",
+                        "count": len(training_data),
+                        "marked_exported": mark,
+                        "data": training_data,
+                    }
+                ),
+                200,
+            )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 
 @promise_bp.route("/export/stats", methods=["GET"])
+@require_api_key
 def export_stats():
     """Get training data export statistics.
 
@@ -808,10 +808,15 @@ def export_stats():
             repo = PromiseRepository(db)
             stats = repo.get_export_stats(vertical=vertical)
 
-            return jsonify({
-                "success": True,
-                "stats": stats,
-            }), 200
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "stats": stats,
+                    }
+                ),
+                200,
+            )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -820,6 +825,7 @@ def export_stats():
 # ============================================================
 # VOUCHING NETWORK
 # ============================================================
+
 
 @promise_bp.route("/vouch", methods=["POST"])
 def create_vouch():
@@ -839,32 +845,17 @@ def create_vouch():
         required = ["voucher", "vouchee", "strength"]
         missing = [f for f in required if f not in data]
         if missing:
-            return jsonify({
-                "success": False,
-                "error": f"Missing required fields: {', '.join(missing)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Missing required fields: {', '.join(missing)}"}), 400
 
         try:
-            voucher = Agent(
-                type=AgentType(data["voucher"]["type"]),
-                id=data["voucher"]["id"]
-            )
-            vouchee = Agent(
-                type=AgentType(data["vouchee"]["type"]),
-                id=data["vouchee"]["id"]
-            )
+            voucher = Agent(type=AgentType(data["voucher"]["type"]), id=data["voucher"]["id"])
+            vouchee = Agent(type=AgentType(data["vouchee"]["type"]), id=data["vouchee"]["id"])
         except (KeyError, ValueError) as e:
-            return jsonify({
-                "success": False,
-                "error": f"Invalid agent format: {str(e)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Invalid agent format: {str(e)}"}), 400
 
         strength = data["strength"]
         if not isinstance(strength, (int, float)) or strength < 0 or strength > 1:
-            return jsonify({
-                "success": False,
-                "error": "Strength must be a number between 0.0 and 1.0"
-            }), 400
+            return jsonify({"success": False, "error": "Strength must be a number between 0.0 and 1.0"}), 400
 
         from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
@@ -878,16 +869,21 @@ def create_vouch():
                 context=data.get("context"),
             )
 
-            return jsonify({
-                "success": True,
-                "vouch": {
-                    "voucher": {"type": vouch.voucher_type, "id": vouch.voucher_id},
-                    "vouchee": {"type": vouch.vouchee_type, "id": vouch.vouchee_id},
-                    "strength": vouch.strength,
-                    "context": vouch.context,
-                    "created_at": vouch.created_at.isoformat(),
-                }
-            }), 201
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "vouch": {
+                            "voucher": {"type": vouch.voucher_type, "id": vouch.voucher_id},
+                            "vouchee": {"type": vouch.vouchee_type, "id": vouch.vouchee_id},
+                            "strength": vouch.strength,
+                            "context": vouch.context,
+                            "created_at": vouch.created_at.isoformat(),
+                        },
+                    }
+                ),
+                201,
+            )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -907,19 +903,10 @@ def revoke_vouch():
         data = request.get_json()
 
         try:
-            voucher = Agent(
-                type=AgentType(data["voucher"]["type"]),
-                id=data["voucher"]["id"]
-            )
-            vouchee = Agent(
-                type=AgentType(data["vouchee"]["type"]),
-                id=data["vouchee"]["id"]
-            )
+            voucher = Agent(type=AgentType(data["voucher"]["type"]), id=data["voucher"]["id"])
+            vouchee = Agent(type=AgentType(data["vouchee"]["type"]), id=data["vouchee"]["id"])
         except (KeyError, ValueError) as e:
-            return jsonify({
-                "success": False,
-                "error": f"Invalid agent format: {str(e)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Invalid agent format: {str(e)}"}), 400
 
         from app.database import get_db  # noqa: F811
         from app.promise_engine.storage.repository import PromiseRepository
@@ -929,10 +916,7 @@ def revoke_vouch():
             revoked = repo.revoke_vouch(voucher, vouchee)
 
             if not revoked:
-                return jsonify({
-                    "success": False,
-                    "error": "No active vouch found between these agents"
-                }), 404
+                return jsonify({"success": False, "error": "No active vouch found between these agents"}), 404
 
             return jsonify({"success": True, "revoked": True}), 200
 
@@ -962,7 +946,7 @@ def get_vouching_network(agent_type: str, agent_id: str):
         with get_db() as db:
             repo = PromiseRepository(db)
 
-            result = {}
+            result: dict = {}
 
             if direction in (None, "for"):
                 vouches_for = repo.get_vouches_for(agent)

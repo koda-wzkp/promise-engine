@@ -33,3 +33,4 @@ faker==22.0.0
 black==23.12.1
 flake8==7.0.0
 mypy==1.8.0
+pre-commit==3.6.0

@@ -80,6 +80,7 @@ _FALLBACK_UTILITY_DATA = {
 # DASHBOARD
 # ============================================================
 
+
 @hb2021_bp.route("/dashboard", methods=["GET"])
 def dashboard():
     """Dashboard summary for the HB 2021 vertical.
@@ -93,22 +94,25 @@ def dashboard():
     try:
         utilities, data_source = _build_utility_summaries()
 
-        return jsonify({
-            "success": True,
-            "dashboard": {
-                "vertical": "hb2021",
-                "title": "Oregon HB 2021 — Clean Energy Promise Tracker",
-                "statutory_targets": [
-                    {"year": y, "reduction_pct": p} for y, p in TARGETS
-                ],
-                "baseline_year": BASELINE_YEAR,
-                "utilities": utilities,
-                "schema_count": len(HB2021_SCHEMAS),
-                "agent_count": len(HB2021_AGENTS),
-                "data_source": data_source,
-                "updated_at": datetime.utcnow().isoformat(),
-            }
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "dashboard": {
+                        "vertical": "hb2021",
+                        "title": "Oregon HB 2021 — Clean Energy Promise Tracker",
+                        "statutory_targets": [{"year": y, "reduction_pct": p} for y, p in TARGETS],
+                        "baseline_year": BASELINE_YEAR,
+                        "utilities": utilities,
+                        "schema_count": len(HB2021_SCHEMAS),
+                        "agent_count": len(HB2021_AGENTS),
+                        "data_source": data_source,
+                        "updated_at": datetime.utcnow().isoformat(),
+                    },
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -146,45 +150,49 @@ def _build_utility_summaries():
         trajectory_expected = []
         for year in range(2020, 2041):
             tp = _verifier.expected_reduction(year)
-            trajectory_expected.append({
-                "year": year,
-                "expected_pct": tp.expected_reduction_pct,
-            })
-
-        summaries.append({
-            "id": uid,
-            "name": data["name"],
-            "short": data["short"],
-            "emissions": {
-                "reporting_year": data["reporting_year"],
-                "actual_reduction_pct": data["actual_reduction_pct"],
-                "expected_reduction_pct": result.details["expected_reduction_pct"],
-                "gap_pct": result.details["gap_pct"],
-                "status": result.result.value,
-                "history": data["emissions_history"],
-                "trajectory_expected": trajectory_expected,
-            },
-            "projections": {
-                year: {
-                    "projected_pct": proj["projected_pct"],
-                    "target_pct": proj["target_pct"],
-                    "gap_pct": proj["gap_pct"],
-                    "on_track": proj["on_track"],
+            trajectory_expected.append(
+                {
+                    "year": year,
+                    "expected_pct": tp.expected_reduction_pct,
                 }
-                for year, proj in projections.items()
-            },
-            "clean_energy_plan": {
-                "status": data["cep_status"],
-                "docket": data.get("cep_docket", ""),
-            },
-            "community_benefits": {
-                "advisory_group_convened": data["advisory_group_convened"],
-            },
-            "fossil_fuel_ban": {
-                "new_gas_plants": data["new_gas_plants"],
-                "compliant": data["new_gas_plants"] == 0,
-            },
-        })
+            )
+
+        summaries.append(
+            {
+                "id": uid,
+                "name": data["name"],
+                "short": data["short"],
+                "emissions": {
+                    "reporting_year": data["reporting_year"],
+                    "actual_reduction_pct": data["actual_reduction_pct"],
+                    "expected_reduction_pct": result.details["expected_reduction_pct"],
+                    "gap_pct": result.details["gap_pct"],
+                    "status": result.result.value,
+                    "history": data["emissions_history"],
+                    "trajectory_expected": trajectory_expected,
+                },
+                "projections": {
+                    year: {
+                        "projected_pct": proj["projected_pct"],
+                        "target_pct": proj["target_pct"],
+                        "gap_pct": proj["gap_pct"],
+                        "on_track": proj["on_track"],
+                    }
+                    for year, proj in projections.items()
+                },
+                "clean_energy_plan": {
+                    "status": data["cep_status"],
+                    "docket": data.get("cep_docket", ""),
+                },
+                "community_benefits": {
+                    "advisory_group_convened": data["advisory_group_convened"],
+                },
+                "fossil_fuel_ban": {
+                    "new_gas_plants": data["new_gas_plants"],
+                    "compliant": data["new_gas_plants"] == 0,
+                },
+            }
+        )
 
     return summaries, data_source
 
@@ -207,7 +215,9 @@ def _load_utility_data_from_db():
 
             # Get all HB2021 events
             emissions_events = repo.get_events(
-                vertical="hb2021", schema_id="hb2021.emissions_target", limit=1000,
+                vertical="hb2021",
+                schema_id="hb2021.emissions_target",
+                limit=1000,
             )
 
             if not emissions_events:
@@ -221,9 +231,12 @@ def _load_utility_data_from_db():
                 year = ctx.get("reporting_year")
                 pct = ctx.get("actual_reduction_pct")
                 if uid and year and pct is not None:
-                    utility_emissions.setdefault(uid, []).append({
-                        "year": year, "reduction_pct": pct,
-                    })
+                    utility_emissions.setdefault(uid, []).append(
+                        {
+                            "year": year,
+                            "reduction_pct": pct,
+                        }
+                    )
 
             if not utility_emissions:
                 return {}
@@ -235,7 +248,9 @@ def _load_utility_data_from_db():
 
             # Get CEP filings
             cep_events = repo.get_events(
-                vertical="hb2021", schema_id="hb2021.clean_energy_plan", limit=100,
+                vertical="hb2021",
+                schema_id="hb2021.clean_energy_plan",
+                limit=100,
             )
             utility_cep = {}
             for e in cep_events:
@@ -250,7 +265,9 @@ def _load_utility_data_from_db():
 
             # Get community benefits
             cb_events = repo.get_events(
-                vertical="hb2021", schema_id="hb2021.community_benefits", limit=100,
+                vertical="hb2021",
+                schema_id="hb2021.community_benefits",
+                limit=100,
             )
             utility_cb = {}
             for e in cb_events:
@@ -261,7 +278,9 @@ def _load_utility_data_from_db():
 
             # Get fossil fuel ban
             ff_events = repo.get_events(
-                vertical="hb2021", schema_id="hb2021.fossil_fuel_ban", limit=100,
+                vertical="hb2021",
+                schema_id="hb2021.fossil_fuel_ban",
+                limit=100,
             )
             utility_ff = {}
             for e in ff_events:
@@ -300,6 +319,7 @@ def _load_utility_data_from_db():
 # TRAJECTORY
 # ============================================================
 
+
 @hb2021_bp.route("/trajectory", methods=["GET"])
 def trajectory():
     """Get the expected emissions reduction trajectory.
@@ -317,33 +337,45 @@ def trajectory():
 
         if year:
             tp = _verifier.expected_reduction(year)
-            return jsonify({
-                "success": True,
-                "trajectory_point": {
-                    "year": tp.year,
-                    "expected_reduction_pct": tp.expected_reduction_pct,
-                    "next_target_year": tp.next_target_year,
-                    "next_target_pct": tp.next_target_pct,
-                    "years_remaining": tp.years_remaining,
-                    "tolerance_pct": tolerance,
-                }
-            }), 200
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "trajectory_point": {
+                            "year": tp.year,
+                            "expected_reduction_pct": tp.expected_reduction_pct,
+                            "next_target_year": tp.next_target_year,
+                            "next_target_pct": tp.next_target_pct,
+                            "years_remaining": tp.years_remaining,
+                            "tolerance_pct": tolerance,
+                        },
+                    }
+                ),
+                200,
+            )
 
         # Full trajectory
         points = []
         for y in range(BASELINE_YEAR, 2041):
             tp = _verifier.expected_reduction(y)
-            points.append({
-                "year": tp.year,
-                "expected_reduction_pct": tp.expected_reduction_pct,
-            })
+            points.append(
+                {
+                    "year": tp.year,
+                    "expected_reduction_pct": tp.expected_reduction_pct,
+                }
+            )
 
-        return jsonify({
-            "success": True,
-            "trajectory": points,
-            "targets": [{"year": y, "reduction_pct": p} for y, p in TARGETS],
-            "tolerance_pct": tolerance,
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "trajectory": points,
+                    "targets": [{"year": y, "reduction_pct": p} for y, p in TARGETS],
+                    "tolerance_pct": tolerance,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -352,6 +384,7 @@ def trajectory():
 # ============================================================
 # VERIFY EMISSIONS
 # ============================================================
+
 
 @hb2021_bp.route("/verify-emissions", methods=["POST"])
 def verify_emissions():
@@ -374,10 +407,7 @@ def verify_emissions():
         required = ["utility_id", "reporting_year", "actual_reduction_pct"]
         missing = [f for f in required if f not in data]
         if missing:
-            return jsonify({
-                "success": False,
-                "error": f"Missing required fields: {', '.join(missing)}"
-            }), 400
+            return jsonify({"success": False, "error": f"Missing required fields: {', '.join(missing)}"}), 400
 
         tolerance = data.get("tolerance_pct", 5.0)
         verifier = EmissionsTrajectoryVerifier(tolerance_pct=tolerance)
@@ -393,18 +423,21 @@ def verify_emissions():
             actual_year=data["reporting_year"],
         )
 
-        return jsonify({
-            "success": True,
-            "verification": {
-                "kept": result.kept,
-                "result": result.result.value,
-                "violation": result.violation,
-                "details": result.details,
-            },
-            "projections": {
-                str(year): proj for year, proj in projections.items()
-            },
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "verification": {
+                        "kept": result.kept,
+                        "result": result.result.value,
+                        "violation": result.violation,
+                        "details": result.details,
+                    },
+                    "projections": {str(year): proj for year, proj in projections.items()},
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -413,6 +446,7 @@ def verify_emissions():
 # ============================================================
 # AGENTS
 # ============================================================
+
 
 @hb2021_bp.route("/agents", methods=["GET"])
 def list_agents():
@@ -434,20 +468,27 @@ def list_agents():
             if role_filter and agent.metadata.get("hb2021_role") != role_filter:
                 continue
 
-            agents.append({
-                "id": agent.id,
-                "type": agent.type.value,
-                "name": agent.metadata.get("name", agent.id),
-                "short": agent.metadata.get("short", ""),
-                "role": agent.metadata.get("hb2021_role", ""),
-                "metadata": agent.metadata,
-            })
+            agents.append(
+                {
+                    "id": agent.id,
+                    "type": agent.type.value,
+                    "name": agent.metadata.get("name", agent.id),
+                    "short": agent.metadata.get("short", ""),
+                    "role": agent.metadata.get("hb2021_role", ""),
+                    "metadata": agent.metadata,
+                }
+            )
 
-        return jsonify({
-            "success": True,
-            "agents": agents,
-            "count": len(agents),
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "agents": agents,
+                    "count": len(agents),
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -459,22 +500,24 @@ def get_agent(agent_id: str):
     try:
         agent = HB2021_AGENTS.get(agent_id)
         if not agent:
-            return jsonify({
-                "success": False,
-                "error": f"Agent not found: {agent_id}"
-            }), 404
+            return jsonify({"success": False, "error": f"Agent not found: {agent_id}"}), 404
 
-        return jsonify({
-            "success": True,
-            "agent": {
-                "id": agent.id,
-                "type": agent.type.value,
-                "name": agent.metadata.get("name", agent.id),
-                "short": agent.metadata.get("short", ""),
-                "role": agent.metadata.get("hb2021_role", ""),
-                "metadata": agent.metadata,
-            }
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "agent": {
+                        "id": agent.id,
+                        "type": agent.type.value,
+                        "name": agent.metadata.get("name", agent.id),
+                        "short": agent.metadata.get("short", ""),
+                        "role": agent.metadata.get("hb2021_role", ""),
+                        "metadata": agent.metadata,
+                    },
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -484,27 +527,35 @@ def get_agent(agent_id: str):
 # SCHEMAS (HB2021-specific)
 # ============================================================
 
+
 @hb2021_bp.route("/schemas", methods=["GET"])
 def list_hb2021_schemas():
     """List all HB 2021 promise schemas."""
     try:
         schemas = []
         for schema_id, schema in HB2021_SCHEMAS.items():
-            schemas.append({
-                "id": schema.id,
-                "name": schema.name,
-                "description": schema.description,
-                "commitment_type": schema.commitment_type,
-                "stakes": schema.stakes,
-                "verification_type": schema.verification_type,
-                "domain_tags": schema.domain_tags,
-            })
+            schemas.append(
+                {
+                    "id": schema.id,
+                    "name": schema.name,
+                    "description": schema.description,
+                    "commitment_type": schema.commitment_type,
+                    "stakes": schema.stakes,
+                    "verification_type": schema.verification_type,
+                    "domain_tags": schema.domain_tags,
+                }
+            )
 
-        return jsonify({
-            "success": True,
-            "schemas": schemas,
-            "count": len(schemas),
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "schemas": schemas,
+                    "count": len(schemas),
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

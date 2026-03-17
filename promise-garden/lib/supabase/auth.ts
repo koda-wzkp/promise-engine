@@ -1,11 +1,18 @@
 import { supabase, isSupabaseConfigured } from "./client";
 import type { Session, User } from "@supabase/supabase-js";
 
+/** Prefer window.location.origin so auth redirects always match the current host. */
+function getBaseUrl(): string {
+  if (typeof window !== "undefined") return window.location.origin;
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  return "http://localhost:3000";
+}
+
 export async function signInWithMagicLink(email: string): Promise<{ error: Error | null }> {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      emailRedirectTo: `${getBaseUrl()}/auth/callback`,
     },
   });
   return { error: error ? new Error(error.message) : null };
@@ -15,7 +22,7 @@ export async function signInWithGoogle(): Promise<{ error: Error | null }> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${getBaseUrl()}/auth/callback`,
     },
   });
   return { error: error ? new Error(error.message) : null };
@@ -25,7 +32,7 @@ export async function signInWithApple(): Promise<{ error: Error | null }> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "apple",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${getBaseUrl()}/auth/callback`,
     },
   });
   return { error: error ? new Error(error.message) : null };

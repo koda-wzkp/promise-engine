@@ -5,11 +5,11 @@ import { useState } from "react";
 
 const NAV_P_PATH = "M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z";
 const NAV_LAYERS = [
-  { fill: "#2a8f6a", scale: 1 },
-  { fill: "#2a2a4e", scale: 0.618 },
+  { fill: "#c93b3b", scale: 1 },
+  { fill: "#7b41d6", scale: 0.618 },
   { fill: "#3e60cf", scale: 0.382 },
-  { fill: "#7b41d6", scale: 0.236 },
-  { fill: "#c93b3b", scale: 0.146 },
+  { fill: "#2a2a4e", scale: 0.236 },
+  { fill: "#2a8f6a", scale: 0.146 },
 ];
 const BREATHE_OFFSETS = ["0s", "0.8s", "1.6s", "2.4s", "3.2s"];
 

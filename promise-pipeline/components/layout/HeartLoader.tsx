@@ -75,10 +75,10 @@ export function HeartLoader({ size = 80 }: { size?: number }) {
             }
             38%, 68% {
               transform:
-                translate(240px, 440px)
-                rotate(-45deg)
+                translate(240px, 430px)
+                rotate(-40deg)
                 scale(0.5)
-                translate(-30px, -340px);
+                translate(10px, -340px);
             }
             88%, 100% {
               transform:
@@ -93,32 +93,32 @@ export function HeartLoader({ size = 80 }: { size?: number }) {
            * Left half: starts collapsed at heart pivot → grows + rotates
            * into left heart lobe, then collapses back.
            *
-           * P state:     translate(240,440) rotate(0)    scale(0.001) translate(-310,-340)
-           * Heart state: translate(240,440) rotate(45)   scale(0.5)   translate(-310,-340)
+           * P state:     translate(240,430) rotate(0)    scale(0.001) translate(-350,-340)
+           * Heart state: translate(240,430) rotate(40)   scale(0.5)   translate(-350,-340)
            */
           @keyframes hl-unfold-l {
             0%, 18% {
               transform:
-                translate(240px, 440px)
+                translate(240px, 430px)
                 rotate(0deg)
                 scale(0.001)
-                translate(-310px, -340px);
+                translate(-350px, -340px);
               opacity: 0;
             }
             38%, 68% {
               transform:
-                translate(240px, 440px)
-                rotate(45deg)
+                translate(240px, 430px)
+                rotate(40deg)
                 scale(0.5)
-                translate(-310px, -340px);
+                translate(-350px, -340px);
               opacity: 1;
             }
             88%, 100% {
               transform:
-                translate(240px, 440px)
+                translate(240px, 430px)
                 rotate(0deg)
                 scale(0.001)
-                translate(-310px, -340px);
+                translate(-350px, -340px);
               opacity: 0;
             }
           }

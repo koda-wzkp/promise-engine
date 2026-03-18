@@ -10,6 +10,25 @@ import { getSkyGradient } from "@/lib/garden/renderer/skyGradient";
 interface GardenViewProps {
   promises: PersonalPromise[];
   onUpdateStatus: (id: string, status: PromiseStatus, reflection?: string) => void;
+  /**
+   * When true, renders the garden canvas (sky + ground) even when there are
+   * no promises — used for the clearcut onboarding state.
+   */
+  forceRender?: boolean;
+  /**
+   * Override the computed sky gradient. Passed from the parent during
+   * onboarding so the count-based sky progression drives the sky colour.
+   */
+  skyGradientOverride?: string;
+  /**
+   * Override the aria-label on the garden scene element.
+   * Defaults to a description derived from the promise count.
+   */
+  gardenAriaLabel?: string;
+  /**
+   * Override the minimum height of the garden scene div (default "320px").
+   */
+  minHeight?: string;
 }
 
 const DOMAIN_LABELS: Record<string, string> = {
@@ -30,7 +49,14 @@ function computeReliability(promises: PersonalPromise[]): number {
   return kept / completed.length;
 }
 
-export function GardenView({ promises, onUpdateStatus }: GardenViewProps) {
+export function GardenView({
+  promises,
+  onUpdateStatus,
+  forceRender = false,
+  skyGradientOverride,
+  gardenAriaLabel,
+  minHeight = "320px",
+}: GardenViewProps) {
   const [time, setTime] = useState(0);
   const animRef = useRef<number>(0);
   const reducedMotion = useRef(false);
@@ -62,7 +88,7 @@ export function GardenView({ promises, onUpdateStatus }: GardenViewProps) {
     };
   }, []);
 
-  if (promises.length === 0) return null;
+  if (promises.length === 0 && !forceRender) return null;
 
   // Group by domain
   const byDomain: Record<string, PersonalPromise[]> = {};
@@ -73,17 +99,25 @@ export function GardenView({ promises, onUpdateStatus }: GardenViewProps) {
   }
 
   const reliabilityScore = computeReliability(promises);
-  const skyGradient = getSkyGradient(reliabilityScore);
+  const skyGradient = skyGradientOverride ?? getSkyGradient(reliabilityScore);
+
+  const defaultAriaLabel =
+    promises.length === 0
+      ? "An empty garden clearing with bare earth and a few old stumps. Ready to plant."
+      : `Promise garden with ${promises.length} promise${promises.length === 1 ? "" : "s"}. Overall reliability: ${Math.round(reliabilityScore * 100)}%.`;
+  const resolvedAriaLabel = gardenAriaLabel ?? defaultAriaLabel;
 
   return (
     <div className="space-y-0">
       {/* Garden scene */}
       <div
         className="relative rounded-xl overflow-hidden"
+        role="img"
+        aria-label={resolvedAriaLabel}
         style={{
           background: skyGradient,
           transition: "background 2s ease",
-          minHeight: "320px",
+          minHeight,
         }}
       >
         {/* Reliability indicator */}

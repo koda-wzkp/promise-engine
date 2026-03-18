@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { PersonalPromise, PersonalStats } from "@/lib/types/personal";
 import { PromiseStatus } from "@/lib/types/promise";
 import { PromiseCreator } from "@/components/personal/PromiseCreator";
@@ -8,6 +8,14 @@ import { GardenView } from "@/components/personal/GardenView";
 import { PromiseTimeline } from "@/components/personal/PromiseTimeline";
 import { ReliabilityScore } from "@/components/personal/ReliabilityScore";
 import { DomainBreakdown } from "@/components/personal/DomainBreakdown";
+import { ClearcutOverlay } from "@/components/personal/ClearcutOverlay";
+import { PromiseCreationSheet } from "@/components/personal/PromiseCreationSheet";
+import { SeedTray } from "@/components/personal/SeedTray";
+import { NotificationPrompt } from "@/components/personal/NotificationPrompt";
+import { AccountPrompt } from "@/components/personal/AccountPrompt";
+import { DependencyTooltip } from "@/components/personal/DependencyTooltip";
+import { useGardenOnboarding } from "@/lib/hooks/useGardenOnboarding";
+import { getSkyGradientByCount } from "@/lib/garden/renderer/skyGradient";
 
 type View = "garden" | "timeline" | "create" | "stats";
 
@@ -32,14 +40,12 @@ function calculateStats(promises: PersonalPromise[]): PersonalStats {
     (p) => p.status === "verified" || p.status === "violated"
   );
   const kept = completed.filter((p) => p.status === "verified");
-  const broken = completed.filter((p) => p.status === "violated");
   const active = promises.filter(
     (p) => p.status === "declared" || p.status === "degraded"
   );
 
   const keptRate = completed.length > 0 ? kept.length / completed.length : 0;
 
-  // MTKP
   const keptWithDates = kept.filter((p) => p.createdAt && p.completedAt);
   const mtkp =
     keptWithDates.length > 0
@@ -51,7 +57,6 @@ function calculateStats(promises: PersonalPromise[]): PersonalStats {
         }, 0) / keptWithDates.length
       : 0;
 
-  // By domain
   const byDomain: PersonalStats["byDomain"] = {};
   const mtkpByDomain: Record<string, number> = {};
   const allDomains = Array.from(new Set(promises.map((p) => p.domain)));
@@ -89,7 +94,6 @@ function calculateStats(promises: PersonalPromise[]): PersonalStats {
     mtkpByDomain[domain] = dMtkp;
   }
 
-  // Monthly trend (last 6 months)
   const trend: PersonalStats["trend"] = [];
   const now = new Date();
   for (let i = 5; i >= 0; i--) {
@@ -122,33 +126,81 @@ function calculateStats(promises: PersonalPromise[]): PersonalStats {
   };
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function PersonalPage() {
   const [promises, setPromises] = useState<PersonalPromise[]>([]);
   const [view, setView] = useState<View>("garden");
   const [loaded, setLoaded] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
+  const seedRef = useRef<HTMLButtonElement>(null);
+
+  const onboarding = useGardenOnboarding();
+  const { state, showAccountPrompt } = onboarding;
+
+  // Load persisted promises on mount
   useEffect(() => {
     setPromises(loadPromises());
     setLoaded(true);
   }, []);
 
+  // Persist promises whenever they change
   useEffect(() => {
     if (loaded) savePromises(promises);
   }, [promises, loaded]);
 
+  // If the user was in the middle of first-plant creation when they last left,
+  // auto-open the sheet so they can resume.
+  useEffect(() => {
+    if (loaded && state.phase === "first-plant" && promises.length === 0) {
+      setIsSheetOpen(true);
+    }
+  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const stats = useMemo(() => calculateStats(promises), [promises]);
 
-  const handleCreate = useCallback((promise: PersonalPromise) => {
-    setPromises((prev) => [...prev, promise]);
-    setView("garden");
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  /** Called from both the ClearcutOverlay seed and the SeedTray seeds */
+  const handleOpenSheet = useCallback(() => {
+    if (state.phase === "clearcut") {
+      onboarding.openSeedForFirstTime();
+    }
+    setIsSheetOpen(true);
+  }, [state.phase, onboarding]);
+
+  const handleSheetClose = useCallback(() => {
+    setIsSheetOpen(false);
+    // Focus returns to the seed button (clearcut) or garden (subsequent)
+    setTimeout(() => seedRef.current?.focus(), 50);
   }, []);
+
+  /**
+   * Shared handler for all promise creation paths:
+   * ClearcutOverlay → PromiseCreationSheet, SeedTray → PromiseCreationSheet,
+   * and the existing "+ New Promise" tab → PromiseCreator.
+   */
+  const handleCreate = useCallback(
+    (promise: PersonalPromise) => {
+      setPromises((prev) => {
+        const next = [...prev, promise];
+        // Sync onboarding count with the real promise array
+        onboarding.plantPromise(next.length);
+        return next;
+      });
+      setIsSheetOpen(false);
+      setView("garden");
+    },
+    [onboarding]
+  );
 
   const handleUpdateStatus = useCallback(
     (id: string, status: PromiseStatus, reflection?: string) => {
       setPromises((prev) =>
         prev.map((p) => {
           if (p.id !== id) return p;
-          return {
+          const updated = {
             ...p,
             status,
             reflection: reflection || p.reflection,
@@ -157,29 +209,97 @@ export default function PersonalPage() {
                 ? new Date().toISOString()
                 : p.completedAt,
           };
+          return updated;
         })
       );
+
+      // First check-in: trigger notification prompt
+      if (
+        (status === "verified" || status === "violated") &&
+        !state.firstCheckInComplete
+      ) {
+        onboarding.completeFirstCheckIn();
+      }
     },
-    []
+    [state.firstCheckInComplete, onboarding]
   );
 
-  const views: { id: View; label: string }[] = [
-    { id: "garden", label: "Garden" },
-    { id: "timeline", label: "Timeline" },
-    { id: "stats", label: "Stats" },
-    { id: "create", label: "+ New Promise" },
-  ];
+  // ── Sky gradient (count-based for the new progression) ────────────────────
+  const skyGradient = getSkyGradientByCount(promises.length);
 
+  // ── Loading gate ──────────────────────────────────────────────────────────
   if (!loaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-sky-lightest to-white">
-        <p className="text-gray-500">Loading your garden...</p>
+        <p className="text-gray-500">Loading your garden…</p>
       </div>
     );
   }
 
+  // ── Clearcut / First-plant layout ─────────────────────────────────────────
+  // Shown when the user hasn't planted any promise yet.
+  const isClearcut = promises.length === 0;
+
+  if (isClearcut) {
+    return (
+      <main id="main-content" className="min-h-screen flex flex-col">
+        {/* Skip link */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:bg-white focus:text-gray-900 focus:rounded focus:shadow"
+        >
+          Skip to main content
+        </a>
+
+        {/* Full-height garden container */}
+        <div className="relative flex-1" style={{ minHeight: "100svh" }}>
+          <GardenView
+            promises={[]}
+            onUpdateStatus={() => {}}
+            forceRender
+            skyGradientOverride={skyGradient}
+            minHeight="100svh"
+          />
+
+          {/* Clearcut overlay: text + floating seed + stumps */}
+          <ClearcutOverlay onSeedClick={handleOpenSheet} seedRef={seedRef} />
+        </div>
+
+        {/* Inline creation sheet (appears on seed tap) */}
+        {isSheetOpen && (
+          <PromiseCreationSheet
+            onSuccess={handleCreate}
+            onClose={handleSheetClose}
+            returnFocusRef={seedRef}
+          />
+        )}
+      </main>
+    );
+  }
+
+  // ── Garden-live layout ────────────────────────────────────────────────────
+  // Standard layout once at least one promise exists.
+
+  const views: { id: View; label: string }[] = [
+    { id: "garden",   label: "Garden" },
+    { id: "timeline", label: "Timeline" },
+    { id: "stats",    label: "Stats" },
+    { id: "create",   label: "+ New Promise" },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 via-sky-lightest to-white">
+    <main
+      id="main-content"
+      className="min-h-screen bg-gradient-to-b from-green-50 via-sky-lightest to-white"
+    >
+      {/* Skip link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:bg-white focus:text-gray-900 focus:rounded focus:shadow"
+      >
+        Skip to main content
+      </a>
+
       {/* Header */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-4">
         <h1 className="font-serif text-2xl font-bold text-gray-900">
@@ -214,43 +334,72 @@ export default function PersonalPage() {
       {/* Content */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-12">
         {view === "garden" && (
-          <GardenView
-            promises={promises}
-            onUpdateStatus={handleUpdateStatus}
-          />
+          <div className="relative">
+            <GardenView
+              promises={promises}
+              onUpdateStatus={handleUpdateStatus}
+              skyGradientOverride={skyGradient}
+            />
+
+            {/* Dependency tooltip — after 3rd promise, one-time */}
+            {state.promisesPlanted >= 3 && !state.dependencyTutorialSeen && (
+              <DependencyTooltip onDismiss={onboarding.dismissDependencyTooltip} />
+            )}
+          </div>
         )}
+
         {view === "timeline" && (
           <PromiseTimeline
             promises={promises}
             onUpdateStatus={handleUpdateStatus}
           />
         )}
+
         {view === "stats" && (
           <div className="space-y-6">
             <ReliabilityScore stats={stats} />
             <DomainBreakdown stats={stats} />
           </div>
         )}
-        {view === "create" && <PromiseCreator onCreate={handleCreate} />}
 
-        {promises.length === 0 && view !== "create" && (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">🌱</div>
-            <h3 className="font-serif text-lg font-semibold text-gray-700 mb-2">
-              Your garden is empty
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Plant your first promise to start growing your garden.
-            </p>
-            <button
-              onClick={() => setView("create")}
-              className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 text-sm font-medium"
-            >
-              Create Your First Promise
-            </button>
-          </div>
-        )}
+        {view === "create" && <PromiseCreator onCreate={handleCreate} />}
       </div>
-    </div>
+
+      {/* Seed tray — optional 2nd/3rd promise nudge */}
+      {view === "garden" &&
+        promises.length < 3 &&
+        !state.seedTrayDismissed && (
+          <SeedTray
+            promisesPlanted={promises.length}
+            onPlantAnother={handleOpenSheet}
+            onDismiss={onboarding.dismissSeedTray}
+          />
+        )}
+
+      {/* Notification prompt — after first check-in */}
+      {state.firstCheckInComplete && !state.notificationTimeSet && (
+        <NotificationPrompt
+          onSet={onboarding.setNotificationTime}
+          onDismiss={() => onboarding.setNotificationTime(null)}
+        />
+      )}
+
+      {/* Account creation prompt — after N days */}
+      {showAccountPrompt && (
+        <AccountPrompt
+          onSave={onboarding.saveGarden}
+          onDismiss={onboarding.dismissAccountPrompt}
+        />
+      )}
+
+      {/* Inline creation sheet (from seed tray or future entry points) */}
+      {isSheetOpen && (
+        <PromiseCreationSheet
+          onSuccess={handleCreate}
+          onClose={handleSheetClose}
+          returnFocusRef={seedRef}
+        />
+      )}
+    </main>
   );
 }

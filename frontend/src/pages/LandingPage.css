@@ -38,10 +38,7 @@
   color: inherit;
 }
 
-.nav-mark-svg {
-  flex-shrink: 0;
-  display: block;
-}
+/* nav-mark-svg styles moved to NestedPLogo.css */
 
 .landing-nav-name {
   font-family: 'IBM Plex Serif', Georgia, serif;
@@ -81,23 +78,7 @@
   color: #1a1a2e;
 }
 
-/* ═══ HERO MARK ═══ */
-.hero-mark-container {
-  margin-bottom: 28px;
-}
-
-.hero-mark-svg {
-  display: block;
-  width: 80px;
-  height: 80px;
-}
-
-@media (min-width: 768px) {
-  .hero-mark-svg {
-    width: 120px;
-    height: 120px;
-  }
-}
+/* hero-mark styles moved to NestedPLogo.css */
 
 /* ═══ HERO ═══ */
 .hero-section {

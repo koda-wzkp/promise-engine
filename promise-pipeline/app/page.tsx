@@ -22,14 +22,15 @@ function HeroMark() {
         />
         <style>{`
           @keyframes pp-hero-appear {
-            from { opacity: 0; transform: scale(1.08); }
-            to   { opacity: 1; transform: scale(1); }
+            from { opacity: 0; }
+            to   { opacity: 1; }
           }
           @keyframes pp-hero-breathe {
             0%, 100% { opacity: 1; }
             50%       { opacity: 0.82; }
           }
           .pp-hero-layer {
+            transform-origin: 0 0;
             opacity: 0;
             animation:
               pp-hero-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
@@ -41,17 +42,17 @@ function HeroMark() {
         `}</style>
       </defs>
       {[
-        { fill: "#1a1a2e", scale: 1,     delay: "0.1s", breatheDelay: "0s" },
-        { fill: "#1a5f4a", scale: 0.618, delay: "0.3s", breatheDelay: "0.8s" },
-        { fill: "#1e40af", scale: 0.382, delay: "0.5s", breatheDelay: "1.6s" },
-        { fill: "#5b21b6", scale: 0.236, delay: "0.7s", breatheDelay: "2.4s" },
-        { fill: "#991b1b", scale: 0.146, delay: "0.9s", breatheDelay: "3.2s" },
+        { fill: "#2a8f6a", scale: 1,     delay: "0.1s", breatheDelay: "0s" },
+        { fill: "#2a2a4e", scale: 0.618, delay: "0.3s", breatheDelay: "0.8s" },
+        { fill: "#3e60cf", scale: 0.382, delay: "0.5s", breatheDelay: "1.6s" },
+        { fill: "#7b41d6", scale: 0.236, delay: "0.7s", breatheDelay: "2.4s" },
+        { fill: "#c93b3b", scale: 0.146, delay: "0.9s", breatheDelay: "3.2s" },
       ].map((layer, i) => (
         <use
           key={i}
           href="#pp-hero-path"
           fill={layer.fill}
-          transform={layer.scale === 1 ? undefined : `scale(${layer.scale})`}
+          transform={`scale(${layer.scale})`}
           className="pp-hero-layer"
           style={{ animationDelay: `${layer.delay}, ${layer.breatheDelay}` }}
         />

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 340">
-  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#1a1a2e"/>
-  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#1a5f4a" transform="scale(0.618)"/>
-  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#1e40af" transform="scale(0.382)"/>
-  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#5b21b6" transform="scale(0.236)"/>
-  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#991b1b" transform="scale(0.146)"/>
+  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#c93b3b"/>
+  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#7b41d6" transform="scale(0.618)"/>
+  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#3e60cf" transform="scale(0.382)"/>
+  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#2a2a4e" transform="scale(0.236)"/>
+  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#2a8f6a" transform="scale(0.146)"/>
 </svg>

@@ -11,8 +11,13 @@ const LAYERS = [
 
 const BREATHE_OFFSETS = ['0s', '0.8s', '1.6s', '2.4s', '3.2s'];
 
+/* Raw P path anchored at top-left (0,0) */
+const P_PATH = 'M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z';
+
 /**
  * Small nav-sized nested-P mark (28×28 default).
+ * Each layer is scaled from (0,0) so smaller P's nest into
+ * the top-left corner of the outer P.
  */
 export const NavMark = () => (
   <svg
@@ -24,27 +29,26 @@ export const NavMark = () => (
     className="nav-mark-svg"
   >
     <defs>
-      <path
-        id="pp-mark"
-        d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z"
-      />
       <style>{`
         @keyframes pp-breathe {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.82; }
         }
-        .pp-layer { animation: pp-breathe 5s ease-in-out infinite; }
+        .pp-layer {
+          animation: pp-breathe 5s ease-in-out infinite;
+          transform-origin: 0 0;
+        }
         @media (prefers-reduced-motion: reduce) {
           .pp-layer { animation: none !important; }
         }
       `}</style>
     </defs>
     {LAYERS.map((layer, i) => (
-      <use
+      <path
         key={i}
-        href="#pp-mark"
+        d={P_PATH}
         fill={layer.fill}
-        transform={layer.scale === 1 ? undefined : `scale(${layer.scale})`}
+        transform={`scale(${layer.scale})`}
         className="pp-layer"
         style={{ animationDelay: BREATHE_OFFSETS[i] }}
       />
@@ -54,6 +58,7 @@ export const NavMark = () => (
 
 /**
  * Larger hero-sized nested-P mark (120×120 default, responsive).
+ * Staggered entrance animation, then breathing.
  */
 export const HeroMark = () => (
   <svg
@@ -66,24 +71,21 @@ export const HeroMark = () => (
     className="hero-mark-svg"
   >
     <defs>
-      <path
-        id="pp-hero"
-        d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z"
-      />
       <style>{`
         @keyframes pp-hero-appear {
-          from { opacity: 0; transform: scale(1.08); }
-          to { opacity: 1; transform: scale(1); }
+          from { opacity: 0; }
+          to   { opacity: 1; }
         }
         @keyframes pp-hero-breathe {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.82; }
         }
         .pp-hero-layer {
+          transform-origin: 0 0;
           opacity: 0;
           animation:
             pp-hero-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
-            pp-hero-breathe 5s ease-in-out infinite;
+            pp-hero-breathe 5s ease-in-out 0.6s infinite;
         }
         @media (prefers-reduced-motion: reduce) {
           .pp-hero-layer {
@@ -94,13 +96,13 @@ export const HeroMark = () => (
       `}</style>
     </defs>
     {LAYERS.map((layer, i) => (
-      <use
+      <path
         key={i}
-        href="#pp-hero"
+        d={P_PATH}
         fill={layer.fill}
-        transform={layer.scale === 1 ? undefined : `scale(${layer.scale})`}
+        transform={`scale(${layer.scale})`}
         className="pp-hero-layer"
-        style={{ animationDelay: `${0.1 + i * 0.2}s, ${BREATHE_OFFSETS[i]}` }}
+        style={{ animationDelay: `${0.1 + i * 0.2}s, ${0.6 + i * 0.2}s` }}
       />
     ))}
   </svg>

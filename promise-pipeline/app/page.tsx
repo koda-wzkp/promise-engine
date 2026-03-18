@@ -4,6 +4,62 @@ import Link from "next/link";
 import { useState } from "react";
 import { CloudBackground } from "@/components/layout/CloudBackground";
 
+function HeroMark() {
+  return (
+    <svg
+      width="100"
+      height="100"
+      viewBox="0 0 340 340"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="Promise Pipeline logo — nested P shapes representing trust at every scale"
+      className="mx-auto mb-8 block"
+    >
+      <defs>
+        <path
+          id="pp-hero-path"
+          d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z"
+        />
+        <style>{`
+          @keyframes pp-hero-appear {
+            from { opacity: 0; transform: scale(1.08); }
+            to   { opacity: 1; transform: scale(1); }
+          }
+          @keyframes pp-hero-breathe {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.82; }
+          }
+          .pp-hero-layer {
+            opacity: 0;
+            animation:
+              pp-hero-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+              pp-hero-breathe 5s ease-in-out infinite;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .pp-hero-layer { opacity: 1; animation: none !important; }
+          }
+        `}</style>
+      </defs>
+      {[
+        { fill: "#1a1a2e", scale: 1,     delay: "0.1s", breatheDelay: "0s" },
+        { fill: "#1a5f4a", scale: 0.618, delay: "0.3s", breatheDelay: "0.8s" },
+        { fill: "#1e40af", scale: 0.382, delay: "0.5s", breatheDelay: "1.6s" },
+        { fill: "#5b21b6", scale: 0.236, delay: "0.7s", breatheDelay: "2.4s" },
+        { fill: "#991b1b", scale: 0.146, delay: "0.9s", breatheDelay: "3.2s" },
+      ].map((layer, i) => (
+        <use
+          key={i}
+          href="#pp-hero-path"
+          fill={layer.fill}
+          transform={layer.scale === 1 ? undefined : `scale(${layer.scale})`}
+          className="pp-hero-layer"
+          style={{ animationDelay: `${layer.delay}, ${layer.breatheDelay}` }}
+        />
+      ))}
+    </svg>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div>
@@ -11,6 +67,7 @@ export default function LandingPage() {
       <section className="relative overflow-hidden py-20 md:py-32">
         <CloudBackground />
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 text-center">
+          <HeroMark />
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 text-balance">
             A trust primitive for commitment networks.
           </h1>

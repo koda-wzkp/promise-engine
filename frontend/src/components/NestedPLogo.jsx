@@ -4,11 +4,11 @@ import './NestedPLogo.css';
 /* Fibonacci scales for concentric P layers */
 const SCALES = [1, 0.618, 0.382, 0.236, 0.146];
 
-/* Pipeline: light-to-dark (outermost lightest, innermost darkest) */
-const PIPELINE_FILLS = ['#b8d4c8', '#6b9e8a', '#1a5f4a', '#134436', '#0d2e24'];
+/* Pipeline: red-to-green (outermost red, innermost green) */
+const PIPELINE_FILLS = ['#c93b3b', '#7b41d6', '#3e60cf', '#2a2a4e', '#2a8f6a'];
 
-/* Garden: dark-to-light (outermost darkest, innermost lightest) */
-const GARDEN_FILLS = ['#0d2e24', '#134436', '#1a5f4a', '#6b9e8a', '#b8d4c8'];
+/* Garden: green-to-red (outermost green, innermost red) */
+const GARDEN_FILLS = ['#2a8f6a', '#2a2a4e', '#3e60cf', '#7b41d6', '#c93b3b'];
 
 const getLayers = (variant = 'pipeline') => {
   const fills = variant === 'garden' ? GARDEN_FILLS : PIPELINE_FILLS;

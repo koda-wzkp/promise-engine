@@ -1,5 +1,6 @@
 /**
  * Sky gradient based on overall garden reliability score.
+ * See also: getSkyGradientByCount for the onboarding / promise-count-based progression.
  */
 
 interface GradientStop {
@@ -41,4 +42,34 @@ export function getSkyGradient(reliabilityScore: number): string {
     if (pct >= band.minScore) return band.gradient;
   }
   return GRADIENT_BANDS[GRADIENT_BANDS.length - 1].gradient;
+}
+
+/**
+ * Sky gradient driven by raw promise count rather than reliability score.
+ * Used during onboarding and as the ambient reward signal as the garden grows.
+ *
+ * 0 promises  — overcast grey (clearcut)
+ * 1 promise   — lighter grey with warm horizon band
+ * 2 promises  — near-white with wider warm band
+ * 3–4         — first blue wash breaking through
+ * 5–9         — clear sky emerging
+ * 10+         — full blue sky
+ */
+export function getSkyGradientByCount(count: number): string {
+  if (count === 0) {
+    return "linear-gradient(180deg, #9ca3af 0%, #d1d5db 100%)";
+  }
+  if (count === 1) {
+    return "linear-gradient(180deg, #d1d5db 0%, #e5e7eb 70%, #fef3c7 100%)";
+  }
+  if (count === 2) {
+    return "linear-gradient(180deg, #e5e7eb 0%, #f3f4f6 55%, #fef3c7 80%, #fdf6b2 100%)";
+  }
+  if (count < 5) {
+    return "linear-gradient(180deg, #bfdbfe 0%, #eff6ff 100%)";
+  }
+  if (count < 10) {
+    return "linear-gradient(180deg, #93c5fd 0%, #dbeafe 100%)";
+  }
+  return "linear-gradient(180deg, #60a5fa 0%, #bfdbfe 100%)";
 }

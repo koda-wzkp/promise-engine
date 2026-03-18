@@ -42,11 +42,11 @@ function HeroMark() {
         `}</style>
       </defs>
       {[
-        { fill: "#c93b3b", scale: 1,     delay: "0.1s", breatheDelay: "0s" },
-        { fill: "#7b41d6", scale: 0.618, delay: "0.3s", breatheDelay: "0.8s" },
+        { fill: "#2a8f6a", scale: 1,     delay: "0.1s", breatheDelay: "0s" },
+        { fill: "#2a2a4e", scale: 0.618, delay: "0.3s", breatheDelay: "0.8s" },
         { fill: "#3e60cf", scale: 0.382, delay: "0.5s", breatheDelay: "1.6s" },
-        { fill: "#2a2a4e", scale: 0.236, delay: "0.7s", breatheDelay: "2.4s" },
-        { fill: "#2a8f6a", scale: 0.146, delay: "0.9s", breatheDelay: "3.2s" },
+        { fill: "#7b41d6", scale: 0.236, delay: "0.7s", breatheDelay: "2.4s" },
+        { fill: "#c93b3b", scale: 0.146, delay: "0.9s", breatheDelay: "3.2s" },
       ].map((layer, i) => (
         <use
           key={i}

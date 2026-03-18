@@ -253,7 +253,7 @@ export default function GardenPage() {
         promises={promises}
         checkIns={checkIns}
         onPlantSelect={setSelectedPlant}
-        className="absolute inset-0"
+        className="absolute inset-0 z-0"
       />
 
       {/* Plant info card */}

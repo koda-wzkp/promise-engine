@@ -1,10 +1,12 @@
 <svg width="32" height="32" viewBox="0 0 340 340" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <path id="p" d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z"/>
-  </defs>
-  <use href="#p" fill="#1a1a2e"/>
-  <use href="#p" fill="#1a5f4a" transform="scale(0.618)"/>
-  <use href="#p" fill="#1e40af" transform="scale(0.382)"/>
-  <use href="#p" fill="#5b21b6" transform="scale(0.236)"/>
-  <use href="#p" fill="#991b1b" transform="scale(0.146)"/>
+  <!-- scale 1.000 → dark navy (outermost) -->
+  <path d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z" fill="#1a1a2e"/>
+  <!-- scale 0.618 → teal -->
+  <path d="M 0,210 L 0,0 L 124,0 C 210,0 210,173 124,173 L 37,173 L 37,210 Z" fill="#1a5f4a"/>
+  <!-- scale 0.382 → blue -->
+  <path d="M 0,130 L 0,0 L 76,0 C 130,0 130,107 76,107 L 23,107 L 23,130 Z" fill="#1e40af"/>
+  <!-- scale 0.236 → purple -->
+  <path d="M 0,80 L 0,0 L 47,0 C 80,0 80,66 47,66 L 14,66 L 14,80 Z" fill="#5b21b6"/>
+  <!-- scale 0.146 → red (innermost) -->
+  <path d="M 0,50 L 0,0 L 29,0 C 50,0 50,41 29,41 L 9,41 L 9,50 Z" fill="#991b1b"/>
 </svg>

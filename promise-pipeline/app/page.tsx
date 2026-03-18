@@ -83,12 +83,6 @@ export default function LandingPage() {
             >
               See the HB 2021 Demo
             </Link>
-            <Link
-              href="/personal"
-              className="px-6 py-3 bg-white text-gray-900 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
-            >
-              Try Promise Garden
-            </Link>
           </div>
 
           <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
@@ -192,7 +186,7 @@ export default function LandingPage() {
             Join the Beta
           </h2>
           <p className="text-gray-400 mb-6">
-            Get early access to Promise Garden and team features.
+            Get early access to new features and demos.
           </p>
           <BetaSignupForm />
         </div>
@@ -234,12 +228,6 @@ function UseCases() {
       label: "Supply Chain",
       title: "Supply Chain Transparency",
       desc: "Track labor, environmental, and transparency promises across global supply chains. Identify verification gaps in tier 2/3 suppliers.",
-    },
-    {
-      id: "teams",
-      label: "Teams",
-      title: "Team Promise Networks",
-      desc: "Track commitments within your team. See who's overloaded. Simulate what happens when someone's out. The promise schema works at every scale.",
     },
   ];
 
@@ -287,14 +275,6 @@ function UseCases() {
               className="inline-block px-4 py-2 bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-800"
             >
               See JCPOA Analysis
-            </Link>
-          )}
-          {active.id === "teams" && (
-            <Link
-              href="/team"
-              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
-              Try Team Dashboard
             </Link>
           )}
         </div>

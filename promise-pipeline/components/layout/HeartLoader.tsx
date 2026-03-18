@@ -20,13 +20,13 @@ const P_PATH =
 const P_MIRROR =
   "M 340,340 L 340,0 L 140,0 C 0,0 0,280 140,280 L 280,280 L 280,340 Z";
 
-/* Garden variant: teal → navy → blue → purple → red */
+/* Pipeline variant: red → purple → blue → navy → teal */
 const LAYERS = [
-  { fill: "#2a8f6a", scale: 1 },
-  { fill: "#2a2a4e", scale: 0.618 },
+  { fill: "#c93b3b", scale: 1 },
+  { fill: "#7b41d6", scale: 0.618 },
   { fill: "#3e60cf", scale: 0.382 },
-  { fill: "#7b41d6", scale: 0.236 },
-  { fill: "#c93b3b", scale: 0.146 },
+  { fill: "#2a2a4e", scale: 0.236 },
+  { fill: "#2a8f6a", scale: 0.146 },
 ];
 
 export function HeartLoader({ size = 80 }: { size?: number }) {
@@ -54,16 +54,16 @@ export function HeartLoader({ size = 80 }: { size?: number }) {
           /* ── heartbeat wrapper ── */
           .hl-pulse {
             animation: hl-beat 5s ease-in-out infinite;
-            transform-origin: 240px 320px;
+            transform-origin: 240px 340px;
           }
 
           /*
-           * Right half: P centered → rotate CW into right lobe
-           * Transform list kept identical across keyframes so the
-           * browser can interpolate each function independently.
+           * Right half: P centered → rotate CW into right heart lobe.
+           * The bowl of the P becomes the top-right lobe, the stem
+           * points down toward the heart's bottom point.
            *
-           * P state:    translate(70,70)  rotate(0)    scale(1)   translate(0,0)
-           * Heart state: translate(240,420) rotate(-35)  scale(0.5) translate(0,-340)
+           * P state:     translate(70,70)   rotate(0)    scale(1)   translate(0,0)
+           * Heart state: translate(240,440)  rotate(-45)  scale(0.5) translate(-30,-340)
            */
           @keyframes hl-unfold-r {
             0%, 18% {
@@ -75,10 +75,10 @@ export function HeartLoader({ size = 80 }: { size?: number }) {
             }
             38%, 68% {
               transform:
-                translate(240px, 420px)
-                rotate(-35deg)
+                translate(240px, 440px)
+                rotate(-45deg)
                 scale(0.5)
-                translate(0px, -340px);
+                translate(-30px, -340px);
             }
             88%, 100% {
               transform:
@@ -91,34 +91,34 @@ export function HeartLoader({ size = 80 }: { size?: number }) {
 
           /*
            * Left half: starts collapsed at heart pivot → grows + rotates
-           * into left lobe, then collapses back.
+           * into left heart lobe, then collapses back.
            *
-           * P state:    translate(240,420) rotate(0)   scale(0.001) translate(-340,-340)
-           * Heart state: translate(240,420) rotate(35)  scale(0.5)   translate(-340,-340)
+           * P state:     translate(240,440) rotate(0)    scale(0.001) translate(-310,-340)
+           * Heart state: translate(240,440) rotate(45)   scale(0.5)   translate(-310,-340)
            */
           @keyframes hl-unfold-l {
             0%, 18% {
               transform:
-                translate(240px, 420px)
+                translate(240px, 440px)
                 rotate(0deg)
                 scale(0.001)
-                translate(-340px, -340px);
+                translate(-310px, -340px);
               opacity: 0;
             }
             38%, 68% {
               transform:
-                translate(240px, 420px)
-                rotate(35deg)
+                translate(240px, 440px)
+                rotate(45deg)
                 scale(0.5)
-                translate(-340px, -340px);
+                translate(-310px, -340px);
               opacity: 1;
             }
             88%, 100% {
               transform:
-                translate(240px, 420px)
+                translate(240px, 440px)
                 rotate(0deg)
                 scale(0.001)
-                translate(-340px, -340px);
+                translate(-310px, -340px);
               opacity: 0;
             }
           }

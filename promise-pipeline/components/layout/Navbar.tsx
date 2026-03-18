@@ -25,6 +25,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-1">
             <NavLink href="/demo/hb2021">HB 2021</NavLink>
             <NavLink href="/demo/jcpoa">JCPOA</NavLink>
+            <NavLink href="/demo/iss">ISS</NavLink>
             <NavLink href="/personal">Promise Garden</NavLink>
             <NavLink href="/team">Teams</NavLink>
             <NavLink href="/blog">Blog</NavLink>
@@ -54,6 +55,7 @@ export function Navbar() {
           <div className="px-4 py-2 space-y-1">
             <MobileNavLink href="/demo/hb2021" onClick={() => setMobileOpen(false)}>HB 2021</MobileNavLink>
             <MobileNavLink href="/demo/jcpoa" onClick={() => setMobileOpen(false)}>JCPOA</MobileNavLink>
+            <MobileNavLink href="/demo/iss" onClick={() => setMobileOpen(false)}>ISS</MobileNavLink>
             <MobileNavLink href="/personal" onClick={() => setMobileOpen(false)}>Promise Garden</MobileNavLink>
             <MobileNavLink href="/team" onClick={() => setMobileOpen(false)}>Teams</MobileNavLink>
             <MobileNavLink href="/blog" onClick={() => setMobileOpen(false)}>Blog</MobileNavLink>

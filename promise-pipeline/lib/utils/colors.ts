@@ -56,12 +56,25 @@ export const jcpoaDomainColors: Record<string, string> = {
   Governance: "#0891b2",
 } as const;
 
+export const issDomainColors: Record<string, string> = {
+  "Crew Safety": "#dc2626",
+  Resupply: "#2563eb",
+  "Crew Transport": "#7c3aed",
+  "Station Maintenance": "#d97706",
+  Research: "#059669",
+  Deorbit: "#1a1a2e",
+  Transition: "#0891b2",
+  Funding: "#78350f",
+  "Orbital Operations": "#9333ea",
+} as const;
+
 export const dashboardThemes = {
   hb2021: { bg: "#faf9f6", accent: "#1a5f4a" },
   ai: { bg: "#f5f0eb", accent: "#1a1a2e" },
   infrastructure: { bg: "#0f1419", accent: "#00d4aa" },
   supplyChain: { bg: "#faf9f6", accent: "#2d5016" },
   jcpoa: { bg: "#f5f0eb", accent: "#991b1b" },
+  iss: { bg: "#f0f4f8", accent: "#1d4ed8" },
 } as const;
 
 export function getStatusColor(status: string): string {
@@ -107,6 +120,12 @@ export const statusColorRgb: Record<string, string> = {
 export function getDomainColor(domain: string, vertical: string = "hb2021"): string {
   if (vertical === "hb2021") {
     return hb2021DomainColors[domain] || "#6b7280";
+  }
+  if (vertical === "jcpoa") {
+    return jcpoaDomainColors[domain] || "#6b7280";
+  }
+  if (vertical === "iss") {
+    return issDomainColors[domain] || "#6b7280";
   }
   return "#6b7280";
 }

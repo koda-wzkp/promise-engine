@@ -214,7 +214,7 @@ export function ClearcutOverlay({ onSeedClick, seedRef }: ClearcutOverlayProps) 
         {/* Floating seed button */}
         <div className="flex flex-col items-center gap-2">
           <button
-            ref={resolvedSeedRef}
+            ref={resolvedSeedRef as React.RefObject<HTMLButtonElement>}
             onClick={onSeedClick}
             aria-label="Plant your first promise"
             className="relative flex items-center justify-center rounded-full p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"

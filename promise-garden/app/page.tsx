@@ -201,9 +201,34 @@ export default function GardenPage() {
     <div className="relative h-screen overflow-hidden bg-[var(--garden-bg)]">
       {/* Navigation bar */}
       <nav className="absolute top-0 inset-x-0 z-40 flex items-center justify-between px-4 py-3 safe-top">
-        <h1 className="text-sm font-serif font-semibold text-white/90 drop-shadow-sm">
-          Promise Garden
-        </h1>
+        <div className="flex items-center gap-2">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 340 340"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+            className="flex-shrink-0 block drop-shadow-sm"
+          >
+            {[
+              { fill: "#2a8f6a", scale: 1 },
+              { fill: "#2a2a4e", scale: 0.618 },
+              { fill: "#3e60cf", scale: 0.382 },
+              { fill: "#7b41d6", scale: 0.236 },
+              { fill: "#c93b3b", scale: 0.146 },
+            ].map((layer, i) => (
+              <path
+                key={i}
+                d="M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z"
+                fill={layer.fill}
+                transform={`scale(${layer.scale})`}
+              />
+            ))}
+          </svg>
+          <h1 className="text-sm font-serif font-semibold text-white/90 drop-shadow-sm">
+            Promise Garden
+          </h1>
+        </div>
         <div className="flex items-center gap-2">
           {uncheckedToday.length > 0 && (
             <button

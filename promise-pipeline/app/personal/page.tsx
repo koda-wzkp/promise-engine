@@ -9,6 +9,7 @@ import { PromiseTimeline } from "@/components/personal/PromiseTimeline";
 import { ReliabilityScore } from "@/components/personal/ReliabilityScore";
 import { DomainBreakdown } from "@/components/personal/DomainBreakdown";
 import { ClearcutOverlay } from "@/components/personal/ClearcutOverlay";
+import { GardenTimeLapse } from "@/components/personal/GardenTimeLapse";
 import { PromiseCreationSheet } from "@/components/personal/PromiseCreationSheet";
 import { SeedTray } from "@/components/personal/SeedTray";
 import { NotificationPrompt } from "@/components/personal/NotificationPrompt";
@@ -133,6 +134,9 @@ export default function PersonalPage() {
   const [view, setView] = useState<View>("garden");
   const [loaded, setLoaded] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  // True while the clearcut time-lapse is playing.
+  // Flipped to false when the loop completes or the user taps the seed.
+  const [timeLapseActive, setTimeLapseActive] = useState(true);
 
   const seedRef = useRef<HTMLButtonElement>(null);
 
@@ -164,6 +168,8 @@ export default function PersonalPage() {
 
   /** Called from both the ClearcutOverlay seed and the SeedTray seeds */
   const handleOpenSheet = useCallback(() => {
+    // Stop the time-lapse immediately if it's still running
+    setTimeLapseActive(false);
     if (state.phase === "clearcut") {
       onboarding.openSeedForFirstTime();
     }
@@ -253,15 +259,28 @@ export default function PersonalPage() {
 
         {/* Full-height garden container */}
         <div className="relative flex-1" style={{ minHeight: "100svh" }}>
-          <GardenView
-            promises={[]}
-            onUpdateStatus={() => {}}
-            forceRender
-            skyGradientOverride={skyGradient}
-            minHeight="100svh"
-          />
+          {/*
+           * Canvas layer — time-lapse while active, static clearcut after.
+           * GardenTimeLapse unmounts when timeLapseActive becomes false, which
+           * cancels its RAF loop. The static GardenView it was rendering
+           * handshakes with the ClearcutOverlay that's always on top.
+           */}
+          {timeLapseActive ? (
+            <GardenTimeLapse
+              onComplete={() => setTimeLapseActive(false)}
+              minHeight="100svh"
+            />
+          ) : (
+            <GardenView
+              promises={[]}
+              onUpdateStatus={() => {}}
+              forceRender
+              skyGradientOverride={getSkyGradientByCount(0)}
+              minHeight="100svh"
+            />
+          )}
 
-          {/* Clearcut overlay: text + floating seed + stumps */}
+          {/* Clearcut overlay: text + floating seed + stumps — always on top */}
           <ClearcutOverlay onSeedClick={handleOpenSheet} seedRef={seedRef} />
         </div>
 

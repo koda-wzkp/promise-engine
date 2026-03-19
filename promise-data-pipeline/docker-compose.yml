@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    restart: unless-stopped
+
+  # Scheduled ingestion (uncomment when ready)
+  # scheduler:
+  #   build: .
+  #   command: ["python", "scripts/ingest_mona.py", "--skip-load"]
+  #   env_file: .env

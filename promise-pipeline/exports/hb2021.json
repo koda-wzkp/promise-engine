@@ -1,0 +1,658 @@
+{
+  "id": "hb2021",
+  "name": "Oregon HB 2021",
+  "source": "Oregon House Bill 2021, 81st Legislative Assembly, 2021 Regular Session",
+  "promiseCount": 20,
+  "agentCount": 11,
+  "domainCount": 7,
+  "domains": [
+    "Emissions",
+    "Planning",
+    "Verification",
+    "Equity",
+    "Affordability",
+    "Tribal",
+    "Workforce"
+  ],
+  "exportedAt": "2026-03-20T19:02:47.563Z",
+  "promises": [
+    {
+      "id": "P001",
+      "ref": "§3(1)",
+      "promiser": "PGE",
+      "promisee": "ORL",
+      "body": "Reduce greenhouse gas emissions 80% below baseline by 2030, 90% by 2035, 100% by 2040",
+      "domain": "Emissions",
+      "status": "degraded",
+      "target": "2030-12-31",
+      "progress": 45,
+      "required": 80,
+      "note": "PGE has made progress but is behind the 2030 interim target. Current trajectory suggests 60-65% reduction by 2030.",
+      "verification": {
+        "method": "audit",
+        "source": "Oregon DEQ",
+        "metric": "GHG emissions (MT CO2e)",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon DEQ Annual Emissions Audit, PGE 2024"
+        },
+        "dependsOnPromise": "P006"
+      },
+      "depends_on": [
+        "P002",
+        "P006"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P002",
+      "ref": "§4(1)",
+      "promiser": "PGE",
+      "promisee": "PUC",
+      "body": "File clean energy plan with PUC demonstrating pathway to 100% clean electricity",
+      "domain": "Planning",
+      "status": "verified",
+      "target": "2022-03-31",
+      "progress": 100,
+      "required": 100,
+      "note": "PGE filed its Clean Energy Plan (CEP) in March 2022, approved by PUC in November 2022.",
+      "verification": {
+        "method": "filing",
+        "source": "Oregon PUC",
+        "metric": "Plan filing status",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon PUC, PGE Clean Energy Plan Filing, Docket LC 80"
+        }
+      },
+      "depends_on": [
+        "P016"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P003",
+      "ref": "§4(1)",
+      "promiser": "PAC",
+      "promisee": "PUC",
+      "body": "File clean energy plan with PUC demonstrating pathway to 100% clean electricity",
+      "domain": "Planning",
+      "status": "degraded",
+      "target": "2022-03-31",
+      "progress": 70,
+      "required": 100,
+      "note": "PacifiCorp filed a plan but received conditional approval with required amendments on coal retirement timeline.",
+      "verification": {
+        "method": "filing",
+        "source": "Oregon PUC",
+        "metric": "Plan filing status",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon PUC, PacifiCorp Clean Energy Plan Filing, Docket LC 82"
+        }
+      },
+      "depends_on": [
+        "P016"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P004",
+      "ref": "§3(1)",
+      "promiser": "PAC",
+      "promisee": "ORL",
+      "body": "Reduce greenhouse gas emissions 80% below baseline by 2030, 90% by 2035, 100% by 2040",
+      "domain": "Emissions",
+      "status": "violated",
+      "target": "2030-12-31",
+      "progress": 25,
+      "required": 80,
+      "note": "PacifiCorp's multi-state operations and heavy coal dependence make the 2030 target effectively unreachable. Current trajectory: 35-40% by 2030.",
+      "verification": {
+        "method": "audit",
+        "source": "Oregon DEQ",
+        "metric": "GHG emissions (MT CO2e)",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon DEQ Annual Emissions Audit, PacifiCorp 2024"
+        },
+        "dependsOnPromise": "P006"
+      },
+      "depends_on": [
+        "P003",
+        "P006"
+      ],
+      "polarity": "give",
+      "origin": "imposed",
+      "violationType": "fault"
+    },
+    {
+      "id": "P005",
+      "ref": "§3(2)",
+      "promiser": "PUC",
+      "promisee": "ORL",
+      "body": "Establish and enforce emissions reduction targets for investor-owned utilities",
+      "domain": "Verification",
+      "status": "verified",
+      "target": "2022-01-01",
+      "progress": 100,
+      "required": 100,
+      "note": "PUC established rulemaking (AR 631) and adopted targets aligned with statutory requirements.",
+      "verification": {
+        "method": "filing",
+        "source": "Oregon PUC",
+        "metric": "Rulemaking completion",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon PUC Rulemaking AR 631, Emissions Reduction Targets"
+        }
+      },
+      "depends_on": [],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P006",
+      "ref": "§5(1)",
+      "promiser": "DEQ",
+      "promisee": "ORL",
+      "body": "Verify utility emissions data and track compliance with reduction targets",
+      "domain": "Verification",
+      "status": "verified",
+      "target": "2022-01-01",
+      "progress": 100,
+      "required": 100,
+      "note": "DEQ has an established emissions tracking and verification program. Annual compliance reports published.",
+      "verification": {
+        "method": "audit",
+        "source": "Oregon DEQ",
+        "metric": "Verification report completion",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon DEQ Emissions Verification Program, Annual Compliance Report 2024"
+        }
+      },
+      "depends_on": [],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P007",
+      "ref": "§6(1)",
+      "promiser": "PGE",
+      "promisee": "PUC",
+      "body": "Procure renewable energy resources sufficient to meet clean energy targets",
+      "domain": "Planning",
+      "status": "verified",
+      "target": "2030-12-31",
+      "progress": 65,
+      "required": 80,
+      "note": "PGE has executed PPAs for ~1,200 MW of new wind and solar. On track for interim target.",
+      "verification": {
+        "method": "filing",
+        "source": "Oregon PUC",
+        "metric": "MW procured vs. target",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon PUC, PGE Renewable Procurement Filing, IRP 2024"
+        }
+      },
+      "depends_on": [
+        "P002"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P008",
+      "ref": "§6(1)",
+      "promiser": "PAC",
+      "promisee": "PUC",
+      "body": "Procure renewable energy resources sufficient to meet clean energy targets",
+      "domain": "Planning",
+      "status": "degraded",
+      "target": "2030-12-31",
+      "progress": 40,
+      "required": 80,
+      "note": "PacifiCorp's multi-state IRP complicates Oregon-specific procurement. Behind on renewable additions.",
+      "verification": {
+        "method": "filing",
+        "source": "Oregon PUC",
+        "metric": "MW procured vs. target",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon PUC, PacifiCorp Renewable Procurement Filing, IRP 2024"
+        }
+      },
+      "depends_on": [
+        "P003"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P009",
+      "ref": "§7(1)(a)",
+      "promiser": "PGE",
+      "promisee": "EJC",
+      "body": "Allocate minimum 50% of energy program spending to environmental justice communities",
+      "domain": "Equity",
+      "status": "declared",
+      "target": "2025-12-31",
+      "progress": 35,
+      "required": 50,
+      "note": "PGE has allocated approximately 35% of relevant program spending to EJ communities. Tracking mechanisms are in place.",
+      "verification": {
+        "method": "self-report",
+        "source": "Portland General Electric",
+        "metric": "% spending in EJ communities",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "PGE Community Benefits Report, EJ Program Spending 2024"
+        }
+      },
+      "depends_on": [
+        "P001"
+      ],
+      "polarity": "give",
+      "origin": "imposed",
+      "scope": [
+        "PGE",
+        "PUC",
+        "DOE"
+      ]
+    },
+    {
+      "id": "P010",
+      "ref": "§7(1)(b)",
+      "promiser": "PGE",
+      "promisee": "EJC",
+      "body": "Provide direct benefits to environmental justice communities from clean energy transition",
+      "domain": "Equity",
+      "status": "unverifiable",
+      "note": "No quantitative metric or independent verification mechanism exists for 'direct benefits.' The promise is structurally unverifiable.",
+      "verification": {
+        "method": "none",
+        "commitment": {
+          "hash": "placeholder — no source document exists; promise is structurally unverifiable",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "No verification mechanism — 'direct benefits' undefined in statute"
+        }
+      },
+      "depends_on": [
+        "P001"
+      ],
+      "polarity": "give",
+      "origin": "imposed",
+      "scope": [
+        "PGE",
+        "PUC"
+      ]
+    },
+    {
+      "id": "P011",
+      "ref": "§7(2)",
+      "promiser": "PUC",
+      "promisee": "EJC",
+      "body": "Ensure energy burden for low-income customers does not increase due to clean energy transition",
+      "domain": "Equity",
+      "status": "unverifiable",
+      "note": "Energy burden is tracked at aggregate level but not at the household level required to verify this promise. No causal isolation between transition costs and other rate factors.",
+      "verification": {
+        "method": "none",
+        "commitment": {
+          "hash": "placeholder — no source document exists; promise is structurally unverifiable",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "No verification mechanism — energy burden tracked at aggregate, not household level"
+        }
+      },
+      "depends_on": [
+        "P005",
+        "P014"
+      ],
+      "polarity": "give",
+      "origin": "imposed",
+      "scope": [
+        "PUC"
+      ]
+    },
+    {
+      "id": "P012",
+      "ref": "§7(3)",
+      "promiser": "PAC",
+      "promisee": "EJC",
+      "body": "Provide direct benefits to environmental justice communities from clean energy transition",
+      "domain": "Equity",
+      "status": "unverifiable",
+      "note": "Same verification gap as P010. PacifiCorp's multi-state structure further complicates Oregon-specific benefit tracking.",
+      "verification": {
+        "method": "none",
+        "commitment": {
+          "hash": "placeholder — no source document exists; promise is structurally unverifiable",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "No verification mechanism — same gap as P010, compounded by multi-state structure"
+        }
+      },
+      "depends_on": [
+        "P004"
+      ],
+      "polarity": "give",
+      "origin": "imposed",
+      "scope": [
+        "PAC",
+        "PUC"
+      ]
+    },
+    {
+      "id": "P013",
+      "ref": "§8(1)",
+      "promiser": "PUC",
+      "promisee": "CPA",
+      "body": "Conduct regular rate impact assessments to protect consumers from excessive transition costs",
+      "domain": "Affordability",
+      "status": "verified",
+      "target": "2023-01-01",
+      "progress": 100,
+      "required": 100,
+      "note": "PUC conducts regular rate impact analyses as part of IRP and CEP review processes.",
+      "verification": {
+        "method": "filing",
+        "source": "Oregon PUC",
+        "metric": "Rate impact assessment completion",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon PUC Rate Impact Assessment, IRP/CEP Review 2024"
+        }
+      },
+      "depends_on": [],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P014",
+      "ref": "§8(2)",
+      "promiser": "ORL",
+      "promisee": "CPA",
+      "body": "Cap annual rate increases attributable to clean energy transition at 6% for PGE, 6% for PacifiCorp",
+      "domain": "Affordability",
+      "status": "degraded",
+      "note": "Rate increases are approaching but have not yet exceeded the cap. PGE's 2024 rate case attributed ~4.5% to clean energy costs. Future years may trigger the cap, which could pause transition investments.",
+      "verification": {
+        "method": "filing",
+        "source": "Oregon PUC",
+        "metric": "% rate increase attributable to clean energy",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon PUC Order No. 24-002, Docket UM 2273"
+        }
+      },
+      "depends_on": [
+        "P013"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P015",
+      "ref": "§9(1)",
+      "promiser": "DOE",
+      "promisee": "ORL",
+      "body": "Publish biennial report on clean energy transition progress, including emissions, costs, and equity impacts",
+      "domain": "Verification",
+      "status": "verified",
+      "target": "2023-09-01",
+      "progress": 100,
+      "required": 100,
+      "note": "DOE published its first biennial report in September 2023. Comprehensive data on emissions trajectories and cost impacts.",
+      "verification": {
+        "method": "filing",
+        "source": "Oregon DOE",
+        "metric": "Report publication",
+        "frequency": "biennial",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon DOE Biennial Clean Energy Report, September 2023"
+        }
+      },
+      "depends_on": [
+        "P006"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P016",
+      "ref": "§10(1)",
+      "promiser": "PUC",
+      "promisee": "TRB",
+      "body": "Conduct meaningful consultation with Oregon's nine federally recognized tribes on clean energy planning",
+      "domain": "Tribal",
+      "status": "degraded",
+      "progress": 40,
+      "required": 100,
+      "note": "PUC has initiated tribal consultation but feedback indicates it has been procedural rather than substantive. Tribes report limited influence on final planning decisions.",
+      "verification": {
+        "method": "self-report",
+        "source": "Oregon PUC",
+        "metric": "Consultation meetings held",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon PUC Tribal Consultation Log, Annual Summary 2024"
+        }
+      },
+      "depends_on": [],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P017",
+      "ref": "§10(2)",
+      "promiser": "PGE",
+      "promisee": "TRB",
+      "body": "Incorporate tribal energy sovereignty considerations into clean energy procurement",
+      "domain": "Tribal",
+      "status": "declared",
+      "progress": 20,
+      "note": "PGE has acknowledged tribal sovereignty in its CEP but specific procurement commitments remain vague.",
+      "verification": {
+        "method": "self-report",
+        "source": "Portland General Electric",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "PGE Clean Energy Plan, Tribal Energy Sovereignty Section, 2024"
+        }
+      },
+      "depends_on": [
+        "P002",
+        "P016"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P018",
+      "ref": "§11(1)",
+      "promiser": "WRK",
+      "promisee": "ORL",
+      "body": "Develop clean energy workforce training programs targeting displaced fossil fuel workers",
+      "domain": "Workforce",
+      "status": "declared",
+      "target": "2025-12-31",
+      "progress": 30,
+      "required": 100,
+      "note": "Programs have been announced but enrollment is below targets. Coordination with utility transition timelines is lacking.",
+      "verification": {
+        "method": "self-report",
+        "source": "Workforce Development Board",
+        "metric": "Program enrollment",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon Workforce Development Board, Clean Energy Training Program Report 2024"
+        }
+      },
+      "depends_on": [
+        "P002",
+        "P003"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P019",
+      "ref": "§11(2)",
+      "promiser": "PGE",
+      "promisee": "WRK",
+      "body": "Provide transition assistance and retraining funding for workers displaced by plant closures",
+      "domain": "Workforce",
+      "status": "declared",
+      "target": "2030-12-31",
+      "progress": 15,
+      "note": "PGE has committed funding but specific programs have not launched. Boardman plant closure (2020) preceded HB 2021.",
+      "verification": {
+        "method": "self-report",
+        "source": "Portland General Electric",
+        "metric": "Funding allocated ($)",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "PGE Worker Transition Assistance Report, Annual Filing 2024"
+        }
+      },
+      "depends_on": [
+        "P002",
+        "P018"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    },
+    {
+      "id": "P020",
+      "ref": "§12(1)",
+      "promiser": "PUC",
+      "promisee": "ORL",
+      "body": "Establish community benefit indicators to measure the equitable distribution of clean energy benefits",
+      "domain": "Equity",
+      "status": "degraded",
+      "target": "2023-01-01",
+      "progress": 40,
+      "required": 100,
+      "note": "PUC has drafted indicators but they have not been finalized or adopted. Community organizations report the indicators do not capture lived experience.",
+      "verification": {
+        "method": "filing",
+        "source": "Oregon PUC",
+        "metric": "Indicator adoption status",
+        "frequency": "annual",
+        "commitment": {
+          "hash": "placeholder — will be computed from actual source documents",
+          "timestamp": "2026-03-15T00:00:00Z",
+          "sourceDigest": "Oregon PUC Community Benefit Indicators Draft, Docket UM 2225"
+        }
+      },
+      "depends_on": [
+        "P005"
+      ],
+      "polarity": "give",
+      "origin": "imposed"
+    }
+  ],
+  "agents": [
+    {
+      "id": "ORL",
+      "name": "Oregon Legislature",
+      "type": "legislator",
+      "short": "ORL"
+    },
+    {
+      "id": "PGE",
+      "name": "Portland General Electric",
+      "type": "utility",
+      "short": "PGE"
+    },
+    {
+      "id": "PAC",
+      "name": "PacifiCorp",
+      "type": "utility",
+      "short": "PAC"
+    },
+    {
+      "id": "PUC",
+      "name": "Oregon PUC",
+      "type": "regulator",
+      "short": "PUC"
+    },
+    {
+      "id": "DEQ",
+      "name": "Oregon DEQ",
+      "type": "regulator",
+      "short": "DEQ"
+    },
+    {
+      "id": "EJC",
+      "name": "Environmental Justice Communities",
+      "type": "community",
+      "short": "EJC"
+    },
+    {
+      "id": "TRB",
+      "name": "Oregon Tribal Nations",
+      "type": "community",
+      "short": "TRB"
+    },
+    {
+      "id": "WRK",
+      "name": "Workforce Development Board",
+      "type": "provider",
+      "short": "WRK"
+    },
+    {
+      "id": "DOE",
+      "name": "Oregon Dept. of Energy",
+      "type": "regulator",
+      "short": "DOE"
+    },
+    {
+      "id": "CPA",
+      "name": "Consumer Protection Advocate",
+      "type": "stakeholder",
+      "short": "CPA"
+    },
+    {
+      "id": "EPA",
+      "name": "EPA Region 10",
+      "type": "auditor",
+      "short": "EPA"
+    }
+  ]
+}

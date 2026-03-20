@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "import-content": "tsx scripts/import-content.ts"
+    "import-content": "tsx scripts/import-content.ts",
+    "export:benthos": "tsx scripts/export_for_benthos.ts ./exports"
   },
   "repository": {
     "type": "git",

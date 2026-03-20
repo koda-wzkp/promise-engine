@@ -33,9 +33,19 @@ export interface NetworkBelief {
   verificationUrgency: {       // Promises where checking NOW has highest impact
     promiseId: string;
     urgencyScore: number;      // Higher = more urgent to verify
+    urgencyType: UrgencyType;  // Classification driving the score
     reason: string;            // Human-readable explanation
   }[];
 }
+
+/**
+ * Urgency type from the two-category urgency system.
+ *
+ * MONITOR_BOTTLENECK: High-dependency promises where failure cascades far.
+ * PREVENT_COMPOSTING: Low-k promises approaching verification window closure.
+ * STANDARD: Everything else.
+ */
+export type UrgencyType = "MONITOR_BOTTLENECK" | "PREVENT_COMPOSTING" | "STANDARD";
 
 /**
  * Regime classification for display.

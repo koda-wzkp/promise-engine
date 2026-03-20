@@ -9,6 +9,28 @@ interface VerificationUrgencyProps {
   onPromiseClick?: (promiseId: string) => void;
 }
 
+import { UrgencyType } from "@/lib/types/bayesian";
+
+function UrgencyTypeBadge({ type }: { type: UrgencyType }) {
+  if (type === "STANDARD") return null;
+
+  const styles =
+    type === "MONITOR_BOTTLENECK"
+      ? "bg-red-50 text-red-800 border border-red-200"
+      : "bg-amber-50 text-amber-800 border border-amber-200";
+  const label =
+    type === "MONITOR_BOTTLENECK" ? "Bottleneck" : "Composting risk";
+
+  return (
+    <span
+      className={`font-mono text-xs px-1.5 py-0.5 rounded ${styles}`}
+      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+    >
+      {label}
+    </span>
+  );
+}
+
 function UrgencyBar({ score }: { score: number }) {
   const pct = Math.round(score * 100);
   const color = pct >= 70 ? "#991b1b" : pct >= 40 ? "#d97706" : "#2563eb";
@@ -71,7 +93,7 @@ export function VerificationUrgency({
           const pct = Math.round(item.urgencyScore * 100);
           return (
             <li key={item.promiseId} className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {onPromiseClick ? (
                   <button
                     className="font-mono text-xs text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
@@ -89,6 +111,7 @@ export function VerificationUrgency({
                 <span className="text-xs text-gray-400" aria-label={`Urgency score: ${pct}%`}>
                   {pct}%
                 </span>
+                <UrgencyTypeBadge type={item.urgencyType} />
               </div>
               {promise && (
                 <p className="text-xs text-gray-700 truncate pl-1" title={promise.body}>

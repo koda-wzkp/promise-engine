@@ -1,5 +1,5 @@
 import { Promise, PromiseStatus, VerificationMethod } from "../types/promise";
-import { BayesianBelief, NetworkBelief, DynamicalRegime } from "../types/bayesian";
+import { BayesianBelief, NetworkBelief, DynamicalRegime, UrgencyType } from "../types/bayesian";
 
 // ─── EMPIRICAL k VALUES ─────────────────────────────────────
 // Source: The Verification Paradox, Table 1 (Section 3.1)
@@ -251,47 +251,94 @@ export function classifyRegime(belief: BayesianBelief): DynamicalRegime {
 }
 
 /**
+ * Urgency result from the two-category urgency system.
+ */
+export interface UrgencyResult {
+  score: number;       // 0 to 1
+  type: UrgencyType;
+  reason: string;      // Filled by urgencyReason()
+}
+
+/**
  * Compute the marginal value of verifying this promise NOW.
  *
- * High urgency = promise is in a recoverable composting state where
- * the next verification event would shift it into computing regime.
+ * Two-category system validated against 500-run stochastic cascades
+ * on HB 2021, ISS, and JCPOA. The old single-score heuristic was
+ * uncorrelated with actual cascade damage (rho=-0.174). Root cause:
+ * the recoverability gate at k>0.55 suppressed the most dangerous
+ * promises; the dep cap at 5 flattened the top of the distribution.
  *
- * The score is highest for promises that:
- * - Have moderate k (0.25-0.55) — still recoverable
- * - Have high variance — uncertain state
- * - Have tau > 1 — have been unverified long enough to matter
- * - Have dependents — verification has network effects
+ * MONITOR_BOTTLENECK: deps >= 2. Leverage-weighted with log transform.
+ *   These are often well-verified (high k) — urgency is to confirm
+ *   they're holding, not to rescue them from composting.
  *
- * Returns a score from 0 to 1. Higher = more urgent.
+ * PREVENT_COMPOSTING: k < 0.45, few deps. Recoverability-weighted
+ *   with verification window peak at k=0.37.
+ *
+ * STANDARD: balanced scoring.
  */
 export function verificationUrgency(
   belief: BayesianBelief,
   dependentCount: number
-): number {
+): UrgencyResult {
   const variance = beliefVariance(belief);
 
-  // Recoverable? k between 0.25 and 0.55 is the sweet spot
-  const recoverability =
-    belief.k >= 0.25 && belief.k <= 0.55
-      ? 1.0 - Math.abs(belief.k - 0.40) / 0.15 // Peak at k=0.40
-      : 0.0;
+  // ─── Classify urgency type ───
+  let type: UrgencyType;
+  if (dependentCount >= 2) {
+    type = "MONITOR_BOTTLENECK";
+  } else if (belief.k < 0.45) {
+    type = "PREVENT_COMPOSTING";
+  } else {
+    type = "STANDARD";
+  }
 
-  // Uncertainty factor
-  const uncertaintyFactor = Math.min(variance * 10, 1.0);
+  let score: number;
 
-  // Dwell time factor (diminishing returns after tau=5)
-  const dwellFactor = Math.min(belief.tau / 5, 1.0);
+  if (type === "MONITOR_BOTTLENECK") {
+    // Leverage is primary. log transform — no hard cap.
+    const leverageFactor = Math.log(1 + dependentCount) / Math.log(1 + 10);
+    const uncertaintyFactor = Math.min(variance * 10, 1.0);
+    const dwellFactor = Math.min(belief.tau / 5, 1.0);
 
-  // Network leverage (more dependents = more urgent)
-  const leverageFactor = Math.min(dependentCount / 5, 1.0);
+    score = leverageFactor * 0.60
+          + uncertaintyFactor * 0.25
+          + dwellFactor * 0.15;
 
-  // Composite score
-  const raw = recoverability * 0.35
-    + uncertaintyFactor * 0.25
-    + dwellFactor * 0.20
-    + leverageFactor * 0.20;
+  } else if (type === "PREVENT_COMPOSTING") {
+    // Recoverability is primary. Peak at k=0.37 (verification window).
+    const recoverability =
+      belief.k >= 0.20 && belief.k <= 0.45
+        ? 1.0 - Math.abs(belief.k - 0.37) / 0.17
+        : 0.0;
+    const uncertaintyFactor = Math.min(variance * 10, 1.0);
+    const dwellFactor = Math.min(belief.tau / 5, 1.0);
 
-  return Math.max(0, Math.min(1, raw));
+    score = recoverability * 0.50
+          + uncertaintyFactor * 0.30
+          + dwellFactor * 0.20;
+
+  } else {
+    // Standard: balanced scoring
+    const leverageFactor = Math.log(1 + dependentCount) / Math.log(1 + 10);
+    const uncertaintyFactor = Math.min(variance * 10, 1.0);
+    const dwellFactor = Math.min(belief.tau / 5, 1.0);
+    const recoverability =
+      belief.k >= 0.30 && belief.k <= 0.60
+        ? 1.0 - Math.abs(belief.k - 0.45) / 0.15
+        : 0.0;
+
+    score = recoverability * 0.25
+          + uncertaintyFactor * 0.25
+          + dwellFactor * 0.25
+          + leverageFactor * 0.25;
+  }
+
+  return {
+    score: Math.max(0, Math.min(1, score)),
+    type,
+    reason: "", // Filled by urgencyReason()
+  };
 }
 
 /**
@@ -300,29 +347,38 @@ export function verificationUrgency(
 export function urgencyReason(
   promise: Promise,
   belief: BayesianBelief,
-  urgencyScore: number,
+  urgencyResult: UrgencyResult,
   dependentCount: number
 ): string {
-  // Suppress unused variable warning — promise available for Phase 2 enrichment
   void promise;
 
-  if (urgencyScore < 0.2) return "Low urgency — stable or already assessed.";
+  if (urgencyResult.score < 0.1) return "Low urgency — stable or isolated.";
 
-  const regime = classifyRegime(belief);
   const parts: string[] = [];
 
-  if (regime === "composting") {
-    parts.push(`Composting (k=${belief.k.toFixed(2)}) — stagnating without verification`);
-  } else if (regime === "transitional") {
-    parts.push(`Transitional (k=${belief.k.toFixed(2)}) — approaching composting threshold`);
-  }
-
-  if (belief.tau > 2) {
-    parts.push(`${belief.tau} review periods without assessment`);
-  }
-
-  if (dependentCount > 0) {
-    parts.push(`${dependentCount} downstream promise${dependentCount > 1 ? "s" : ""} depend on this`);
+  if (urgencyResult.type === "MONITOR_BOTTLENECK") {
+    parts.push(
+      `Structural bottleneck: ${dependentCount} downstream promise${dependentCount > 1 ? "s" : ""} depend on this`
+    );
+    if (belief.k >= 0.60) {
+      parts.push("Currently well-verified — confirm it's holding");
+    } else {
+      parts.push("Under-verified for its network importance");
+    }
+  } else if (urgencyResult.type === "PREVENT_COMPOSTING") {
+    parts.push(
+      `Composting risk (k=${belief.k.toFixed(2)}) — approaching verification window closure`
+    );
+    if (belief.tau > 2) {
+      parts.push(`${belief.tau} review periods without assessment`);
+    }
+  } else {
+    const regime = classifyRegime(belief);
+    if (regime === "composting") {
+      parts.push(`In composting regime (k=${belief.k.toFixed(2)})`);
+    } else if (regime === "transitional") {
+      parts.push(`Transitional regime (k=${belief.k.toFixed(2)}) — could go either way`);
+    }
   }
 
   const variance = beliefVariance(belief);
@@ -373,9 +429,14 @@ export function computeNetworkBelief(
   // Verification urgency — top 5
   const urgencyScores = promises.map((p, i) => {
     const depCount = dependentCounts[p.id] ?? 0;
-    const score = verificationUrgency(beliefs[i], depCount);
-    const reason = urgencyReason(p, beliefs[i], score, depCount);
-    return { promiseId: p.id, urgencyScore: score, reason };
+    const result = verificationUrgency(beliefs[i], depCount);
+    result.reason = urgencyReason(p, beliefs[i], result, depCount);
+    return {
+      promiseId: p.id,
+      urgencyScore: result.score,
+      urgencyType: result.type,
+      reason: result.reason,
+    };
   });
 
   urgencyScores.sort((a, b) => b.urgencyScore - a.urgencyScore);

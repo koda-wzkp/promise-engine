@@ -2,7 +2,10 @@
 
 import { Promise as PromiseType, Agent } from "@/lib/types/promise";
 import { StatusBadge } from "./StatusBadge";
+import { ProbabilityBar } from "./ProbabilityBar";
+import { RegimeBadge } from "./RegimeBadge";
 import { getDomainColor } from "@/lib/utils/colors";
+import { computeBelief, classifyRegime } from "@/lib/simulation/bayesian";
 
 interface PromiseCardProps {
   promise: PromiseType;
@@ -26,6 +29,8 @@ export function PromiseCard({
   const promiserAgent = agents.find((a) => a.id === promise.promiser);
   const promiseeAgent = agents.find((a) => a.id === promise.promisee);
   const domainColor = getDomainColor(promise.domain);
+  const belief = computeBelief(promise);
+  const regime = classifyRegime(belief);
 
   return (
     <div
@@ -44,6 +49,10 @@ export function PromiseCard({
               <span className="font-mono text-xs text-gray-400">{promise.ref}</span>
             )}
             <StatusBadge status={promise.status} size="xs" />
+            <RegimeBadge regime={regime} k={belief.k} />
+          </div>
+          <div className="mb-2">
+            <ProbabilityBar pKept={belief.pKept} k={belief.k} compact={compact} />
           </div>
 
           <p className={`text-gray-900 ${compact ? "text-sm" : "text-sm leading-relaxed"}`}>

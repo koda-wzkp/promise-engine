@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { CascadeResult } from "@/lib/types/simulation";
 import { Promise as PromiseType, Agent, PromiseStatus, isPromiseFactory } from "@/lib/types/promise";
 import { StatusBadge } from "@/components/promise/StatusBadge";
 import { ProbabilisticCascadeResult, StatusDistribution } from "@/lib/types/analysis";
 import { generateFactoryNarrative } from "@/lib/analysis/factory";
+import { BayesianCascadeResult } from "@/lib/simulation/bayesianCascade";
 
 interface CascadeResultsProps {
   result: CascadeResult;
@@ -13,6 +15,8 @@ interface CascadeResultsProps {
   onReset: () => void;
   /** Optional probabilistic supplement — populated when the What If engine has run */
   probabilistic?: ProbabilisticCascadeResult;
+  /** Optional Bayesian cascade supplement — mean-field probability shifts */
+  bayesianCascade?: BayesianCascadeResult;
 }
 
 /** Colors for each status segment in the probability bar. */
@@ -74,7 +78,9 @@ export function CascadeResults({
   agents,
   onReset,
   probabilistic,
+  bayesianCascade,
 }: CascadeResultsProps) {
+  const [bayesianOpen, setBayesianOpen] = useState(false);
   const healthDelta = result.newNetworkHealth - result.originalNetworkHealth;
   const promiseMap = new Map(promises.map((p) => [p.id, p]));
 
@@ -261,6 +267,102 @@ export function CascadeResults({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Bayesian Probability Analysis — collapsible supplement */}
+      {bayesianCascade && (
+        <div className="mt-4 border border-indigo-200 rounded-lg overflow-hidden">
+          <button
+            className="w-full flex items-center justify-between px-3 py-2 bg-indigo-50 text-sm font-medium text-indigo-900 hover:bg-indigo-100 transition-colors"
+            onClick={() => setBayesianOpen(!bayesianOpen)}
+            aria-expanded={bayesianOpen}
+            aria-controls="bayesian-cascade-panel"
+          >
+            <span>▸ Probability Analysis (Bayesian)</span>
+            <span className="text-xs text-indigo-600 font-normal">
+              {bayesianOpen ? "collapse" : "expand"}
+            </span>
+          </button>
+          {bayesianOpen && (
+            <div id="bayesian-cascade-panel" className="p-3 text-xs space-y-3">
+              {/* Network-level shifts */}
+              <div className="space-y-1 font-mono">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Network health</span>
+                  <span>
+                    {Math.round(bayesianCascade.networkHealthBefore * 100)}%
+                    {" → "}
+                    {Math.round(bayesianCascade.networkHealthAfter * 100)}%
+                    <span
+                      className={`ml-1 ${
+                        bayesianCascade.networkHealthAfter < bayesianCascade.networkHealthBefore
+                          ? "text-red-700"
+                          : "text-green-700"
+                      }`}
+                    >
+                      ({bayesianCascade.networkHealthAfter >= bayesianCascade.networkHealthBefore ? "+" : ""}
+                      {Math.round((bayesianCascade.networkHealthAfter - bayesianCascade.networkHealthBefore) * 100)}%)
+                    </span>
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Network certainty</span>
+                  <span>
+                    {Math.round(bayesianCascade.networkCertaintyBefore * 100)}%
+                    {" → "}
+                    {Math.round(bayesianCascade.networkCertaintyAfter * 100)}%
+                    <span
+                      className={`ml-1 ${
+                        bayesianCascade.networkCertaintyAfter < bayesianCascade.networkCertaintyBefore
+                          ? "text-red-700"
+                          : "text-green-700"
+                      }`}
+                    >
+                      ({bayesianCascade.networkCertaintyAfter >= bayesianCascade.networkCertaintyBefore ? "+" : ""}
+                      {Math.round((bayesianCascade.networkCertaintyAfter - bayesianCascade.networkCertaintyBefore) * 100)}%)
+                    </span>
+                  </span>
+                </div>
+                <div className="text-gray-400">
+                  Converged in {bayesianCascade.convergenceIterations} iteration{bayesianCascade.convergenceIterations !== 1 ? "s" : ""}
+                </div>
+              </div>
+
+              {/* Probability shifts */}
+              {bayesianCascade.probabilityShifts.length > 0 && (
+                <div>
+                  <p className="text-gray-600 font-medium mb-1.5">Largest probability shifts:</p>
+                  <div className="space-y-1 font-mono">
+                    {bayesianCascade.probabilityShifts.slice(0, 8).map((ps) => (
+                      <div key={ps.promiseId} className="flex items-center justify-between gap-2">
+                        <span className="text-gray-500 w-10 shrink-0">{ps.promiseId}</span>
+                        <span className="flex-1 text-gray-700">
+                          {Math.round(ps.originalPKept * 100)}%
+                          {" → "}
+                          {Math.round(ps.newPKept * 100)}%
+                          <span
+                            className={`ml-1 font-bold ${ps.shift < 0 ? "text-red-700" : "text-green-700"}`}
+                          >
+                            ({ps.shift >= 0 ? "+" : ""}{Math.round(ps.shift * 100)}%)
+                          </span>
+                        </span>
+                        <span className="text-gray-400 text-[10px] capitalize shrink-0">
+                          {ps.regime}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {bayesianCascade.probabilityShifts.length === 0 && (
+                <p className="text-gray-500 italic">
+                  No meaningful probability shifts (all changes &lt;1%).
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

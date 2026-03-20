@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { Promise as PromiseType, Agent, PromiseStatus, Threat } from "@/lib/types/promise";
 import { CascadeResult, CertaintyImpact } from "@/lib/types/simulation";
 import { runDiagnostic, computeHeuristicCPTs, simulateProbabilisticCascade } from "@/lib/analysis";
+import { simulateBayesianCascade } from "@/lib/simulation/bayesianCascade";
 import { ProceduralGraph } from "@/components/network/ProceduralGraph";
 import { ViewSwitcher, ViewMode } from "@/components/network/ViewSwitcher";
 import { WhatIfPanel } from "@/components/simulation/WhatIfPanel";
@@ -60,6 +61,16 @@ export function NetworkTab({
   const probabilistic = useMemo(() => {
     if (!cascadeResult) return undefined;
     return simulateProbabilisticCascade(promises, cascadeResult.query);
+  }, [promises, cascadeResult]);
+
+  // Bayesian cascade — mean-field probability shifts (runs alongside deterministic)
+  const bayesianCascade = useMemo(() => {
+    if (!cascadeResult) return undefined;
+    try {
+      return simulateBayesianCascade(promises, cascadeResult.query);
+    } catch {
+      return undefined;
+    }
   }, [promises, cascadeResult]);
 
   // Resize observer to fill container
@@ -191,6 +202,7 @@ export function NetworkTab({
                 agents={agents}
                 onReset={onReset}
                 probabilistic={probabilistic}
+                bayesianCascade={bayesianCascade}
               />
             </div>
           )}

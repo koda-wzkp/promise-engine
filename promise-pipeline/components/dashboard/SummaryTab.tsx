@@ -9,6 +9,9 @@ import { statusBreakdown, domainHealthScores, calculateNetworkEntropy, identifyH
 import { getGradeFromScore } from "@/lib/utils/formatting";
 import { statusColors } from "@/lib/utils/colors";
 import { runDiagnostic } from "@/lib/analysis";
+import { computeNetworkBelief } from "@/lib/simulation/bayesian";
+import { NetworkCertainty } from "./NetworkCertainty";
+import { VerificationUrgency } from "./VerificationUrgency";
 
 interface SummaryTabProps {
   data: DashboardData;
@@ -31,6 +34,23 @@ export function SummaryTab({ data }: SummaryTabProps) {
   const certainty = Math.round(100 - entropy.overall);
   const leverageNodes = useMemo(() => identifyHighLeverageNodes(data.promises), [data.promises]);
   const domainEntropy = entropy.byDomain;
+
+  // Dependent counts for Bayesian urgency scoring
+  const dependentCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of data.promises) {
+      for (const depId of p.depends_on) {
+        counts[depId] = (counts[depId] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [data.promises]);
+
+  // Bayesian network belief (memoized — pure function, computed on render)
+  const networkBelief = useMemo(
+    () => computeNetworkBelief(data.promises, dependentCounts),
+    [data.promises, dependentCounts]
+  );
 
   // Five-field diagnostic (memoized — pure functions, no side effects)
   const diagnostic = useMemo(() => runDiagnostic(data.promises), [data.promises]);
@@ -142,6 +162,17 @@ export function SummaryTab({ data }: SummaryTabProps) {
             })}
         </div>
       </div>
+
+      {/* Bayesian Dynamics */}
+      <NetworkCertainty
+        certainty={networkBelief.networkCertainty}
+        regimeDistribution={networkBelief.regimeDistribution}
+      />
+
+      <VerificationUrgency
+        urgencyItems={networkBelief.verificationUrgency}
+        promises={data.promises}
+      />
 
       {/* High-Leverage Promises */}
       {leverageNodes.length > 0 && (

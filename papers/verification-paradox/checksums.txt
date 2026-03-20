@@ -1,0 +1,13 @@
+# SHA-256 checksums for MONA source data files
+# Downloaded March 19, 2026 from https://www.imf.org/external/np/pdr/mona/
+#
+# To verify: download the files from the MONA database and run:
+#   sha256sum <filename>
+#
+# Note: the IMF may update these files. If checksums do not match,
+# the data may have been revised since this analysis was conducted.
+
+305b7370a181e3ecd41b14208ab1559ddd191a5a7b0bd02354a59834c9990bb2  combined.xlsx
+87d38dafe6a739f240c616a2b134497dd942b5fc0b4a06bd6c16d1b024d96aeb  reviews.xlsx
+c045044aae736fc1ad4c37adfcfe9b997b55f90f7f47d8ebd6769745f497ac58  qpc.xlsx
+7e90fea8ba7dee45684c9f01b3166abbbf1013b26d17c7e500f391bc6150464d  description.xlsx

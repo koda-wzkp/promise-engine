@@ -9,6 +9,7 @@ import { getStatusColor } from "@/lib/utils/colors";
 import { buildPromiseGraph } from "@/lib/simulation/graph";
 import { layoutWatershed, layoutCanopy, layoutStrata } from "@/lib/simulation/layouts";
 import { calculateNetworkHealth } from "@/lib/simulation/cascade";
+import { ATTENTION_BETA } from "@/lib/simulation/softmax";
 import { PixelRenderer } from "./PixelRenderer";
 import { renderCanopyPixelScene } from "@/lib/rendering/canopy";
 import { renderWatershedPixelScene } from "@/lib/rendering/watershed";
@@ -30,6 +31,9 @@ interface ProceduralGraphProps {
   cascadeActive?: boolean;
   cascadeSourceId?: string;
   viewMode: ViewMode;
+  /** Per-promise k_effective values from attention allocation. When provided,
+   *  node radius and saturation are scaled to reflect attention distribution. */
+  attentionAllocation?: Record<string, number>;
 }
 
 /** Sprite animation interval in ms. */
@@ -58,6 +62,7 @@ export function ProceduralGraph({
   cascadeActive = false,
   cascadeSourceId,
   viewMode,
+  attentionAllocation,
 }: ProceduralGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = useRef(false);
@@ -141,6 +146,9 @@ export function ProceduralGraph({
   }, [promises]);
 
   // Prepare pixel-art render data
+  // Baseline k when attention is evenly distributed (used for scaling)
+  const attentionBaselineK = ATTENTION_BETA;
+
   const renderData = useMemo(() => {
     const promiseNodes = graph.nodes.filter((n) => n.type === "promise");
 
@@ -162,18 +170,38 @@ export function ProceduralGraph({
       domainsSpanned: 0,
     };
 
-    const pixelNodes = promiseNodes.map((n) => ({
-      id: n.id,
-      x: n.x ?? 0,
-      y: n.y ?? 0,
-      domain: n.domain ?? "Other",
-      status: n.status ?? "declared",
-      encoding: nodeEncodings[n.id] ?? defaultEncoding,
-      isSelected: selectedPromiseId === n.id,
-      isAffected: affectedIds.has(n.id),
-      downstreamCount: downstreamCounts.get(n.id) ?? 0,
-      layerIndex: 0,
-    }));
+    const pixelNodes = promiseNodes.map((n) => {
+      let encoding = nodeEncodings[n.id] ?? defaultEncoding;
+
+      // Scale radius and saturation by attention allocation when active.
+      // k / baseline gives a relative scale: 1.0 = normal, <1 = neglected, >1 = prioritized.
+      if (attentionAllocation && attentionAllocation[n.id] !== undefined) {
+        const k = attentionAllocation[n.id];
+        const kScale = k / attentionBaselineK;
+        // Radius: range ~70–130% of base (never fully disappears, never huge)
+        const radiusScale = 0.7 + 0.6 * Math.min(1.0, Math.max(0.0, kScale));
+        // Saturation: range ~20–100% (fades out for neglected promises)
+        const satScale = 0.2 + 0.8 * Math.min(1.0, Math.max(0.0, kScale));
+        encoding = {
+          ...encoding,
+          radius: Math.round(encoding.radius * radiusScale),
+          saturation: Math.round(encoding.saturation * satScale),
+        };
+      }
+
+      return {
+        id: n.id,
+        x: n.x ?? 0,
+        y: n.y ?? 0,
+        domain: n.domain ?? "Other",
+        status: n.status ?? "declared",
+        encoding,
+        isSelected: selectedPromiseId === n.id,
+        isAffected: affectedIds.has(n.id),
+        downstreamCount: downstreamCounts.get(n.id) ?? 0,
+        layerIndex: 0,
+      };
+    });
 
     // Build edges for dependency connections
     const depEdges = graph.edges.filter((e) => e.type === "depends_on");
@@ -226,7 +254,7 @@ export function ProceduralGraph({
     const violatedIds = new Set(pixelNodes.filter((n) => n.status === "violated").map((n) => n.id));
 
     return { pixelNodes, pixelEdges, domains, domainBands, violatedIds };
-  }, [graph, nodeEncodings, selectedPromiseId, affectedIds, nodeMap, height, width, promises, promiseMap, downstreamCounts]);
+  }, [graph, nodeEncodings, selectedPromiseId, affectedIds, nodeMap, height, width, promises, promiseMap, downstreamCounts, attentionAllocation, attentionBaselineK]);
 
   // Main render + sprite animation
   useEffect(() => {

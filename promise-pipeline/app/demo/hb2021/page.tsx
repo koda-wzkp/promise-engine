@@ -174,6 +174,7 @@ export default function HB2021Page() {
             promises={hb2021Data.promises}
             agents={hb2021Data.agents}
             threats={hb2021Data.threats}
+            domains={hb2021Data.domains}
             selectedPromiseId={simState.selectedPromise}
             cascadeResult={simState.cascadeResult}
             affectedIds={affectedIds}

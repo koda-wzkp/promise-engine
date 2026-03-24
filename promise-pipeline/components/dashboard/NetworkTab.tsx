@@ -50,6 +50,7 @@ export function NetworkTab({
     Set<string>
   >(new Set());
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [viewTransition, setViewTransition] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 900, height: 600 });
 
@@ -125,6 +126,28 @@ export function NetworkTab({
     return () => observer.disconnect();
   }, []);
 
+  // Detect touch device for hint text
+  const isTouchDevice = typeof window !== "undefined" && (
+    "ontouchstart" in window || navigator.maxTouchPoints > 0
+  );
+
+  // Detect mobile viewport
+  const isMobileViewport = dimensions.width < 768;
+
+  // View switching with fade transition (respects reduced motion)
+  function handleViewChange(view: ViewMode) {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      setViewMode(view);
+      return;
+    }
+    setViewTransition(true);
+    setTimeout(() => {
+      setViewMode(view);
+      setTimeout(() => setViewTransition(false), 150);
+    }, 150);
+  }
+
   // Switching to attention mode clears the cascade selection
   function handleSetNetworkMode(mode: NetworkMode) {
     setNetworkMode(mode);
@@ -166,10 +189,17 @@ export function NetworkTab({
     <>
       <div
         className="relative w-full rounded-xl border bg-gray-900 overflow-hidden"
-        style={{ height: "75vh", minHeight: 500 }}
+        style={{
+          height: isMobileViewport ? `${Math.max(500, Math.floor(dimensions.width * 1.5))}px` : "75vh",
+          minHeight: 500,
+        }}
       >
-        {/* Full-bleed canvas container */}
-        <div ref={containerRef} className="absolute inset-0">
+        {/* Full-bleed canvas container with view transition */}
+        <div
+          ref={containerRef}
+          className="absolute inset-0 transition-opacity duration-150"
+          style={{ opacity: viewTransition ? 0 : 1 }}
+        >
           <ProceduralGraph
             promises={promises}
             agents={agents}
@@ -191,7 +221,7 @@ export function NetworkTab({
 
         {/* Top bar: view switcher */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-          <ViewSwitcher activeView={viewMode} onViewChange={setViewMode} />
+          <ViewSwitcher activeView={viewMode} onViewChange={handleViewChange} />
         </div>
 
         {/* Mode toggle: What If | Attention Allocation */}
@@ -347,8 +377,14 @@ export function NetworkTab({
 
         {/* Empty state prompt — only in What If mode without selection */}
         {networkMode === "whatif" && !selectedPromise && !cascadeResult && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2.5 rounded-lg bg-black/50 backdrop-blur-sm text-white/70 text-xs text-center max-w-md">
-            Click any node to open the What If simulation panel
+          <div
+            className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-10 rounded-lg backdrop-blur-sm text-white/70 text-center ${
+              isMobileViewport
+                ? "px-3 py-1.5 text-[10px] bg-black/40 max-w-[280px]"
+                : "px-4 py-2.5 text-xs bg-black/50 max-w-md"
+            }`}
+          >
+            {isTouchDevice ? "Tap" : "Click"} any node to open the What If simulation panel
           </div>
         )}
 

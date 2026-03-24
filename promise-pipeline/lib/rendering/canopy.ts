@@ -57,6 +57,11 @@ export function renderCanopyPixelScene(
   reducedMotion: boolean
 ): TreeBounds[] {
   const { pw, ph } = r;
+
+  // Guard: don't render if canvas has no area (prevents blank on first mount)
+  if (pw <= 0 || ph <= 0 || !nodes.length) return [];
+
+  const isMobile = r.config.width < 768;
   const groundY = Math.floor(ph * 0.8);
   const skyH = groundY;
 
@@ -132,11 +137,10 @@ export function renderCanopyPixelScene(
   const bounds: TreeBounds[] = [];
 
   for (const node of sorted) {
-    const artPos = r.toPixel(node.x, node.y);
-    // Map node y to canvas position above ground
-    const treeX = Math.floor((node.x / r.config.width) * pw);
+    // Map node x to pixel art coordinates; anchor trees to ground
+    const treeX = Math.max(2, Math.min(pw - 2, Math.floor((node.x / r.config.width) * pw)));
     const treeGroundY = groundY - 1;
-    const b = renderPixelTree(r, node, treeX, treeGroundY, spriteFrame, reducedMotion);
+    const b = renderPixelTree(r, node, treeX, treeGroundY, spriteFrame, reducedMotion, isMobile);
     bounds.push(b);
   }
 
@@ -149,7 +153,8 @@ function renderPixelTree(
   baseX: number,
   groundY: number,
   spriteFrame: number,
-  reducedMotion: boolean
+  reducedMotion: boolean,
+  isMobile: boolean = false
 ): TreeBounds {
   const palette = getStatusPalette(node.status);
   const rng = createSeededRandom(node.id);
@@ -157,7 +162,9 @@ function renderPixelTree(
 
   // Tree height scales with dependent count: 0 deps = 30%, 5+ = 60%
   const heightFraction = 0.3 + Math.min(dependents, 5) / 5 * 0.3;
-  const treeH = Math.max(6, Math.floor(r.ph * 0.4 * heightFraction));
+  // Mobile: scale trees down 25% but maintain relative proportions
+  const mobileScale = isMobile ? 0.75 : 1.0;
+  const treeH = Math.max(6, Math.floor(r.ph * 0.4 * heightFraction * mobileScale));
   const trunkW = node.status === "declared" ? 1 : (dependents > 3 ? 3 : 2);
   const trunkH = Math.floor(treeH * 0.5);
   const canopyR = Math.max(3, Math.floor(treeH * 0.35));
@@ -389,14 +396,19 @@ function drawUnverifiableTree(
     }
   }
 
-  // Canopy outline only
+  // Canopy outline only — dashed with visible gaps
   const canopyCenter = groundY - trunkH;
   for (let dy = -canopyR; dy <= canopyR; dy++) {
     for (let dx = -canopyR; dx <= canopyR; dx++) {
       const dist = Math.sqrt(dx * dx + dy * dy);
-      // Only boundary pixels
+      // Only boundary pixels, with dash pattern (every other 2px segment)
       if (dist >= canopyR - 1.2 && dist < canopyR + 0.5) {
-        r.pixel(baseX + dx, canopyCenter + dy, palette.light);
+        const angle = Math.atan2(dy, dx);
+        const seg = Math.floor((angle + Math.PI) * canopyR);
+        // Dash pattern: 2px on, 2px off
+        if (seg % 4 < 2) {
+          r.pixel(baseX + dx, canopyCenter + dy, palette.light);
+        }
       }
     }
   }

@@ -54,6 +54,7 @@ export function renderStrataPixelScene(
   reducedMotion: boolean
 ): BlockBounds[] {
   const { pw, ph } = r;
+  const isMobile = r.config.width < 768;
 
   // --- Layer rendering ---
   for (const band of domainBands) {
@@ -69,13 +70,13 @@ export function renderStrataPixelScene(
   // --- Promise blocks ---
   const bounds: BlockBounds[] = [];
   for (const node of nodes) {
-    bounds.push(renderStrataBlock(r, node));
+    bounds.push(renderStrataBlock(r, node, isMobile));
   }
 
   // --- Fracture lines from violated promises ---
   for (const node of nodes) {
     if (node.status === "violated") {
-      renderFractureLine(r, node, domainBands, nodes);
+      renderFractureLine(r, node, domainBands, nodes, isMobile);
     }
   }
 
@@ -137,7 +138,8 @@ function renderStrataLayer(
 
 function renderStrataBlock(
   r: PixelRenderer,
-  node: StrataPixelNode
+  node: StrataPixelNode,
+  isMobile: boolean = false
 ): BlockBounds {
   const palette = getStatusPalette(node.status);
   const rng = createSeededRandom(node.id);
@@ -149,7 +151,11 @@ function renderStrataBlock(
 
   // Width proportional to dependents (min 3, max 8 tiles)
   const tilePx = r.config.resolution === 32 ? 3 : 5;
-  const depWidth = Math.max(3, Math.min(8, 3 + node.encoding.directDependents));
+  let depWidth = Math.max(3, Math.min(8, 3 + node.encoding.directDependents));
+  // Mobile: violated blocks get a size boost for visibility
+  if (isMobile && node.status === "violated") {
+    depWidth = Math.max(depWidth, 5);
+  }
   const blockW = depWidth * tilePx;
   const blockH = Math.floor(blockW * 0.6);
 
@@ -242,7 +248,8 @@ function renderFractureLine(
   r: PixelRenderer,
   violatedNode: StrataPixelNode,
   domainBands: StrataDomainBand[],
-  allNodes: StrataPixelNode[]
+  allNodes: StrataPixelNode[],
+  isMobile: boolean = false
 ): void {
   const { pw, ph } = r;
   const violated = pixelPalettes.violated;
@@ -251,6 +258,9 @@ function renderFractureLine(
   // Fracture starts from top edge of violated block and goes upward
   const cx = Math.floor((violatedNode.x / r.config.width) * pw);
   const startY = Math.floor((violatedNode.y / r.config.height) * ph);
+
+  // Mobile: 2px wide fracture for visibility at phone resolution
+  const fractureWidth = isMobile ? 2 : 1;
 
   // Propagate upward to surface (y = 0)
   let fracX = cx;
@@ -261,6 +271,8 @@ function renderFractureLine(
     }
 
     const color = rng() < 0.7 ? violated.shadow : violated.mid;
-    r.pixel(fracX, y, color);
+    for (let w = 0; w < fractureWidth; w++) {
+      r.pixel(fracX + w, y, color);
+    }
   }
 }

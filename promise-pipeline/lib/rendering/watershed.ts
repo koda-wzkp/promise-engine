@@ -53,22 +53,25 @@ export function renderWatershedPixelScene(
 ): NodeBounds[] {
   const { pw, ph } = r;
   const terrain = pixelPalettes.terrain;
+  const isMobile = r.config.width < 768;
 
   // --- Terrain background with elevation gradient ---
   // Top = lighter (headwaters/mountain), bottom = darker (delta/valley)
   r.gradient(0, 0, pw, ph, "#7a9a6a", "#3a5a3a");
 
   // Tiled terrain texture (8×8 patches)
+  // Mobile: halve terrain particle density and reduce opacity effect
   const terrainRng = createSeededRandom("terrain-tex");
+  const stoneThreshold = isMobile ? 0.015 : 0.03;
+  const dirtThreshold = isMobile ? 0.03 : 0.06;
   for (let ty = 0; ty < ph; ty += 8) {
     for (let tx = 0; tx < pw; tx += 8) {
-      // Procedural terrain variation within each 8x8 block
       for (let dy = 0; dy < 8 && ty + dy < ph; dy++) {
         for (let dx = 0; dx < 8 && tx + dx < pw; dx++) {
           const v = terrainRng();
-          if (v < 0.03) {
+          if (v < stoneThreshold) {
             r.pixel(tx + dx, ty + dy, terrain.stone);
-          } else if (v < 0.06) {
+          } else if (v < dirtThreshold) {
             r.pixel(tx + dx, ty + dy, terrain.dirt);
           }
         }
@@ -78,7 +81,7 @@ export function renderWatershedPixelScene(
 
   // --- Streams (edges) ---
   for (const edge of edges) {
-    renderPixelStream(r, edge, spriteFrame, reducedMotion);
+    renderPixelStream(r, edge, spriteFrame, reducedMotion, isMobile);
   }
 
   // --- Promise nodes ---
@@ -95,13 +98,15 @@ function renderPixelStream(
   r: PixelRenderer,
   edge: WatershedPixelEdge,
   spriteFrame: number,
-  reducedMotion: boolean
+  reducedMotion: boolean,
+  isMobile: boolean = false
 ): void {
   const terrain = pixelPalettes.terrain;
   const palette = getStatusPalette(edge.sourceStatus);
 
-  // Stream width based on downstream count
-  const streamWidth = Math.min(3, 1 + Math.floor(edge.downstreamCount / 2));
+  // Stream width based on downstream count; mobile: reduce by 30%
+  const baseWidth = Math.min(3, 1 + Math.floor(edge.downstreamCount / 2));
+  const streamWidth = isMobile ? Math.max(1, Math.round(baseWidth * 0.7)) : baseWidth;
 
   // Map to art coordinates
   const sx = Math.floor((edge.sourceX / r.config.width) * r.pw);
@@ -110,9 +115,14 @@ function renderPixelStream(
   const ty = Math.floor((edge.targetY / r.config.height) * r.ph);
 
   // Stream color based on upstream status
+  // Mobile: use more saturated degraded colors for better distinction
   const isFailure = edge.sourceStatus === "violated" || edge.sourceStatus === "degraded";
+  const isDegraded = edge.sourceStatus === "degraded";
+  const degradedMobile = isDegraded && isMobile;
   const waterColors = isFailure
-    ? [palette.shadow, palette.mid, palette.highlight]
+    ? degradedMobile
+      ? ["#5a2808", "#8f3e11", "#d9a030"]  // More saturated amber on mobile
+      : [palette.shadow, palette.mid, palette.highlight]
     : [terrain.waterDeep, terrain.water, terrain.waterFoam];
 
   // Draw stepped pixel path with ±1px wobble
@@ -153,7 +163,10 @@ function renderPixelNode(
   node: WatershedPixelNode
 ): NodeBounds {
   const palette = getStatusPalette(node.status);
-  const nodeSize = r.config.resolution === 32 ? 5 : 9;
+  const isMobile = r.config.width < 768;
+  // Ensure minimum 20px visual size on mobile (nodeSize * ps >= 20)
+  const baseSize = r.config.resolution === 32 ? 5 : 9;
+  const nodeSize = isMobile ? Math.max(baseSize, Math.ceil(20 / r.ps)) : baseSize;
   const half = Math.floor(nodeSize / 2);
 
   // Map to art coordinates

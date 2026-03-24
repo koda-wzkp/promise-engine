@@ -75,6 +75,7 @@ export function layoutWatershed(
   const nodes = graph.nodes.map((n) => ({ ...n }));
   const edges = [...graph.edges];
   const depths = computeDepths(promises);
+  const isMobile = width < 768;
 
   const maxDepth = Math.max(0, ...depths.values());
   const promiseNodes = nodes.filter((n) => n.type === "promise");
@@ -88,12 +89,13 @@ export function layoutWatershed(
     layers.get(depth)!.push(node);
   }
 
-  // Layout each layer horizontally
-  const topPad = 40;
-  const bottomPad = 60;
-  const sidePad = 60;
+  // Mobile: increase vertical spacing between tiers by 45%
+  const topPad = isMobile ? 30 : 40;
+  const bottomPad = isMobile ? 40 : 60;
+  const sidePad = isMobile ? 30 : 60;
   const layerCount = maxDepth + 1;
-  const layerHeight = (height - topPad - bottomPad) / Math.max(1, layerCount);
+  const baseLayerHeight = (height - topPad - bottomPad) / Math.max(1, layerCount);
+  const layerHeight = isMobile ? baseLayerHeight * 1.45 : baseLayerHeight;
 
   for (const [depth, layerNodes] of layers.entries()) {
     const y = topPad + depth * layerHeight + layerHeight / 2;
@@ -117,6 +119,7 @@ export function layoutWatershed(
 /**
  * Canopy layout — bottom-up tree.
  * Roots (trunks) at the bottom, dependents branch upward.
+ * On mobile, uses staggered rows with tallest trees in back.
  */
 export function layoutCanopy(
   graph: PromiseGraph,
@@ -127,41 +130,81 @@ export function layoutCanopy(
   const nodes = graph.nodes.map((n) => ({ ...n }));
   const edges = [...graph.edges];
   const depths = computeDepths(promises);
+  const isMobile = width < 768;
 
   const maxDepth = Math.max(0, ...depths.values());
   const promiseNodes = nodes.filter((n) => n.type === "promise");
   const agentNodes = nodes.filter((n) => n.type === "agent");
 
-  // Group by depth layer
-  const layers = new Map<number, GraphNode[]>();
-  for (const node of promiseNodes) {
-    const depth = depths.get(node.id) ?? 0;
-    if (!layers.has(depth)) layers.set(depth, []);
-    layers.get(depth)!.push(node);
-  }
+  if (isMobile) {
+    // Mobile: arrange trees in 2-3 staggered rows for depth and breathing room.
+    // Count dependents per node
+    const depCounts = new Map<string, number>();
+    for (const p of promises) {
+      for (const dep of p.depends_on) {
+        depCounts.set(dep, (depCounts.get(dep) ?? 0) + 1);
+      }
+    }
 
-  // Layout layers bottom-up (depth 0 at bottom)
-  const topPad = 40;
-  const bottomPad = 60;
-  const sidePad = 60;
-  const layerCount = maxDepth + 1;
-  const layerHeight = (height - topPad - bottomPad) / Math.max(1, layerCount);
+    // Sort by dependent count descending (tallest trees first)
+    const sorted = [...promiseNodes].sort(
+      (a, b) => (depCounts.get(b.id) ?? 0) - (depCounts.get(a.id) ?? 0)
+    );
 
-  for (const [depth, layerNodes] of layers.entries()) {
-    // Invert: depth 0 at bottom
-    const y = height - bottomPad - depth * layerHeight - layerHeight / 2;
-    const nodeCount = layerNodes.length;
-    const spacing = (width - sidePad * 2) / Math.max(1, nodeCount + 1);
-    for (let i = 0; i < nodeCount; i++) {
-      layerNodes[i].x = sidePad + spacing * (i + 1);
-      layerNodes[i].y = y;
+    const rowCount = Math.min(3, Math.max(2, Math.ceil(sorted.length / 5)));
+    const rows: GraphNode[][] = Array.from({ length: rowCount }, () => []);
+
+    // Distribute: most dependents in back row (index 0), fewest in front
+    for (let i = 0; i < sorted.length; i++) {
+      rows[i % rowCount].push(sorted[i]);
+    }
+
+    const sidePad = 24;
+    const groundZone = height * 0.75; // trees live in lower 75%
+    const rowSpacing = groundZone / (rowCount + 1);
+
+    for (let ri = 0; ri < rowCount; ri++) {
+      const row = rows[ri];
+      // Back rows higher (smaller y), front rows lower
+      const y = height * 0.25 + rowSpacing * (ri + 1);
+      const spacing = (width - sidePad * 2) / Math.max(1, row.length + 1);
+      // Stagger odd rows by half-spacing for depth illusion
+      const stagger = ri % 2 === 1 ? spacing * 0.4 : 0;
+      for (let i = 0; i < row.length; i++) {
+        row[i].x = sidePad + spacing * (i + 1) + stagger;
+        row[i].y = y;
+      }
+    }
+  } else {
+    // Desktop: standard bottom-up layers
+    const layers = new Map<number, GraphNode[]>();
+    for (const node of promiseNodes) {
+      const depth = depths.get(node.id) ?? 0;
+      if (!layers.has(depth)) layers.set(depth, []);
+      layers.get(depth)!.push(node);
+    }
+
+    const topPad = 40;
+    const bottomPad = 60;
+    const sidePad = 60;
+    const layerCount = maxDepth + 1;
+    const layerHeight = (height - topPad - bottomPad) / Math.max(1, layerCount);
+
+    for (const [depth, layerNodes] of layers.entries()) {
+      const y = height - bottomPad - depth * layerHeight - layerHeight / 2;
+      const nodeCount = layerNodes.length;
+      const spacing = (width - sidePad * 2) / Math.max(1, nodeCount + 1);
+      for (let i = 0; i < nodeCount; i++) {
+        layerNodes[i].x = sidePad + spacing * (i + 1);
+        layerNodes[i].y = y;
+      }
     }
   }
 
   // Agent nodes on the left side
   for (let i = 0; i < agentNodes.length; i++) {
     agentNodes[i].x = 30;
-    agentNodes[i].y = topPad + (i / Math.max(1, agentNodes.length - 1)) * (height - topPad - bottomPad);
+    agentNodes[i].y = 40 + (i / Math.max(1, agentNodes.length - 1)) * (height - 100);
   }
 
   return { nodes, edges };
@@ -192,10 +235,11 @@ export function layoutStrata(
     domainGroups.get(domain)!.push(node);
   }
 
+  const isMobile = width < 768;
   const domains = [...domainGroups.keys()];
-  const topPad = 30;
-  const bottomPad = 50;
-  const sidePad = 50;
+  const topPad = isMobile ? 20 : 30;
+  const bottomPad = isMobile ? 30 : 50;
+  const sidePad = isMobile ? 24 : 50;
   const bandHeight = (height - topPad - bottomPad) / Math.max(1, domains.length);
 
   for (let di = 0; di < domains.length; di++) {
@@ -207,7 +251,13 @@ export function layoutStrata(
 
     const bandY = topPad + di * bandHeight + bandHeight / 2;
     const nodeCount = domNodes.length;
-    const spacing = (width - sidePad * 2) / Math.max(1, nodeCount + 1);
+    // Mobile: ensure minimum 16px gap between blocks (in display coords)
+    const minGap = isMobile ? 16 : 0;
+    const availableWidth = width - sidePad * 2;
+    const spacing = Math.max(
+      minGap,
+      availableWidth / Math.max(1, nodeCount + 1)
+    );
 
     for (let i = 0; i < nodeCount; i++) {
       domNodes[i].x = sidePad + spacing * (i + 1);

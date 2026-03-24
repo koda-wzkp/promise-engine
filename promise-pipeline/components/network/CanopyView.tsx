@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { hashSeed, seededRandom } from "@/lib/rendering/noise";
-import { getStatusColor } from "@/lib/utils/colors";
 import type { SVGViewProps, SVGNodeData } from "./svg-view-types";
 
 /** Render a procedural tree based on promise status. */
@@ -147,6 +146,15 @@ function renderTree(
   }
 }
 
+/** Positioned tree with layout data. */
+interface PositionedTree {
+  node: SVGNodeData;
+  treeX: number;
+  treeGroundY: number;
+  scale: number;
+  labelY: number;
+}
+
 export function CanopyView({
   nodes,
   edges,
@@ -172,8 +180,9 @@ export function CanopyView({
   const skyTop = networkHealth > 70 ? "#87CEEB" : networkHealth > 40 ? "#b0c4d8" : "#8a9bae";
   const skyBottom = networkHealth > 70 ? "#E0F6FF" : networkHealth > 40 ? "#d1d5db" : "#9ca3af";
 
-  // Ground line with noise
-  const groundY = effectiveHeight * 0.82;
+  // Ground line at 75% — leaves room for trees above and roots/labels below
+  const groundY = effectiveHeight * 0.75;
+
   const groundPath = useMemo(() => {
     const pts = Array.from({ length: 20 }, (_, i) => {
       const gx = (i / 19) * width;
@@ -183,20 +192,91 @@ export function CanopyView({
     return `M 0,${effectiveHeight} L ${pts.join(" L ")} L ${width},${effectiveHeight} Z`;
   }, [width, effectiveHeight, groundY]);
 
-  // Sort nodes for rendering: tallest (most dependents) in center
-  const sortedNodes = useMemo(() => {
-    const sorted = [...nodes].sort((a, b) => b.downstreamCount - a.downstreamCount);
-    // Place in order: center-out alternation
-    const result: SVGNodeData[] = [];
-    for (let i = 0; i < sorted.length; i++) {
-      if (i % 2 === 0) result.push(sorted[i]);
-      else result.unshift(sorted[i]);
+  // Compute positioned trees — memoized to avoid flash on selection change
+  const positionedTrees: PositionedTree[] = useMemo(() => {
+    const padding = isMobile ? 24 : 40;
+
+    if (isMobile) {
+      // Mobile: 2 staggered rows for depth
+      const sorted = [...nodes].sort((a, b) => b.downstreamCount - a.downstreamCount);
+      const half = Math.ceil(sorted.length / 2);
+      const backRow = sorted.slice(0, half);  // Most dependents → back
+      const frontRow = sorted.slice(half);     // Fewer dependents → front
+
+      const result: PositionedTree[] = [];
+
+      // Back row: at groundY, scale 0.8
+      const backSpacing = (width - padding * 2) / Math.max(1, backRow.length + 1);
+      for (let i = 0; i < backRow.length; i++) {
+        const treeX = padding + backSpacing * (i + 1);
+        result.push({
+          node: backRow[i],
+          treeX,
+          treeGroundY: groundY,
+          scale: 0.8,
+          labelY: groundY + 20,
+        });
+      }
+
+      // Front row: at groundY + 15, scale 1.0
+      const frontSpacing = (width - padding * 2) / Math.max(1, frontRow.length + 1);
+      for (let i = 0; i < frontRow.length; i++) {
+        const treeX = padding + frontSpacing * (i + 1) + frontSpacing * 0.3;
+        result.push({
+          node: frontRow[i],
+          treeX,
+          treeGroundY: groundY + 15,
+          scale: 1.0,
+          labelY: groundY + 35,
+        });
+      }
+
+      return result;
+    } else {
+      // Desktop: single row sorted by domain for clustering
+      const sorted = [...nodes].sort((a, b) => a.domain.localeCompare(b.domain));
+      const spacing = (width - padding * 2) / Math.max(1, sorted.length + 1);
+      return sorted.map((node, idx) => ({
+        node,
+        treeX: padding + spacing * (idx + 1),
+        treeGroundY: groundY,
+        scale: 1.0,
+        labelY: groundY + 20,
+      }));
+    }
+  }, [nodes, width, groundY, isMobile]);
+
+  // Resolve overlapping labels by offsetting
+  const labelPositions = useMemo(() => {
+    const positions = positionedTrees.map((t) => ({
+      x: t.treeX,
+      y: t.labelY,
+    }));
+    const labelWidth = isMobile ? 48 : 56;
+
+    // Sort by x to check adjacency
+    const indexed = positions.map((p, i) => ({ ...p, i }));
+    indexed.sort((a, b) => a.x - b.x);
+    for (let k = 1; k < indexed.length; k++) {
+      if (Math.abs(indexed[k].x - indexed[k - 1].x) < labelWidth &&
+          Math.abs(indexed[k].y - indexed[k - 1].y) < 14) {
+        indexed[k].y += 14;
+      }
+    }
+
+    // Map back to original order
+    const result = new Array(positions.length);
+    for (const item of indexed) {
+      result[item.i] = { x: item.x, y: item.y };
     }
     return result;
-  }, [nodes]);
+  }, [positionedTrees, isMobile]);
 
-  // Tree scale based on viewport
+  // Tree scale based on viewport (used for hit areas)
   const treeScale = isMobile ? 0.75 : 1.0;
+
+  // Active tooltip node: show on tap (focusedNodeId) or hover
+  const activeTooltipId = focusedNodeId || hoveredNodeId;
 
   return (
     <svg
@@ -221,26 +301,24 @@ export function CanopyView({
 
       {/* Ground */}
       <path d={groundPath} fill="#5c4a32" />
-      {/* Ground gradient overlay */}
       <rect
         x={0} y={groundY - 4}
         width={width} height={effectiveHeight - groundY + 4}
         fill="#4a3a25" opacity={0.3}
       />
 
-      {/* Trees */}
+      {/* Trees — rendered from memoized positions */}
       <g className="nodes">
-        {sortedNodes.map((node, idx) => {
+        {positionedTrees.map((pt, idx) => {
+          const { node, treeX, treeGroundY, scale } = pt;
           const promise = promiseMap.get(node.id);
           const label = promise
             ? `Promise ${node.id}: ${promise.body.slice(0, 40)}. Status: ${node.status}`
             : `Promise ${node.id}. Status: ${node.status}`;
           const isFocused = focusedNodeId === node.id;
           const isAffected = affectedIds.has(node.id);
-
-          // Tree position: spread along ground line
-          const spacing = width / (sortedNodes.length + 1);
-          const treeX = spacing * (idx + 1);
+          const treeHeight = (30 + node.downstreamCount * 12) * scale;
+          const labelPos = labelPositions[idx];
 
           return (
             <g
@@ -262,7 +340,7 @@ export function CanopyView({
               style={{
                 cursor: "pointer",
                 outline: "none",
-                transformOrigin: `${treeX}px ${groundY}px`,
+                transformOrigin: `${treeX}px ${treeGroundY}px`,
               }}
               className={
                 !isMobile && !reducedMotion
@@ -272,24 +350,24 @@ export function CanopyView({
             >
               {/* Invisible hit area */}
               <rect
-                x={treeX - 22} y={groundY - 80 * treeScale}
-                width={44} height={Math.max(44, 80 * treeScale)}
+                x={treeX - 22} y={treeGroundY - Math.max(44, treeHeight)}
+                width={44} height={Math.max(44, treeHeight + 20)}
                 fill="transparent"
               />
-              {/* Focus ring */}
+              {/* Focus / selection highlight ring */}
               {isFocused && (
                 <rect
-                  x={treeX - 24} y={groundY - 82 * treeScale}
-                  width={48} height={Math.max(48, 84 * treeScale)}
+                  x={treeX - 24} y={treeGroundY - treeHeight - 4}
+                  width={48} height={treeHeight + 8}
                   rx={4}
-                  fill="none" stroke="#2563eb" strokeWidth={2}
+                  fill="none" stroke="#2563eb" strokeWidth={3}
                 />
               )}
               {/* Cascade highlight */}
               {isAffected && cascadeActive && (
                 <rect
-                  x={treeX - 20} y={groundY - 76 * treeScale}
-                  width={40} height={Math.max(40, 76 * treeScale)}
+                  x={treeX - 20} y={treeGroundY - treeHeight}
+                  width={40} height={treeHeight}
                   rx={4}
                   fill="none" stroke="#dc2626" strokeWidth={1.5} opacity={0.6}
                   strokeDasharray={reducedMotion ? "none" : "4 3"}
@@ -298,47 +376,71 @@ export function CanopyView({
               {/* The tree */}
               {renderTree(
                 { ...node, x: treeX },
-                groundY,
-                treeScale,
+                treeGroundY,
+                scale,
                 idx,
               )}
-              {/* Label */}
+              {/* Label below ground line */}
               <rect
-                x={treeX - 24} y={groundY + 4}
-                width={48} height={isMobile ? 14 : 12}
+                x={labelPos.x - (isMobile ? 24 : 28)}
+                y={labelPos.y - (isMobile ? 10 : 11)}
+                width={isMobile ? 48 : 56}
+                height={isMobile ? 14 : 15}
                 rx={2}
                 fill={skyBottom} opacity={0.85}
               />
               <text
-                x={treeX} y={groundY + (isMobile ? 15 : 14)}
+                x={labelPos.x}
+                y={labelPos.y}
                 textAnchor="middle"
                 fontFamily="'IBM Plex Mono', monospace"
-                fontSize={isMobile ? 11 : 13}
+                fontSize={isMobile ? 10 : 12}
                 fill="#1f2937"
               >
-                {node.id.length > 8 ? node.id.slice(0, 8) + "…" : node.id}
+                {node.id.length > 8 ? node.id.slice(0, 8) + "\u2026" : node.id}
               </text>
             </g>
           );
         })}
       </g>
 
-      {/* Overlays */}
+      {/* Overlays — tooltip rendered last for z-order */}
       <g className="overlays">
-        {hoveredNodeId && (() => {
-          const node = nodes.find((n) => n.id === hoveredNodeId);
-          const promise = node ? promiseMap.get(node.id) : null;
-          if (!node || !promise) return null;
-          const tx = Math.min(node.x + 14, width - 180);
-          const ty = Math.max(40, node.y - 40);
-          const bodyText = promise.body.length > 50 ? promise.body.slice(0, 50) + "…" : promise.body;
+        {activeTooltipId && (() => {
+          const pt = positionedTrees.find((t) => t.node.id === activeTooltipId);
+          const promise = pt ? promiseMap.get(pt.node.id) : null;
+          if (!pt || !promise) return null;
+
+          const tooltipWidth = Math.min(width * 0.7, 300);
+          const tooltipHeight = 52;
+          const tooltipX = Math.max(8, Math.min(pt.treeX - tooltipWidth / 2, width - tooltipWidth - 8));
+          // Above the tree if room, below ground otherwise
+          const treeTop = pt.treeGroundY - (30 + pt.node.downstreamCount * 12) * pt.scale;
+          const tooltipY = treeTop - tooltipHeight - 8 > 0
+            ? treeTop - tooltipHeight - 8
+            : pt.treeGroundY + 40;
+          const bodyText = promise.body.length > 60 ? promise.body.slice(0, 60) + "\u2026" : promise.body;
+
           return (
-            <g>
-              <rect x={tx} y={ty - 28} width={170} height={42} rx={6} fill="#111827" opacity={0.9} />
-              <text x={tx + 8} y={ty - 12} fontFamily="'IBM Plex Mono', monospace" fontSize={11} fill="#fff" fontWeight="bold">
-                {node.id}
+            <g style={{ pointerEvents: "none" }}>
+              <rect
+                x={tooltipX} y={tooltipY}
+                width={tooltipWidth} height={tooltipHeight}
+                rx={6}
+                fill="#1a1a2e" opacity={0.95}
+              />
+              <text
+                x={tooltipX + 10} y={tooltipY + 18}
+                fontFamily="'IBM Plex Mono', monospace"
+                fontSize={13} fontWeight="bold" fill="#ffffff"
+              >
+                {pt.node.id}
               </text>
-              <text x={tx + 8} y={ty + 2} fontFamily="'IBM Plex Mono', monospace" fontSize={10} fill="rgba(255,255,255,0.7)">
+              <text
+                x={tooltipX + 10} y={tooltipY + 36}
+                fontFamily="'IBM Plex Sans', sans-serif"
+                fontSize={11} fill="#d1d5db"
+              >
                 {bodyText}
               </text>
             </g>

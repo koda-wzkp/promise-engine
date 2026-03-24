@@ -1,4 +1,19 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About — Promise Pipeline",
+  description:
+    "An open-source platform applying Promise Theory to commitment tracking, auditing, and simulation.",
+  openGraph: {
+    title: "About — Promise Pipeline",
+    description:
+      "An open-source platform applying Promise Theory to commitment tracking, auditing, and simulation.",
+    url: "https://promise-engine.vercel.app/about",
+    siteName: "Promise Pipeline",
+    type: "website",
+  },
+};
 
 export default function AboutPage() {
   return (

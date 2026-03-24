@@ -1,5 +1,18 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getAllPosts, type BlogPost } from "@/lib/blog";
+
+export const metadata: Metadata = {
+  title: "Blog — Promise Pipeline",
+  description: "Promise Theory, case studies, and project updates.",
+  openGraph: {
+    title: "Blog — Promise Pipeline",
+    description: "Promise Theory, case studies, and project updates.",
+    url: "https://promise-engine.vercel.app/blog",
+    siteName: "Promise Pipeline",
+    type: "website",
+  },
+};
 
 // Blog index page — loads from local markdown in content/,
 // falls back to Sanity when configured.

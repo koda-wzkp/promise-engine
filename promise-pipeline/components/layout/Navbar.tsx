@@ -73,6 +73,7 @@ export function Navbar() {
             <NavLink href="/demo/hb2021">HB 2021</NavLink>
             <NavLink href="/demo/jcpoa">JCPOA</NavLink>
             <NavLink href="/demo/iss">ISS</NavLink>
+            <NavLink href="/services">Services</NavLink>
             <NavLink href="/blog">Blog</NavLink>
             <NavLink href="/about">About</NavLink>
           </div>
@@ -101,6 +102,7 @@ export function Navbar() {
             <MobileNavLink href="/demo/hb2021" onClick={() => setMobileOpen(false)}>HB 2021</MobileNavLink>
             <MobileNavLink href="/demo/jcpoa" onClick={() => setMobileOpen(false)}>JCPOA</MobileNavLink>
             <MobileNavLink href="/demo/iss" onClick={() => setMobileOpen(false)}>ISS</MobileNavLink>
+            <MobileNavLink href="/services" onClick={() => setMobileOpen(false)}>Services</MobileNavLink>
             <MobileNavLink href="/blog" onClick={() => setMobileOpen(false)}>Blog</MobileNavLink>
             <MobileNavLink href="/about" onClick={() => setMobileOpen(false)}>About</MobileNavLink>
           </div>

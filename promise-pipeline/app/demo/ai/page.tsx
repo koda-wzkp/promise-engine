@@ -1,6 +1,7 @@
 "use client";
 
 import { aiDemoData } from "@/lib/data/ai-demo";
+import { InlineServiceCTA } from "@/components/cta/InlineServiceCTA";
 import { PromiseCard } from "@/components/promise/PromiseCard";
 import { InsightsTab } from "@/components/dashboard/InsightsTab";
 import { NetworkHealthBar } from "@/components/simulation/NetworkHealthBar";
@@ -56,6 +57,8 @@ export default function AIDemoPage() {
           <h2 className="font-serif text-xl font-semibold text-gray-900 mb-4">Insights</h2>
           <InsightsTab insights={aiDemoData.insights} promises={aiDemoData.promises} />
         </div>
+
+        <InlineServiceCTA variant="demo" />
       </div>
     </div>
   );

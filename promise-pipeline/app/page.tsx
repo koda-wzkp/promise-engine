@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { CloudBackground } from "@/components/layout/CloudBackground";
+import { BOOKING_URL } from "@/lib/constants/booking";
 
 function HeroMark() {
   return (
@@ -179,16 +180,32 @@ export default function LandingPage() {
       {/* Use Cases */}
       <UseCases />
 
-      {/* Beta Signup */}
+      {/* Services CTA */}
       <section className="py-16 bg-gray-900 text-white">
         <div className="max-w-xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="font-serif text-3xl font-bold mb-3">
-            Join the Beta
+            Get Your Promises Mapped
           </h2>
           <p className="text-gray-400 mb-6">
-            Get early access to new features and demos.
+            We build interactive promise graphs for laws, policies, and
+            organizational commitments.
           </p>
-          <BetaSignupForm />
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <a
+              href={BOOKING_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            >
+              Book a demo call
+            </a>
+            <Link
+              href="/services"
+              className="px-6 py-3 bg-white/10 text-white border border-white/20 rounded-lg font-medium hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            >
+              Learn more
+            </Link>
+          </div>
         </div>
       </section>
     </div>
@@ -283,55 +300,3 @@ function UseCases() {
   );
 }
 
-function BetaSignupForm() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-
-    try {
-      await fetch("/api/beta", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
-      });
-    } catch {
-      // Silently handle — beta signup is best-effort
-    }
-
-    setSubmitted(true);
-  };
-
-  if (submitted) {
-    return (
-      <p className="text-green-400 font-medium">
-        Thanks! We&apos;ll be in touch.
-      </p>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex gap-2 max-w-md mx-auto">
-      <label htmlFor="beta-email" className="sr-only">
-        Email address
-      </label>
-      <input
-        id="beta-email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="flex-1 px-4 py-2.5 rounded-lg text-gray-900 text-sm"
-        placeholder="your@email.com"
-        required
-      />
-      <button
-        type="submit"
-        className="px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 text-sm"
-      >
-        Sign Up
-      </button>
-    </form>
-  );
-}

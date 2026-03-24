@@ -7,6 +7,7 @@ import {
   NetworkHealthScore,
 } from "../types/simulation";
 import { calculateNetworkEntropy, STATUS_WEIGHTS, CERTAINTY_WEIGHTS, healthScore, domainHealthScores } from "./scoring";
+import { analyzePromiseDynamics } from "./lindblad";
 
 const DEGRADATION_ORDER: PromiseStatus[] = [
   "verified",
@@ -237,6 +238,27 @@ export function simulateCascade(
     query.promiseId,
     query.newStatus,
   );
+
+  // Enrich affected promises with Lindblad projections
+  for (const ap of affected) {
+    const promise = promiseMap.get(ap.promiseId);
+    if (promise) {
+      const dynamics = analyzePromiseDynamics(promise.verification.method);
+      ap.lindbladProjection = {
+        crossoverCycle: dynamics.crossover.cycle,
+        crossoverDirection: dynamics.crossover.direction as "met_rising" | "not_met_rising",
+        action: dynamics.crossover.action,
+        pMetAt5: dynamics.projection.pMet[5] ?? null,
+        pMetAt10: dynamics.projection.pMet[10] ?? null,
+        pNotMetAt5: dynamics.projection.pNotMet[5] ?? null,
+        pNotMetAt10: dynamics.projection.pNotMet[10] ?? null,
+        regime: dynamics.regime,
+        dominantOutcome: dynamics.projection.dominantOutcome,
+        optimalReviewInterval: dynamics.review.interval,
+        zenoRisk: dynamics.review.zenoRisk,
+      };
+    }
+  }
 
   // Entropy before and after
   const originalEntropy = calculateNetworkEntropy(promises).overall;

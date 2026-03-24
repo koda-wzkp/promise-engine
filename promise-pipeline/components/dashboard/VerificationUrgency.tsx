@@ -2,6 +2,9 @@
 
 import { NetworkBelief } from "@/lib/types/bayesian";
 import { Promise as PromiseType } from "@/lib/types/promise";
+import { analyzePromiseDynamics } from "@/lib/simulation/lindblad";
+import { computeBelief } from "@/lib/simulation/bayesian";
+import { LindbladSparkline } from "./LindbladSparkline";
 
 interface VerificationUrgencyProps {
   urgencyItems: NetworkBelief["verificationUrgency"];
@@ -119,6 +122,43 @@ export function VerificationUrgency({
                 </p>
               )}
               <p className="text-xs text-gray-400 pl-1">{item.reason}</p>
+              {/* Lindblad projection */}
+              {promise && (() => {
+                const belief = computeBelief(promise);
+                const dynamics = analyzePromiseDynamics(
+                  promise.verification.method,
+                  belief.k
+                );
+                return (
+                  <div className="pl-1 mt-1">
+                    <div className="flex items-center gap-2">
+                      <LindbladSparkline regime={dynamics.regime} />
+                      {dynamics.crossover.cycle && (
+                        <span
+                          className="text-xs block"
+                          style={{
+                            color: dynamics.crossover.direction === 'not_met_rising' ? '#991b1b' : '#1a5f4a',
+                          }}
+                        >
+                          {dynamics.crossover.direction === 'met_rising'
+                            ? `Resolution expected by cycle ${dynamics.crossover.cycle.toFixed(0)}`
+                            : `Failure likely by cycle ${dynamics.crossover.cycle.toFixed(0)}`
+                          }
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-500 block mt-0.5">
+                      Optimal review: every {dynamics.review.interval} cycles
+                      {dynamics.review.zenoRisk && ' (more frequent \u2192 Zeno freeze risk)'}
+                    </span>
+                    <span className="text-gray-400 block mt-0.5" style={{ fontSize: 10 }}>
+                      Long-term: {dynamics.projection.dominantOutcome === 'met' ? 'resolution trending' : 'failure trending'}
+                      {' \u00b7 '}P(met) at cycle 10: {((dynamics.projection.pMet[10] ?? 0) * 100).toFixed(0)}%
+                      {' \u00b7 '}P(not met): {((dynamics.projection.pNotMet[10] ?? 0) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                );
+              })()}
             </li>
           );
         })}

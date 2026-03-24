@@ -13,6 +13,8 @@ import { computeNetworkBelief } from "@/lib/simulation/bayesian";
 import { NetworkCertainty } from "./NetworkCertainty";
 import { VerificationUrgency } from "./VerificationUrgency";
 import { NestedPLogo } from "@/components/brand/NestedPLogo";
+import { classifyLindbladRegime, getOptimalReviewInterval, projectLindbladState } from "@/lib/simulation/lindblad";
+import { computeBelief } from "@/lib/simulation/bayesian";
 
 interface SummaryTabProps {
   data: DashboardData;
@@ -58,6 +60,23 @@ export function SummaryTab({ data, logoMode, logoCascadeTarget }: SummaryTabProp
   // Five-field diagnostic (memoized — pure functions, no side effects)
   const diagnostic = useMemo(() => runDiagnostic(data.promises), [data.promises]);
   const { epidemiology, reliability, information, strategy } = diagnostic;
+
+  // Lindblad regime counts for assessment paragraph
+  const lindbladCounts = useMemo(() => {
+    let composting = 0;
+    let computing = 0;
+    let zenoRisk = 0;
+    for (const p of data.promises) {
+      const belief = computeBelief(p);
+      const regime = classifyLindbladRegime(p.verification.method, belief.k);
+      if (regime === "composting") composting++;
+      if (regime === "computing") computing++;
+      const projection = projectLindbladState(regime, 15);
+      const review = getOptimalReviewInterval(regime, projection.crossoverCycle);
+      if (review.zenoRisk) zenoRisk++;
+    }
+    return { composting, computing, zenoRisk };
+  }, [data.promises]);
 
   const medianDeps = leverageNodes.length > 0
     ? leverageNodes[Math.floor(leverageNodes.length / 2)].dependentCount
@@ -412,6 +431,17 @@ export function SummaryTab({ data, logoMode, logoCascadeTarget }: SummaryTabProp
       <div className="bg-gray-50 rounded-xl border p-6">
         <h3 className="font-serif font-semibold text-gray-900 mb-2">Assessment</h3>
         <p className="text-sm text-gray-700 leading-relaxed">{data.gradeExplanation}</p>
+        <p className="text-sm text-gray-600 leading-relaxed mt-3">
+          <strong>Lindblad projection:</strong> Based on the open quantum systems master equation
+          fitted to 67,027 institutional commitments, {lindbladCounts.composting} promise{lindbladCounts.composting !== 1 ? "s" : ""} in
+          this network {lindbladCounts.composting !== 1 ? "are" : "is"} in composting dynamics (slow resolution, Zeno-sensitive)
+          and {lindbladCounts.computing} {lindbladCounts.computing !== 1 ? "are" : "is"} in computing dynamics (observation-driven resolution).
+          {lindbladCounts.zenoRisk > 0 && (
+            <> {lindbladCounts.zenoRisk} promise{lindbladCounts.zenoRisk !== 1 ? "s are" : " is"} at risk of
+            Zeno freeze — {lindbladCounts.zenoRisk !== 1 ? "they are" : "it is"} being monitored too frequently
+            relative to {lindbladCounts.zenoRisk !== 1 ? "their" : "its"} natural resolution timescale.</>
+          )}
+        </p>
       </div>
     </div>
   );

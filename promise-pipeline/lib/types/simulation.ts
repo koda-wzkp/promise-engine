@@ -5,12 +5,27 @@ export interface WhatIfQuery {
   newStatus: PromiseStatus;
 }
 
+export interface LindbladCascadeProjection {
+  crossoverCycle: number | null;
+  crossoverDirection: "met_rising" | "not_met_rising";
+  action: string;
+  pMetAt5: number | null;
+  pMetAt10: number | null;
+  pNotMetAt5: number | null;
+  pNotMetAt10: number | null;
+  regime: string;
+  dominantOutcome: "met" | "not_met";
+  optimalReviewInterval: number;
+  zenoRisk: boolean;
+}
+
 export interface AffectedPromise {
   promiseId: string;
   originalStatus: PromiseStatus;
   newStatus: PromiseStatus;
   cascadeDepth: number;
   reason: string;
+  lindbladProjection?: LindbladCascadeProjection;
 }
 
 export interface CertaintyImpact {

@@ -1,0 +1,79 @@
+{
+  "version": "1.1",
+  "description": "Lindblad master equation parameters by verification regime — validated on MONA (67,027 obs, 5 cohorts, R²=0.910-0.965)",
+  "source": "Benthos lindblad_validation, March 24 2026",
+  "findings": {
+    "weibull_wins_survival_curve": true,
+    "lindblad_wins_state_projection": true,
+    "most_conditions_resolve_to_met": true,
+    "crossover_direction_is_decision_signal": true,
+    "zeno_effect_rho": -0.191,
+    "bond_dimension_sufficient": 2
+  },
+  "regimes": {
+    "computing": {
+      "description": "Numeric periodic verification. k > 0.7. Failures detected and corrected. DEQ audits, uptime monitors, sensor verification.",
+      "E_declared": { "mean": 0.35, "std": 0.10, "min": 0.20, "max": 0.50 },
+      "E_met": { "mean": 0.55, "std": 0.15, "min": 0.30, "max": 0.80 },
+      "E_not_met": { "mean": 0.15, "std": 0.08, "min": 0.05, "max": 0.30 },
+      "gamma_to_met": { "mean": 0.12, "std": 0.05, "min": 0.05, "max": 0.25 },
+      "gamma_to_not_met": { "mean": 0.28, "std": 0.08, "min": 0.15, "max": 0.40 },
+      "gamma_decay": { "mean": 0.05, "std": 0.03, "min": 0.01, "max": 0.10 },
+      "gamma_recovery": { "mean": 0.02, "std": 0.01, "min": 0.005, "max": 0.05 },
+      "crossover_cycle": { "mean": 3.5, "std": 1.0, "min": 2.0, "max": 6.0 },
+      "crossover_direction": "not_met_rising",
+      "dominant_outcome": "not_met",
+      "optimal_review_interval": 2,
+      "n_cohorts_validated": 0,
+      "note": "Estimated from Test 7 computing regime fit. Awaiting ECHO DMR data for full validation."
+    },
+    "composting": {
+      "description": "Qualitative or absent verification. k < 0.4. Conditions stagnate. Equity provisions, tribal consultation, self-report.",
+      "E_declared": { "mean": 0.08, "std": 0.04, "min": 0.02, "max": 0.15 },
+      "E_met": { "mean": 0.65, "std": 0.12, "min": 0.45, "max": 0.85 },
+      "E_not_met": { "mean": 0.22, "std": 0.08, "min": 0.10, "max": 0.35 },
+      "gamma_to_met": { "mean": 0.08, "std": 0.03, "min": 0.03, "max": 0.15 },
+      "gamma_to_not_met": { "mean": 0.015, "std": 0.008, "min": 0.005, "max": 0.03 },
+      "gamma_decay": { "mean": 0.008, "std": 0.004, "min": 0.002, "max": 0.02 },
+      "gamma_recovery": { "mean": 0.003, "std": 0.002, "min": 0.001, "max": 0.008 },
+      "crossover_cycle": { "mean": 7.0, "std": 2.5, "min": 4.0, "max": 12.0 },
+      "crossover_direction": "met_rising",
+      "dominant_outcome": "met",
+      "optimal_review_interval": 5,
+      "n_cohorts_validated": 2,
+      "note": "Validated on MONA overall (N=67027, R²=0.922) and SB (N=52238, R²=0.910). P(met) dominates — slow resolution, not failure."
+    },
+    "transitional": {
+      "description": "Mixed verification. 0.4 ≤ k ≤ 0.7. Intermediate dynamics between computing and composting.",
+      "E_declared": { "mean": 0.20, "std": 0.08, "min": 0.08, "max": 0.35 },
+      "E_met": { "mean": 0.58, "std": 0.12, "min": 0.40, "max": 0.80 },
+      "E_not_met": { "mean": 0.18, "std": 0.07, "min": 0.08, "max": 0.28 },
+      "gamma_to_met": { "mean": 0.10, "std": 0.04, "min": 0.04, "max": 0.20 },
+      "gamma_to_not_met": { "mean": 0.02, "std": 0.01, "min": 0.008, "max": 0.05 },
+      "gamma_decay": { "mean": 0.02, "std": 0.01, "min": 0.005, "max": 0.05 },
+      "gamma_recovery": { "mean": 0.005, "std": 0.003, "min": 0.001, "max": 0.015 },
+      "crossover_cycle": { "mean": 5.5, "std": 1.8, "min": 3.0, "max": 9.0 },
+      "crossover_direction": "met_rising",
+      "dominant_outcome": "met",
+      "optimal_review_interval": 3,
+      "n_cohorts_validated": 3,
+      "note": "Validated on MONA PA (N=12376, R²=0.960), SAC (N=340, R²=0.965), SPC (N=4893, R²=0.937). P(met) dominates in all three."
+    },
+    "pressure": {
+      "description": "Deadline-driven. k > 1.5. External forces accumulate. Political attention, litigation, sunset clauses.",
+      "E_declared": { "mean": 0.50, "std": 0.15, "min": 0.30, "max": 0.70 },
+      "E_met": { "mean": 0.40, "std": 0.12, "min": 0.25, "max": 0.60 },
+      "E_not_met": { "mean": 0.10, "std": 0.05, "min": 0.03, "max": 0.20 },
+      "gamma_to_met": { "mean": 0.25, "std": 0.08, "min": 0.15, "max": 0.40 },
+      "gamma_to_not_met": { "mean": 0.35, "std": 0.10, "min": 0.20, "max": 0.50 },
+      "gamma_decay": { "mean": 0.02, "std": 0.01, "min": 0.005, "max": 0.04 },
+      "gamma_recovery": { "mean": 0.01, "std": 0.005, "min": 0.002, "max": 0.02 },
+      "crossover_cycle": { "mean": 2.5, "std": 0.8, "min": 1.5, "max": 4.0 },
+      "crossover_direction": "not_met_rising",
+      "dominant_outcome": "not_met",
+      "optimal_review_interval": 2,
+      "n_cohorts_validated": 0,
+      "note": "Estimated from Weibull k>1.5 cohorts. Awaiting IEG/GlobalFund deadline-driven data for full validation."
+    }
+  }
+}

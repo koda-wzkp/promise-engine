@@ -203,10 +203,7 @@ export default function AboutPage() {
                 SVG-based network graph visualization with three views
                 (Watershed, Canopy, Strata)
               </li>
-              <li>Deterministic BFS cascade simulation engine</li>
-              <li>
-                Empirical cascade parameters from Weibull survival analysis
-              </li>
+              <li>Cascade simulation engine with empirical parameters from Weibull survival analysis (85,000+ observations)</li>
               <li>
                 Hex-encoded promise fingerprinting (128-bit headers, SHA-256
                 composition)

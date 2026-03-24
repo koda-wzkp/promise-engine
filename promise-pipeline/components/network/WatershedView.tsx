@@ -5,16 +5,19 @@ import { hashSeed, seededRandom } from "@/lib/rendering/noise";
 import { getStatusColor } from "@/lib/utils/colors";
 import type { SVGViewProps } from "./svg-view-types";
 
-/** Determine stream color based on endpoint statuses. */
-function streamColor(srcStatus: string, tgtStatus: string): string {
-  if (srcStatus === "violated" || tgtStatus === "violated") return "#dc2626";
-  if (srcStatus === "degraded" || tgtStatus === "degraded") return "#d97706";
-  if (srcStatus === "unverifiable" || tgtStatus === "unverifiable") return "#8b5cf6";
-  return "#60a5fa";
+/** Determine stream color pair based on endpoint statuses. */
+function streamColors(srcStatus: string, tgtStatus: string): { base: string; bright: string } {
+  if (srcStatus === "violated" || tgtStatus === "violated")
+    return { base: "#f87171", bright: "#dc2626" };
+  if (srcStatus === "degraded" || tgtStatus === "degraded")
+    return { base: "#fbbf24", bright: "#d97706" };
+  if (srcStatus === "unverifiable" || tgtStatus === "unverifiable")
+    return { base: "#c4b5fd", bright: "#8b5cf6" };
+  return { base: "#93c5fd", bright: "#60a5fa" };
 }
 
 function streamDash(srcStatus: string, tgtStatus: string): string | undefined {
-  if (srcStatus === "unverifiable" || tgtStatus === "unverifiable") return "6 4";
+  if (srcStatus === "unverifiable" || tgtStatus === "unverifiable") return "8 4";
   return undefined;
 }
 
@@ -35,32 +38,66 @@ export function WatershedView({
   reducedMotion,
   unobservablePercent,
 }: SVGViewProps) {
-  const svgHeight = isMobile ? width * 1.6 : width * 0.65;
+  // Adjust height so all tiers fit without scrolling
+  const svgHeight = isMobile ? width * 1.5 : width * 0.7;
   const effectiveHeight = Math.min(height, svgHeight);
 
-  // Compute particle data once
+  // Compute tiered positions: remap node y to fit within SVG with padding
+  const tieredNodes = useMemo(() => {
+    if (nodes.length === 0) return nodes;
+    const minY = Math.min(...nodes.map((n) => n.y));
+    const maxY = Math.max(...nodes.map((n) => n.y));
+    const yRange = maxY - minY || 1;
+    const topPad = 30;
+    const bottomPad = 30;
+    const availH = effectiveHeight - topPad - bottomPad;
+
+    return nodes.map((n) => ({
+      ...n,
+      y: topPad + ((n.y - minY) / yRange) * availH,
+    }));
+  }, [nodes, effectiveHeight]);
+
+  // Remap edges to match tiered node positions
+  const tieredEdges = useMemo(() => {
+    const nodePos = new Map<string, { x: number; y: number }>(
+      tieredNodes.map((n) => [n.id, { x: n.x, y: n.y }])
+    );
+    return edges.map((e) => {
+      const src = nodePos.get(e.sourceId);
+      const tgt = nodePos.get(e.targetId);
+      return {
+        ...e,
+        sourceX: src?.x ?? e.sourceX,
+        sourceY: src?.y ?? e.sourceY,
+        targetX: tgt?.x ?? e.targetX,
+        targetY: tgt?.y ?? e.targetY,
+      };
+    });
+  }, [edges, tieredNodes]);
+
+  // Compute particle flow for desktop
   const particles = useMemo(() => {
     if (isMobile || reducedMotion) return [];
-    return edges.slice(0, 20).flatMap((edge, ei) => {
-      const src = nodes.find((n) => n.id === edge.sourceId);
-      const tgt = nodes.find((n) => n.id === edge.targetId);
-      if (!src || !tgt) return [];
-      const midX = (src.x + tgt.x) / 2;
-      const midY = (src.y + tgt.y) / 2;
+    return tieredEdges.slice(0, 20).flatMap((edge, ei) => {
+      const midX = (edge.sourceX + edge.targetX) / 2;
+      const midY = (edge.sourceY + edge.targetY) / 2;
       const seed = hashSeed(edge.edgeId);
-      const controlX = midX + (seededRandom(seed) - 0.5) * 60;
-      const controlY = midY + (seededRandom(seed + 1) - 0.5) * 40;
-      const pathD = `M ${src.x} ${src.y} Q ${controlX} ${controlY} ${tgt.x} ${tgt.y}`;
-      const color = streamColor(src.status, tgt.status);
+      const controlX = midX + (seededRandom(seed) - 0.5) * 40;
+      const pathD = `M ${edge.sourceX} ${edge.sourceY} Q ${controlX} ${midY} ${edge.targetX} ${edge.targetY}`;
+      const { bright } = streamColors(edge.sourceStatus, edge.targetStatus);
       const count = Math.min(2, Math.max(1, Math.floor(edge.downstreamCount / 2)));
       return Array.from({ length: count }, (_, pi) => ({
         key: `${edge.edgeId}-p${pi}`,
         pathD,
-        color,
+        color: bright,
         dur: `${3 + seededRandom(seed + pi + 10) * 2}s`,
       }));
     });
-  }, [edges, nodes, isMobile, reducedMotion]);
+  }, [tieredEdges, isMobile, reducedMotion]);
+
+  // Active tooltip node: show on tap or hover
+  const activeTooltipId = focusedNodeId || hoveredNodeId;
 
   return (
     <svg
@@ -72,43 +109,54 @@ export function WatershedView({
       style={{ display: "block" }}
     >
       <defs>
-        <linearGradient id="watershed-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#e8e4df" />
-          <stop offset="100%" stopColor="#c4b9a8" />
+        {/* Terrain gradient: highlands at top, delta/floodplain at bottom */}
+        <linearGradient id="watershed-terrain" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d4c5a9" />
+          <stop offset="50%" stopColor="#b8a88a" />
+          <stop offset="100%" stopColor="#8a9a7b" />
         </linearGradient>
       </defs>
 
-      {/* Background */}
+      {/* Terrain background */}
       <g className="background">
-        <rect width={width} height={effectiveHeight} fill="url(#watershed-bg)" />
+        <rect width={width} height={effectiveHeight} fill="url(#watershed-terrain)" />
       </g>
 
-      {/* Streams (edges) */}
+      {/* Streams (edges) — dual-layer for water effect */}
       <g className="edges">
-        {edges.map((edge) => {
-          const src = nodes.find((n) => n.id === edge.sourceId);
-          const tgt = nodes.find((n) => n.id === edge.targetId);
-          if (!src || !tgt) return null;
-          const midX = (src.x + tgt.x) / 2;
-          const midY = (src.y + tgt.y) / 2;
+        {tieredEdges.map((edge) => {
+          const midY = (edge.sourceY + edge.targetY) / 2;
           const seed = hashSeed(edge.edgeId);
-          const controlX = midX + (seededRandom(seed) - 0.5) * 60;
-          const controlY = midY + (seededRandom(seed + 1) - 0.5) * 40;
-          const color = streamColor(src.status, tgt.status);
-          const sw = 2 + Math.min(edge.downstreamCount, 5);
-          const dash = streamDash(src.status, tgt.status);
+          const controlX = (edge.sourceX + edge.targetX) / 2 + (seededRandom(seed) - 0.5) * 40;
+          const { base, bright } = streamColors(edge.sourceStatus, edge.targetStatus);
+          const sw = 3 + Math.min(edge.downstreamCount, 8) * 1.5;
+          const dash = streamDash(edge.sourceStatus, edge.targetStatus);
+          const pathD = `M ${edge.sourceX} ${edge.sourceY} Q ${controlX} ${midY} ${edge.targetX} ${edge.targetY}`;
 
           return (
-            <path
-              key={edge.edgeId}
-              d={`M ${src.x} ${src.y} Q ${controlX} ${controlY} ${tgt.x} ${tgt.y}`}
-              stroke={color}
-              strokeWidth={sw}
-              fill="none"
-              opacity={0.6}
-              strokeLinecap="round"
-              strokeDasharray={dash}
-            />
+            <g key={edge.edgeId}>
+              {/* Wide stream bed */}
+              <path
+                d={pathD}
+                stroke={base}
+                strokeWidth={sw}
+                fill="none"
+                opacity={0.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray={dash}
+              />
+              {/* Bright center current */}
+              <path
+                d={pathD}
+                stroke={bright}
+                strokeWidth={sw * 0.4}
+                fill="none"
+                opacity={0.7}
+                strokeLinecap="round"
+                strokeDasharray={dash}
+              />
+            </g>
           );
         })}
       </g>
@@ -124,9 +172,9 @@ export function WatershedView({
         </g>
       )}
 
-      {/* Nodes */}
+      {/* Nodes — spring/pool appearance */}
       <g className="nodes">
-        {nodes.map((node) => {
+        {tieredNodes.map((node) => {
           const baseR = isMobile ? 10 : 12;
           const r = Math.min(24, baseR + node.downstreamCount * 2);
           const color = getStatusColor(node.status);
@@ -158,22 +206,28 @@ export function WatershedView({
             >
               {/* Invisible hit area for 44px minimum */}
               <rect
-                x={node.x - 22}
-                y={node.y - 22}
-                width={44}
-                height={44}
+                x={node.x - 22} y={node.y - 22}
+                width={44} height={44}
                 fill="transparent"
               />
-              {/* Node circle */}
+              {/* Outer glow */}
               <circle
-                cx={node.x}
-                cy={node.y}
-                r={r}
+                cx={node.x} cy={node.y} r={r + 2}
+                fill={color} opacity={0.2}
+              />
+              {/* Main node */}
+              <circle
+                cx={node.x} cy={node.y} r={r}
                 fill={color}
                 stroke={isFocused ? "#2563eb" : color}
-                strokeWidth={isFocused ? 2 : 1.5}
-                opacity={0.9}
+                strokeWidth={isFocused ? 3 : 1.5}
+                opacity={0.85}
                 className={isAffected && cascadeActive && !reducedMotion ? "watershed-pulse" : ""}
+              />
+              {/* Light reflection */}
+              <circle
+                cx={node.x} cy={node.y} r={r * 0.4}
+                fill="white" opacity={0.3}
               />
               {/* Label background */}
               <rect
@@ -182,7 +236,7 @@ export function WatershedView({
                 width={48}
                 height={isMobile ? 14 : 12}
                 rx={2}
-                fill="#e8e4df"
+                fill="#d4c5a9"
                 opacity={0.85}
               />
               {/* Label text */}
@@ -194,37 +248,57 @@ export function WatershedView({
                 fontSize={isMobile ? 11 : 13}
                 fill="#1f2937"
               >
-                {node.id.length > 8 ? node.id.slice(0, 8) + "…" : node.id}
+                {node.id.length > 8 ? node.id.slice(0, 8) + "\u2026" : node.id}
               </text>
             </g>
           );
         })}
       </g>
 
-      {/* Overlays */}
+      {/* Overlays — tooltip last for z-order */}
       <g className="overlays">
-        {/* Tooltip for hovered node */}
-        {hoveredNodeId && (() => {
-          const node = nodes.find((n) => n.id === hoveredNodeId);
+        {activeTooltipId && (() => {
+          const node = tieredNodes.find((n) => n.id === activeTooltipId);
           const promise = node ? promiseMap.get(node.id) : null;
           if (!node || !promise) return null;
-          const tx = Math.min(node.x + 14, width - 180);
-          const ty = node.y - 10;
-          const bodyText = promise.body.length > 50 ? promise.body.slice(0, 50) + "…" : promise.body;
+
+          const tooltipWidth = Math.min(width * 0.7, 300);
+          const tooltipHeight = 52;
+          const tooltipX = Math.max(8, Math.min(node.x - tooltipWidth / 2, width - tooltipWidth - 8));
+          // Above node if room, below otherwise
+          const baseR = isMobile ? 10 : 12;
+          const nodeR = Math.min(24, baseR + node.downstreamCount * 2);
+          const tooltipY = node.y - nodeR - tooltipHeight - 8 > 0
+            ? node.y - nodeR - tooltipHeight - 8
+            : node.y + nodeR + 8;
+          const bodyText = promise.body.length > 60 ? promise.body.slice(0, 60) + "\u2026" : promise.body;
+
           return (
-            <g>
-              <rect x={tx} y={ty - 28} width={170} height={42} rx={6} fill="#111827" opacity={0.9} />
-              <text x={tx + 8} y={ty - 12} fontFamily="'IBM Plex Mono', monospace" fontSize={11} fill="#fff" fontWeight="bold">
+            <g style={{ pointerEvents: "none" }}>
+              <rect
+                x={tooltipX} y={tooltipY}
+                width={tooltipWidth} height={tooltipHeight}
+                rx={6}
+                fill="#1a1a2e" opacity={0.95}
+              />
+              <text
+                x={tooltipX + 10} y={tooltipY + 18}
+                fontFamily="'IBM Plex Mono', monospace"
+                fontSize={13} fontWeight="bold" fill="#ffffff"
+              >
                 {node.id}
               </text>
-              <text x={tx + 8} y={ty + 2} fontFamily="'IBM Plex Mono', monospace" fontSize={10} fill="rgba(255,255,255,0.7)">
+              <text
+                x={tooltipX + 10} y={tooltipY + 36}
+                fontFamily="'IBM Plex Sans', sans-serif"
+                fontSize={11} fill="#d1d5db"
+              >
                 {bodyText}
               </text>
             </g>
           );
         })()}
 
-        {/* UNOBSERVABLE watermark */}
         {unobservablePercent !== null && unobservablePercent > 0 && (
           <text
             x={width - 16}

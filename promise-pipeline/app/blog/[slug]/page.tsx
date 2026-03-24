@@ -1,9 +1,37 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import PortableTextRenderer from "@/components/blog/PortableTextRenderer";
 import MarkdownRenderer from "@/components/blog/MarkdownRenderer";
 import { getPostBySlug } from "@/lib/blog";
+import { InlineServiceCTA } from "@/components/cta/InlineServiceCTA";
 
 // Individual blog post page — tries Sanity first, falls back to local markdown.
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
+  const post = getPostBySlug(params.slug);
+  const title = post
+    ? `${post.title} — Promise Pipeline`
+    : "Blog — Promise Pipeline";
+  const description = post
+    ? post.body?.slice(0, 160).replace(/[#*\n]/g, "").trim() + "..."
+    : "Promise Theory, case studies, and project updates.";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://promise-engine.vercel.app/blog/${params.slug}`,
+      siteName: "Promise Pipeline",
+      type: "article",
+    },
+  };
+}
 
 export default async function BlogPostPage({
   params,
@@ -99,6 +127,8 @@ export default async function BlogPostPage({
               </p>
             )}
           </div>
+
+          <InlineServiceCTA variant="blog" />
 
           {/* Related promises (Sanity posts only) */}
           {post.relatedPromises && post.relatedPromises.length > 0 && (

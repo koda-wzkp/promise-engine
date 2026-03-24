@@ -2,6 +2,7 @@
 
 import { useState, useReducer, useMemo, useCallback } from "react";
 import { jcpoaData } from "@/lib/data/jcpoa";
+import { InlineServiceCTA } from "@/components/cta/InlineServiceCTA";
 import { jcpoaTimeline } from "@/lib/data/jcpoa-timeline";
 import { PromiseStatus } from "@/lib/types/promise";
 import { CascadeResult, WhatIfQuery } from "@/lib/types/simulation";
@@ -211,6 +212,9 @@ export default function JCPOAPage() {
           />
         )}
         {activeTab === "about" && <JCPOAAboutTab />}
+      </div>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <InlineServiceCTA variant="demo" />
       </div>
     </div>
   );

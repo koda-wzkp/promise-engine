@@ -2,6 +2,7 @@
 
 import { useState, useReducer, useMemo, useCallback } from "react";
 import { hb2021Data } from "@/lib/data/hb2021";
+import { InlineServiceCTA } from "@/components/cta/InlineServiceCTA";
 import { PromiseStatus } from "@/lib/types/promise";
 import { CascadeResult, WhatIfQuery } from "@/lib/types/simulation";
 import { simulateCascade } from "@/lib/simulation/cascade";
@@ -205,6 +206,9 @@ export default function HB2021Page() {
           />
         )}
         {activeTab === "about" && <AboutTab />}
+      </div>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <InlineServiceCTA variant="demo" />
       </div>
     </div>
   );

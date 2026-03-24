@@ -1,6 +1,7 @@
 "use client";
 
 import { supplyChainDemoData } from "@/lib/data/supply-chain-demo";
+import { InlineServiceCTA } from "@/components/cta/InlineServiceCTA";
 import { PromiseCard } from "@/components/promise/PromiseCard";
 import { InsightsTab } from "@/components/dashboard/InsightsTab";
 import { calculateNetworkHealth } from "@/lib/simulation/cascade";
@@ -55,6 +56,8 @@ export default function SupplyChainDemoPage() {
           <h2 className="font-serif text-xl font-semibold text-gray-900 mb-4">Insights</h2>
           <InsightsTab insights={supplyChainDemoData.insights} promises={supplyChainDemoData.promises} />
         </div>
+
+        <InlineServiceCTA variant="demo" />
       </div>
     </div>
   );

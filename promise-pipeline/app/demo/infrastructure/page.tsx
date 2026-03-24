@@ -1,6 +1,7 @@
 "use client";
 
 import { infraDemoData } from "@/lib/data/infra-demo";
+import { InlineServiceCTA } from "@/components/cta/InlineServiceCTA";
 import { PromiseCard } from "@/components/promise/PromiseCard";
 import { InsightsTab } from "@/components/dashboard/InsightsTab";
 import { calculateNetworkHealth } from "@/lib/simulation/cascade";
@@ -55,6 +56,8 @@ export default function InfrastructureDemoPage() {
           <h2 className="font-serif text-xl font-semibold text-white mb-4">Insights</h2>
           <InsightsTab insights={infraDemoData.insights} promises={infraDemoData.promises} />
         </div>
+
+        <InlineServiceCTA variant="demo" />
       </div>
     </div>
   );

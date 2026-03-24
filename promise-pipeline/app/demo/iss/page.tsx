@@ -2,6 +2,7 @@
 
 import { useState, useReducer, useMemo, useCallback } from "react";
 import { issData } from "@/lib/data/iss";
+import { InlineServiceCTA } from "@/components/cta/InlineServiceCTA";
 import { PromiseStatus } from "@/lib/types/promise";
 import { CascadeResult, WhatIfQuery } from "@/lib/types/simulation";
 import { simulateCascade } from "@/lib/simulation/cascade";
@@ -238,6 +239,9 @@ export default function ISSPage() {
           />
         )}
         {activeTab === "about" && <ISSAboutTab />}
+      </div>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <InlineServiceCTA variant="demo" />
       </div>
     </div>
   );

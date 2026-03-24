@@ -8,8 +8,11 @@ export const metadata: Metadata = {
   description:
     "Map, verify, and simulate commitment networks. From climate legislation to team accountability.",
   openGraph: {
-    title: "Promise Pipeline",
-    description: "A trust primitive for commitment networks.",
+    title: "Promise Pipeline — A Trust Primitive for Commitment Networks",
+    description:
+      "Dashboards show what's broken. Promise Pipeline shows what breaks next and why.",
+    url: "https://promise-engine.vercel.app",
+    siteName: "Promise Pipeline",
     type: "website",
   },
 };

@@ -415,6 +415,29 @@ export function ISSTimelineTab() {
         </div>
       </div>
 
+      {/* Lindblad Analysis — Healthiest Network */}
+      <div style={{
+        background: '#ecfdf5',
+        border: '1px solid #a7f3d0',
+        borderRadius: 8,
+        padding: '14px 16px',
+        marginBottom: 24,
+      }}>
+        <div style={{ fontFamily: 'IBM Plex Serif, serif', fontWeight: 600, fontSize: 14, marginBottom: 6, color: '#1a5f4a' }}>
+          Lindblad Analysis — Healthiest Network in the Corpus
+        </div>
+        <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6, margin: 0 }}>
+          The ISS network scores 74/100 — the highest health score in the Promise Pipeline corpus.
+          The Lindblad projection explains why: the majority of ISS promises operate in the
+          <strong> computing regime</strong> with numeric, periodic, sensor-verified commitments.
+          Life support metrics, orbital parameters, and resupply schedules all have continuous
+          automated verification. The crossover direction is <strong>met-rising</strong> across
+          most promises — the system is resolving its commitments, not failing them. This is what
+          a well-architected promise network looks like: high verification coverage, distributed
+          dependencies, and numeric targets with automated observation.
+        </p>
+      </div>
+
       {/* Gantt chart */}
       <div className="bg-white rounded-xl border p-6 overflow-x-auto">
         <h3 className="font-serif font-semibold text-gray-900 mb-4">
@@ -677,6 +700,47 @@ export function ISSTimelineTab() {
             </div>
           );
         })}
+      </div>
+
+      {/* Lindblad Analysis — Crew Access Vulnerability */}
+      <div style={{
+        background: '#fffbeb',
+        border: '1px solid #fde68a',
+        borderRadius: 8,
+        padding: '12px 14px',
+        marginTop: 10,
+        fontSize: 13,
+        color: '#4b5563',
+        lineHeight: 1.6,
+      }}>
+        <strong>Crew access is the structural vulnerability.</strong> The Starliner cascade
+        (single-provider crew access dependency) and the Roscosmos 2028 commitment gap represent
+        hub vulnerabilities in an otherwise healthy network. The Lindblad projection for crew
+        access promises shows <strong>transitional regime</strong> (k &asymp; 0.55) — these promises
+        are not in the computing regime like the rest of the ISS network because crew launch
+        commitments depend on hardware development timelines that resist periodic verification.
+        The optimal review interval is <strong>every 3 cycles</strong>, with attention focused
+        on the commercial station transition promises that will inherit these dependencies.
+      </div>
+
+      {/* Lindblad Analysis — Post-2030 Transition */}
+      <div style={{
+        background: '#f9fafb',
+        border: '1px solid #e5e7eb',
+        borderRadius: 8,
+        padding: '12px 14px',
+        marginTop: 10,
+        fontSize: 13,
+        color: '#4b5563',
+        lineHeight: 1.6,
+      }}>
+        <strong>Post-2030 transition:</strong> The ISS commitment network has a known sunset.
+        The Lindblad projection for the commercial station readiness promises shows
+        <strong> composting dynamics</strong> (k &lt; 0.4) — these promises are declared but
+        lack the verification infrastructure of the operational ISS network. The transition
+        from ISS to commercial stations is, in promise network terms, a transfer from a
+        computing-regime network to a composting-regime one. The verification architecture
+        hasn&apos;t been built yet for the successor.
       </div>
     </div>
   );

@@ -39,6 +39,32 @@ export function TimelineTab({ timePoints }: TimelineTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Lindblad Analysis — Terminal Cascade */}
+      <div style={{
+        background: '#fef2f2',
+        border: '1px solid #fecaca',
+        borderRadius: 8,
+        padding: '14px 16px',
+        marginBottom: 24,
+      }}>
+        <div style={{ fontFamily: 'IBM Plex Serif, serif', fontWeight: 600, fontSize: 14, marginBottom: 6, color: '#991b1b' }}>
+          Lindblad Analysis — Terminal Cascade
+        </div>
+        <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6, margin: 0 }}>
+          The JCPOA trajectory is a textbook cascade from hub failure. The US sanctions
+          re-imposition (JCPOA-011, Bridge score 1.00) triggered the network&apos;s collapse.
+          64% of JCPOA promises were in the <strong>computing regime</strong> — the verification
+          infrastructure (IAEA continuous monitoring, sensor-based verification) was the most
+          sophisticated in arms control history. The Lindblad projection for computing-regime
+          promises shows <strong>not-met-rising crossover</strong>: under stress, these promises
+          resolve to failure, not compliance. The verification infrastructure detected the collapse
+          in real time — but detection couldn&apos;t prevent it because the verification layer was nested
+          inside the political layer that failed first. The timeline below shows the cascade
+          propagation: each event corresponds to a promise crossing its Lindblad crossover point
+          from declared/verified into violated.
+        </p>
+      </div>
+
       {/* Health vs Entropy chart */}
       <div className="bg-white rounded-xl border p-6">
         <h3 className="font-serif font-semibold text-gray-900 mb-1">
@@ -141,6 +167,24 @@ export function TimelineTab({ timePoints }: TimelineTabProps) {
             <div className="w-3 h-0.5 bg-blue-600" style={{ borderTop: "1px dashed" }} />
             <span>Verification Coverage %</span>
           </div>
+        </div>
+
+        {/* Verification regime context */}
+        <div style={{
+          background: '#f9fafb',
+          border: '1px solid #e5e7eb',
+          borderRadius: 8,
+          padding: '12px 14px',
+          marginTop: 10,
+          fontSize: 13,
+          color: '#4b5563',
+          lineHeight: 1.6,
+        }}>
+          <strong>Verification regime:</strong> Computing (k &asymp; 0.90). IAEA sensor-verified.
+          Crossover direction: not-met-rising. This promise was being monitored at the highest
+          possible frequency — and it still failed. The Zeno effect does not apply here:
+          computing-regime promises benefit from frequent observation. The failure was structural
+          (upstream political dependency), not observational.
         </div>
       </div>
 

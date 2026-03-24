@@ -17,6 +17,7 @@ import { AccountPrompt } from "@/components/personal/AccountPrompt";
 import { DependencyTooltip } from "@/components/personal/DependencyTooltip";
 import { useGardenOnboarding } from "@/lib/hooks/useGardenOnboarding";
 import { getSkyGradientByCount } from "@/lib/garden/renderer/skyGradient";
+import { NestedPLogo } from "@/components/brand/NestedPLogo";
 
 type View = "garden" | "timeline" | "create" | "stats";
 
@@ -321,9 +322,12 @@ export default function PersonalPage() {
 
       {/* Header */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-4">
-        <h1 className="font-serif text-2xl font-bold text-gray-900">
-          Promise Garden
-        </h1>
+        <div className="flex items-center gap-3">
+          <NestedPLogo mode="grow" size={48} />
+          <h1 className="font-serif text-2xl font-bold text-gray-900">
+            Promise Garden
+          </h1>
+        </div>
         <p className="text-gray-600 text-sm mt-1">
           Your personal promise tracker. Every promise plants a seed. Keeping them grows the garden.
         </p>

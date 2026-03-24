@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { NestedPLogo } from "@/components/brand/NestedPLogo";
 
 export const metadata: Metadata = {
   title: "About — Promise Pipeline",
@@ -160,6 +161,7 @@ export default function AboutPage() {
           </section>
 
           <section className="bg-white rounded-xl border p-6">
+            <NestedPLogo mode="intervention" size={56} className="mx-auto mb-4" />
             <h2 className="font-serif text-xl font-semibold text-gray-900 mb-3">
               Mission
             </h2>
@@ -213,6 +215,7 @@ export default function AboutPage() {
           </section>
 
           <section className="bg-white rounded-xl border p-6">
+            <NestedPLogo mode="recurse" size={48} className="mx-auto mb-4" />
             <h2 className="font-serif text-xl font-semibold text-gray-900 mb-3">
               Research
             </h2>

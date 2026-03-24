@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BOOKING_URL, CONTACT_EMAIL } from "@/lib/constants/booking";
+import { NestedPLogo } from "@/components/brand/NestedPLogo";
 
 const PROJECT_TYPES = [
   "Legislation or policy",
@@ -139,6 +140,7 @@ export default function ServicesPage() {
       {/* How It Works */}
       <section className="py-16 bg-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <NestedPLogo mode="flow" size={48} className="mx-auto mb-4" />
           <h2 className="font-serif text-3xl font-bold text-gray-900 text-center mb-12">
             How It Works
           </h2>

@@ -169,7 +169,7 @@ export default function HB2021Page() {
 
       {/* Tab content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === "summary" && <SummaryTab data={hb2021Data} />}
+        {activeTab === "summary" && <SummaryTab data={hb2021Data} logoMode="morph" />}
         {activeTab === "network" && (
           <NetworkTab
             promises={hb2021Data.promises}

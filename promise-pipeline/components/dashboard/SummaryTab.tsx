@@ -12,9 +12,12 @@ import { runDiagnostic } from "@/lib/analysis";
 import { computeNetworkBelief } from "@/lib/simulation/bayesian";
 import { NetworkCertainty } from "./NetworkCertainty";
 import { VerificationUrgency } from "./VerificationUrgency";
+import { NestedPLogo } from "@/components/brand/NestedPLogo";
 
 interface SummaryTabProps {
   data: DashboardData;
+  logoMode?: string;
+  logoCascadeTarget?: number | null;
 }
 
 const PRIORITY_COLORS: Record<"critical" | "high" | "medium" | "low", { bg: string; text: string; border: string }> = {
@@ -24,7 +27,7 @@ const PRIORITY_COLORS: Record<"critical" | "high" | "medium" | "low", { bg: stri
   low:      { bg: "#ecfdf5", text: "#1a5f4a", border: "#6ee7b7" },
 };
 
-export function SummaryTab({ data }: SummaryTabProps) {
+export function SummaryTab({ data, logoMode, logoCascadeTarget }: SummaryTabProps) {
   const health = useMemo(() => calculateNetworkHealth(data.promises), [data.promises]);
   const breakdown = useMemo(() => statusBreakdown(data.promises), [data.promises]);
   const domainScores = useMemo(() => domainHealthScores(data.promises), [data.promises]);
@@ -68,7 +71,12 @@ export function SummaryTab({ data }: SummaryTabProps) {
       {/* Top metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border p-6 text-center">
-          <p className="text-sm text-gray-500 mb-1">Network Health</p>
+          <div className="flex items-center justify-center gap-2 mb-1">
+            {logoMode && (
+              <NestedPLogo mode={logoMode} size={40} cascadeTarget={logoCascadeTarget} />
+            )}
+            <p className="text-sm text-gray-500">Network Health</p>
+          </div>
           <p className="text-4xl font-bold" style={{ color: health.overall >= 60 ? "#1a5f4a" : health.overall >= 40 ? "#b45309" : "#b91c1c" }}>
             {Math.round(health.overall)}
           </p>

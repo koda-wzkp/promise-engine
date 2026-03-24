@@ -597,45 +597,38 @@ export const trajectories: Trajectory[] = [
 export const insights: Insight[] = [
   {
     severity: "critical",
-    type: "Cascade",
-    title: "The PacifiCorp Cascade",
-    body: "PacifiCorp's violated emissions target (P004) cascades through the dependency network. Because P004 depends on P003 (planning, degraded) and P006 (verification, verified), the failure is attributable to planning execution, not verification gaps. Downstream equity promises P012 depend on P004, meaning PacifiCorp's emissions failure directly undermines environmental justice commitments.",
-    promises: ["P004", "P003", "P006", "P012"],
+    type: "Gap",
+    title: "The Verification Paradox",
+    body: "Emissions promises (k = 0.66\u20130.90) are in the computing regime \u2014 failures are detected and corrected through DEQ audits and quantitative baselines. Equity and tribal promises (k = 0.28\u20130.41) are in the composting regime \u2014 conditions stagnate without external observation. Cross-domain research across 85,000+ observations confirms this isn\u2019t unique to HB 2021: the pattern appears in IMF programs (\u03c1 = \u22120.242), World Bank projects, and EPA facilities. Networks that verify more intensely surface more problems. The equity domain\u2019s low health score (30/100) and low certainty (18/100) are both consequences of the same architectural decision: no verification infrastructure was built for the promises that affect the most vulnerable communities.",
+    promises: ["P009", "P010", "P011", "P017"],
   },
   {
     severity: "critical",
-    type: "ScopeGap",
-    title: "The Equity Verification Gap",
-    body: "Five equity promises (P009, P010, P011, P012, P020) lack independent verification mechanisms. Three are rated 'unverifiable' — there is no way to confirm whether environmental justice communities are receiving promised benefits. This is both a scope gap (affected communities cannot assess compliance) and an incomplete binding (there are no corresponding -accept promises from EJ communities engaging with the verification process).",
-    promises: ["P009", "P010", "P011", "P012", "P020"],
+    type: "Cascade",
+    title: "The PacifiCorp Cascade",
+    body: "PacifiCorp\u2019s clean energy plan rejection (P003, degraded) cascades to 5 downstream promises across 4 domains. In empirical terms, P003 sits at a hub with R\u2080 = 2.20 \u2014 above the cascade containment threshold. The Weibull survival parameter for planning promises of this type (k = 0.55) indicates a transitional regime: the promise could recover with intervention or decay further without it. Historical data from comparable institutional commitments shows that planning rejections at this network position have a mean resolution time of 6\u20138 review cycles. Each cycle of delay increases the downstream cascade probability.",
+    promises: ["P003", "P001", "P004", "P018", "P016"],
   },
   {
     severity: "warning",
-    type: "Threat",
-    title: "The Affordability Threat",
-    body: "The 6% rate cap (P014) is a conditional threat to emissions goals (P001, P004). If transition costs trigger the cap, the PUC must slow investments, creating a structural tension between affordability and decarbonization. PGE's rates are approaching the threshold (~4.5% in 2024). This is modeled as Threat T001.",
+    type: "Conflict",
+    title: "The Affordability Conflict",
+    body: "The 6% rate cap (P014) structurally conflicts with emissions reduction (P001, P004). This is not a cascade \u2014 it\u2019s a design tension. When clean energy costs exceed the cap, the affordability promise forces emissions promises to yield. The incentive alignment analysis shows P014 with moderate agency cost (moral hazard: 0.50), meaning the utility has structural incentive to invoke the cap. This conflict is visible in the dependency graph as a structural contradiction: two promises that cannot both be kept under stress conditions.",
     promises: ["P014", "P001", "P004"],
+  },
+  {
+    severity: "critical",
+    type: "Gap",
+    title: "P016: The Highest-Risk Promise in the Network",
+    body: "Tribal consultation (P016) carries the highest Risk Priority Number in the network (RPN: 490) \u2014 driven by high severity (cascades to 12 downstream promises), high occurrence likelihood (currently degraded), and low detectability (self-report verification). Its k value of 0.36 places it firmly in composting dynamics. The agency cost analysis (moral hazard: 0.80, agency cost: 1.28) confirms the incentive misalignment: the promiser has minimal structural incentive to fulfill a promise that no independent verifier is checking. This is the equity verification gap at its most concrete.",
+    promises: ["P016", "P002", "P003"],
   },
   {
     severity: "positive",
     type: "Working",
-    title: "Verification Infrastructure Works",
-    body: "The verification layer — DEQ emissions auditing (P006), PUC target enforcement (P005), DOE biennial reporting (P015), and PUC rate assessment (P013) — is fully operational. All four verification promises are verified. This means that when promises fail, we know they failed. The infrastructure for accountability exists even where the commitments themselves fall short.",
-    promises: ["P005", "P006", "P013", "P015"],
-  },
-  {
-    severity: "critical",
-    type: "IncompleteBinding",
-    title: "Missing Community Acceptance Promises",
-    body: "All equity promises in HB 2021 are +give promises from institutions to environmental justice communities. There are no corresponding -accept promises — no structured mechanism for communities to engage with, validate, or contest the benefits claimed. Without acceptance bindings, the equity promises are one-sided declarations that cannot be verified by the intended beneficiaries.",
-    promises: ["P009", "P010", "P011", "P012", "P020"],
-  },
-  {
-    severity: "warning",
-    type: "DesignFlaw",
-    title: "Tribal Consultation — Procedural, Not Substantive",
-    body: "Tribal consultation (P016) is degraded not because the mechanism failed (fault) but because the promise was inadequately designed (flaw). 'Meaningful consultation' was never operationally defined, leaving no measurable standard for whether tribal input actually influenced planning decisions.",
-    promises: ["P016", "P017"],
+    title: "The Verification Domain is Healthy",
+    body: "The Verification domain scores 100/100 health and 100/100 certainty \u2014 the only domain at full marks. DEQ emissions tracking (P006) is verified, and the verification infrastructure itself (audit-based, numeric, periodic) places these promises in the computing regime (k = 0.90). This demonstrates what robust verification architecture looks like: when promises have numeric targets, independent auditors, and periodic assessment, they follow correctable trajectories. The rest of the network should be designed to match.",
+    promises: ["P005", "P006", "P015"],
   },
 ];
 
@@ -651,5 +644,5 @@ export const hb2021Data: DashboardData = {
   trajectories,
   grade: "C-",
   gradeExplanation:
-    "Oregon's clean energy transition has strong verification infrastructure but faces critical failures in equity, tribal consultation, and PacifiCorp emissions. The dependency network reveals that planning execution, not policy ambition, is the binding constraint.",
+    "Oregon\u2019s clean energy transition illustrates the verification paradox: the domains with the strongest monitoring infrastructure (Emissions, Verification) look the worst because failures are actually visible there. Meanwhile, Equity scores 18% certainty \u2014 not because equity provisions are failing more than emissions provisions, but because nobody is checking. Five of the seven equity and tribal promises are in composting dynamics (k < 0.41), meaning they are stagnating without external observation. Cross-domain research on 85,000+ institutional commitments confirms the pattern: promises with qualitative or absent verification follow ecological decay curves, while promises with numeric periodic verification follow correctable trajectories. The binding constraint in HB 2021 is not policy ambition \u2014 it is that equity provisions were architecturally bolted on rather than woven into the dependency structure. Nothing downstream breaks when they fail, so nothing upstream forces their verification.",
 };

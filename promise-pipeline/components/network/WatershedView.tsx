@@ -48,7 +48,7 @@ export function WatershedView({
     const minY = Math.min(...nodes.map((n) => n.y));
     const maxY = Math.max(...nodes.map((n) => n.y));
     const yRange = maxY - minY || 1;
-    const topPad = 30;
+    const topPad = isMobile ? 60 : 30;
     const bottomPad = 30;
     const availH = effectiveHeight - topPad - bottomPad;
 
@@ -56,7 +56,7 @@ export function WatershedView({
       ...n,
       y: topPad + ((n.y - minY) / yRange) * availH,
     }));
-  }, [nodes, effectiveHeight]);
+  }, [nodes, effectiveHeight, isMobile]);
 
   // Remap edges to match tiered node positions
   const tieredEdges = useMemo(() => {
@@ -129,13 +129,23 @@ export function WatershedView({
           const seed = hashSeed(edge.edgeId);
           const controlX = (edge.sourceX + edge.targetX) / 2 + (seededRandom(seed) - 0.5) * 40;
           const { base, bright } = streamColors(edge.sourceStatus, edge.targetStatus);
-          const sw = 3 + Math.min(edge.downstreamCount, 8) * 1.5;
+          const sw = 4 + Math.min(edge.downstreamCount, 6) * 1.5;
           const dash = streamDash(edge.sourceStatus, edge.targetStatus);
           const pathD = `M ${edge.sourceX} ${edge.sourceY} Q ${controlX} ${midY} ${edge.targetX} ${edge.targetY}`;
 
           return (
             <g key={edge.edgeId}>
-              {/* Wide stream bed */}
+              {/* Riverbed — wide, faint */}
+              <path
+                d={pathD}
+                stroke={base}
+                strokeWidth={sw * 2.5}
+                fill="none"
+                opacity={0.12}
+                strokeLinecap="round"
+                strokeDasharray={dash}
+              />
+              {/* Water surface — medium */}
               <path
                 d={pathD}
                 stroke={base}
@@ -146,11 +156,11 @@ export function WatershedView({
                 strokeLinejoin="round"
                 strokeDasharray={dash}
               />
-              {/* Bright center current */}
+              {/* Current — thin bright center */}
               <path
                 d={pathD}
                 stroke={bright}
-                strokeWidth={sw * 0.4}
+                strokeWidth={sw * 0.35}
                 fill="none"
                 opacity={0.7}
                 strokeLinecap="round"
@@ -188,6 +198,7 @@ export function WatershedView({
           return (
             <g
               key={node.id}
+              data-promise-node="true"
               role="button"
               tabIndex={0}
               aria-label={label}
@@ -299,19 +310,6 @@ export function WatershedView({
           );
         })()}
 
-        {unobservablePercent !== null && unobservablePercent > 0 && (
-          <text
-            x={width - 16}
-            y={effectiveHeight - 16}
-            textAnchor="end"
-            fontFamily="'IBM Plex Mono', monospace"
-            fontSize={13}
-            fill="rgba(0,0,0,0.25)"
-            style={{ userSelect: "none" }}
-          >
-            {Math.round(unobservablePercent)}% UNOBSERVABLE
-          </text>
-        )}
       </g>
     </svg>
   );

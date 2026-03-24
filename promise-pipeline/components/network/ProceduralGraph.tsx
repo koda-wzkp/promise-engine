@@ -11,6 +11,7 @@ import type { SVGNodeData, SVGEdgeData, DomainBand } from "./svg-view-types";
 import { WatershedView } from "./WatershedView";
 import { CanopyView } from "./CanopyView";
 import { StrataView } from "./StrataView";
+import { PanZoomWrapper } from "./PanZoomWrapper";
 
 interface ProceduralGraphProps {
   promises: PromiseType[];
@@ -202,12 +203,36 @@ export function ProceduralGraph({
 
   return (
     <div className="relative w-full h-full">
-      {/* SVG visualization */}
-      <div className="w-full overflow-hidden">
+      {/* SVG visualization wrapped in pan/zoom */}
+      <PanZoomWrapper
+        key={viewMode}
+        width={width}
+        height={height}
+        reducedMotion={reducedMotion}
+      >
         {viewMode === "watershed" && <WatershedView {...viewProps} />}
         {viewMode === "canopy" && <CanopyView {...viewProps} />}
         {viewMode === "strata" && <StrataView {...viewProps} />}
-      </div>
+      </PanZoomWrapper>
+
+      {/* UNOBSERVABLE watermark — outside zoom area */}
+      {unobservablePercent !== null && unobservablePercent > 0 && (
+        <span
+          style={{
+            position: "absolute",
+            bottom: 16,
+            right: 16,
+            fontFamily: "IBM Plex Mono, monospace",
+            fontSize: 12,
+            color: "rgba(0,0,0,0.25)",
+            pointerEvents: "none",
+            userSelect: "none",
+            zIndex: 5,
+          }}
+        >
+          {Math.round(unobservablePercent)}% UNOBSERVABLE
+        </span>
+      )}
 
       {/* Rₑ Indicator overlay */}
       {Re !== null && (

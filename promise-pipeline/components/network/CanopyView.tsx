@@ -209,12 +209,14 @@ export function CanopyView({
       const backSpacing = (width - padding * 2) / Math.max(1, backRow.length + 1);
       for (let i = 0; i < backRow.length; i++) {
         const treeX = padding + backSpacing * (i + 1);
+        // Stagger labels: even at groundY+16, odd at groundY+28
+        const labelOff = i % 2 === 0 ? 16 : 28;
         result.push({
           node: backRow[i],
           treeX,
           treeGroundY: groundY,
           scale: 0.8,
-          labelY: groundY + 20,
+          labelY: groundY + labelOff,
         });
       }
 
@@ -222,12 +224,14 @@ export function CanopyView({
       const frontSpacing = (width - padding * 2) / Math.max(1, frontRow.length + 1);
       for (let i = 0; i < frontRow.length; i++) {
         const treeX = padding + frontSpacing * (i + 1) + frontSpacing * 0.3;
+        // Stagger labels: even at groundY+31, odd at groundY+43
+        const labelOff = i % 2 === 0 ? 31 : 43;
         result.push({
           node: frontRow[i],
           treeX,
           treeGroundY: groundY + 15,
           scale: 1.0,
-          labelY: groundY + 35,
+          labelY: groundY + labelOff,
         });
       }
 
@@ -323,6 +327,7 @@ export function CanopyView({
           return (
             <g
               key={node.id}
+              data-promise-node="true"
               role="button"
               tabIndex={0}
               aria-label={label}
@@ -394,7 +399,7 @@ export function CanopyView({
                 y={labelPos.y}
                 textAnchor="middle"
                 fontFamily="'IBM Plex Mono', monospace"
-                fontSize={isMobile ? 10 : 12}
+                fontSize={width < 500 ? 9 : isMobile ? 10 : 12}
                 fill="#1f2937"
               >
                 {node.id.length > 8 ? node.id.slice(0, 8) + "\u2026" : node.id}
@@ -447,18 +452,6 @@ export function CanopyView({
           );
         })()}
 
-        {unobservablePercent !== null && unobservablePercent > 0 && (
-          <text
-            x={width - 16} y={effectiveHeight - 16}
-            textAnchor="end"
-            fontFamily="'IBM Plex Mono', monospace"
-            fontSize={13}
-            fill="rgba(0,0,0,0.25)"
-            style={{ userSelect: "none" }}
-          >
-            {Math.round(unobservablePercent)}% UNOBSERVABLE
-          </text>
-        )}
       </g>
     </svg>
   );

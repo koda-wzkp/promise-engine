@@ -85,6 +85,18 @@ export default function AboutPage() {
 
           <section className="bg-white rounded-xl border p-6">
             <h2 className="font-serif text-xl font-semibold text-gray-900 mb-3">
+              Research
+            </h2>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              The platform&apos;s analytical framework — including verification dynamics,
+              cascade risk modeling, and network health scoring — is empirically validated
+              against 85,000+ observations from the IMF (MONA), World Bank (IEG), EPA
+              (ECHO), and Global Fund. The research is published on SSRN (ID 6444080).
+            </p>
+          </section>
+
+          <section className="bg-white rounded-xl border p-6">
+            <h2 className="font-serif text-xl font-semibold text-gray-900 mb-3">
               Technology
             </h2>
             <ul className="text-sm text-gray-700 space-y-1 list-disc pl-5">

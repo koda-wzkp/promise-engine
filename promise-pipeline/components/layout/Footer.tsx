@@ -30,7 +30,7 @@ export function Footer() {
           </div>
         </div>
         <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-center">
-          <p>AGPL-3.0 License. Built on Promise Theory.</p>
+          <p>AGPL-3.0 License. Built on Promise Theory. 85,000+ observations analyzed.</p>
         </div>
       </div>
     </footer>

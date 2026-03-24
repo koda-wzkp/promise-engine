@@ -88,10 +88,10 @@ export default function LandingPage() {
 
           <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
-              { value: "20", label: "Promises tracked" },
-              { value: "11", label: "Agents mapped" },
-              { value: "7", label: "Domains covered" },
-              { value: "∞", label: "What If scenarios" },
+              { value: "85,000+", label: "Observations analyzed" },
+              { value: "69", label: "Promises tracked" },
+              { value: "43", label: "Agents mapped" },
+              { value: "3", label: "Live dashboards" },
             ].map((stat) => (
               <div key={stat.label}>
                 <p className="text-3xl font-bold text-gray-900">{stat.value}</p>

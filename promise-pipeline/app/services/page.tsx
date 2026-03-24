@@ -191,6 +191,9 @@ export default function ServicesPage() {
           <h2 className="font-serif text-3xl font-bold text-gray-900 text-center mb-12">
             See It In Action
           </h2>
+          <p className="text-center mb-12" style={{ color: "#4b5563", fontSize: "14px", marginTop: "8px" }}>
+            Our analytical framework is validated against 85,000+ institutional commitments across IMF, World Bank, EPA, and Global Fund datasets.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {ANALYSES.map((a) => (
               <Link

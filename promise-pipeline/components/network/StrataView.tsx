@@ -186,6 +186,7 @@ export function StrataView({
           return (
             <g
               key={node.id}
+              data-promise-node="true"
               role="button"
               tabIndex={0}
               aria-label={label}
@@ -289,18 +290,6 @@ export function StrataView({
           );
         })()}
 
-        {unobservablePercent !== null && unobservablePercent > 0 && (
-          <text
-            x={width - 16} y={effectiveHeight - 16}
-            textAnchor="end"
-            fontFamily="'IBM Plex Mono', monospace"
-            fontSize={13}
-            fill="rgba(255,255,255,0.5)"
-            style={{ userSelect: "none" }}
-          >
-            {Math.round(unobservablePercent)}% UNOBSERVABLE
-          </text>
-        )}
       </g>
     </svg>
   );

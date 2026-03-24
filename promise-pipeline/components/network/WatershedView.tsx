@@ -122,9 +122,9 @@ export function WatershedView({
         <rect width={width} height={effectiveHeight} fill="url(#watershed-terrain)" />
       </g>
 
-      {/* Streams (edges) — dual-layer for water effect */}
-      <g className="edges">
-        {tieredEdges.map((edge) => {
+      {/* Streams (edges) — three-layer river effect, rendered in layer order */}
+      {(() => {
+        const edgeRenderData = tieredEdges.map((edge) => {
           const midY = (edge.sourceY + edge.targetY) / 2;
           const seed = hashSeed(edge.edgeId);
           const controlX = (edge.sourceX + edge.targetX) / 2 + (seededRandom(seed) - 0.5) * 40;
@@ -132,44 +132,40 @@ export function WatershedView({
           const sw = 4 + Math.min(edge.downstreamCount, 6) * 1.5;
           const dash = streamDash(edge.sourceStatus, edge.targetStatus);
           const pathD = `M ${edge.sourceX} ${edge.sourceY} Q ${controlX} ${midY} ${edge.targetX} ${edge.targetY}`;
-
-          return (
-            <g key={edge.edgeId}>
-              {/* Riverbed — wide, faint */}
-              <path
-                d={pathD}
-                stroke={base}
-                strokeWidth={sw * 2.5}
-                fill="none"
-                opacity={0.12}
-                strokeLinecap="round"
-                strokeDasharray={dash}
-              />
-              {/* Water surface — medium */}
-              <path
-                d={pathD}
-                stroke={base}
-                strokeWidth={sw}
-                fill="none"
-                opacity={0.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray={dash}
-              />
-              {/* Current — thin bright center */}
-              <path
-                d={pathD}
-                stroke={bright}
-                strokeWidth={sw * 0.35}
-                fill="none"
-                opacity={0.7}
-                strokeLinecap="round"
-                strokeDasharray={dash}
-              />
+          return { edgeId: edge.edgeId, pathD, base, bright, sw, dash };
+        });
+        return (
+          <>
+            <g className="riverbeds">
+              {edgeRenderData.map((e) => (
+                <path key={`bed-${e.edgeId}`} d={e.pathD}
+                  stroke={e.base} strokeWidth={e.sw * 3}
+                  fill="none" opacity={0.10}
+                  strokeLinecap="round" strokeLinejoin="round"
+                  strokeDasharray={e.dash} />
+              ))}
             </g>
-          );
-        })}
-      </g>
+            <g className="water">
+              {edgeRenderData.map((e) => (
+                <path key={`water-${e.edgeId}`} d={e.pathD}
+                  stroke={e.base} strokeWidth={e.sw * 1.2}
+                  fill="none" opacity={0.45}
+                  strokeLinecap="round" strokeLinejoin="round"
+                  strokeDasharray={e.dash} />
+              ))}
+            </g>
+            <g className="currents">
+              {edgeRenderData.map((e) => (
+                <path key={`current-${e.edgeId}`} d={e.pathD}
+                  stroke={e.bright} strokeWidth={Math.max(e.sw * 0.3, 1.5)}
+                  fill="none" opacity={0.75}
+                  strokeLinecap="round" strokeLinejoin="round"
+                  strokeDasharray={e.dash} />
+              ))}
+            </g>
+          </>
+        );
+      })()}
 
       {/* Particle flow — desktop only, motion enabled */}
       {particles.length > 0 && (
@@ -273,39 +269,59 @@ export function WatershedView({
           const promise = node ? promiseMap.get(node.id) : null;
           if (!node || !promise) return null;
 
-          const tooltipWidth = Math.min(width * 0.7, 300);
-          const tooltipHeight = 52;
+          const tooltipWidth = Math.min(width * 0.75, 300);
+          const tooltipPadding = 10;
+          const line1 = promise.body.slice(0, 45);
+          const line2Raw = promise.body.slice(45);
+          const line2 = line2Raw.length > 40 ? line2Raw.slice(0, 40) + "\u2026" : line2Raw;
+          const hasLine2 = line2Raw.length > 0;
+          const tooltipHeight = hasLine2 ? 66 : 52;
           const tooltipX = Math.max(8, Math.min(node.x - tooltipWidth / 2, width - tooltipWidth - 8));
-          // Above node if room, below otherwise
           const baseR = isMobile ? 10 : 12;
           const nodeR = Math.min(24, baseR + node.downstreamCount * 2);
           const tooltipY = node.y - nodeR - tooltipHeight - 8 > 0
             ? node.y - nodeR - tooltipHeight - 8
             : node.y + nodeR + 8;
-          const bodyText = promise.body.length > 60 ? promise.body.slice(0, 60) + "\u2026" : promise.body;
+          const clipId = `watershed-tooltip-clip-${node.id}`;
 
           return (
             <g style={{ pointerEvents: "none" }}>
+              <defs>
+                <clipPath id={clipId}>
+                  <rect x={tooltipX} y={tooltipY} width={tooltipWidth} height={tooltipHeight} rx={6} />
+                </clipPath>
+              </defs>
               <rect
                 x={tooltipX} y={tooltipY}
                 width={tooltipWidth} height={tooltipHeight}
                 rx={6}
                 fill="#1a1a2e" opacity={0.95}
               />
-              <text
-                x={tooltipX + 10} y={tooltipY + 18}
-                fontFamily="'IBM Plex Mono', monospace"
-                fontSize={13} fontWeight="bold" fill="#ffffff"
-              >
-                {node.id}
-              </text>
-              <text
-                x={tooltipX + 10} y={tooltipY + 36}
-                fontFamily="'IBM Plex Sans', sans-serif"
-                fontSize={11} fill="#d1d5db"
-              >
-                {bodyText}
-              </text>
+              <g clipPath={`url(#${clipId})`}>
+                <text
+                  x={tooltipX + tooltipPadding} y={tooltipY + 18}
+                  fontFamily="'IBM Plex Mono', monospace"
+                  fontSize={13} fontWeight="bold" fill="#ffffff"
+                >
+                  {node.id}
+                </text>
+                <text
+                  x={tooltipX + tooltipPadding} y={tooltipY + 36}
+                  fontFamily="'IBM Plex Sans', sans-serif"
+                  fontSize={11} fill="#d1d5db"
+                >
+                  {line1}
+                </text>
+                {hasLine2 && (
+                  <text
+                    x={tooltipX + tooltipPadding} y={tooltipY + 50}
+                    fontFamily="'IBM Plex Sans', sans-serif"
+                    fontSize={11} fill="#d1d5db"
+                  >
+                    {line2}
+                  </text>
+                )}
+              </g>
             </g>
           );
         })()}

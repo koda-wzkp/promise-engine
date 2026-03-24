@@ -270,22 +270,61 @@ export function StrataView({
 
       {/* Overlays */}
       <g className="overlays">
-        {hoveredNodeId && (() => {
-          const node = nodes.find((n) => n.id === hoveredNodeId);
+        {(focusedNodeId || hoveredNodeId) && (() => {
+          const activeId = focusedNodeId || hoveredNodeId;
+          const node = nodes.find((n) => n.id === activeId);
           const promise = node ? promiseMap.get(node.id) : null;
           if (!node || !promise) return null;
-          const tx = Math.min(node.x + 14, width - 180);
-          const ty = Math.max(40, node.y - 40);
-          const bodyText = promise.body.length > 50 ? promise.body.slice(0, 50) + "…" : promise.body;
+
+          const tooltipWidth = Math.min(width * 0.75, 300);
+          const tooltipPadding = 10;
+          const line1 = promise.body.slice(0, 45);
+          const line2Raw = promise.body.slice(45);
+          const line2 = line2Raw.length > 40 ? line2Raw.slice(0, 40) + "\u2026" : line2Raw;
+          const hasLine2 = line2Raw.length > 0;
+          const tooltipHeight = hasLine2 ? 66 : 52;
+          const tooltipX = Math.max(8, Math.min(node.x - tooltipWidth / 2, width - tooltipWidth - 8));
+          const tooltipY = Math.max(8, node.y - tooltipHeight - 16);
+          const clipId = `strata-tooltip-clip-${node.id}`;
+
           return (
-            <g>
-              <rect x={tx} y={ty - 28} width={170} height={42} rx={6} fill="#111827" opacity={0.9} />
-              <text x={tx + 8} y={ty - 12} fontFamily="'IBM Plex Mono', monospace" fontSize={11} fill="#fff" fontWeight="bold">
-                {node.id}
-              </text>
-              <text x={tx + 8} y={ty + 2} fontFamily="'IBM Plex Mono', monospace" fontSize={10} fill="rgba(255,255,255,0.7)">
-                {bodyText}
-              </text>
+            <g style={{ pointerEvents: "none" }}>
+              <defs>
+                <clipPath id={clipId}>
+                  <rect x={tooltipX} y={tooltipY} width={tooltipWidth} height={tooltipHeight} rx={6} />
+                </clipPath>
+              </defs>
+              <rect
+                x={tooltipX} y={tooltipY}
+                width={tooltipWidth} height={tooltipHeight}
+                rx={6}
+                fill="#1a1a2e" opacity={0.95}
+              />
+              <g clipPath={`url(#${clipId})`}>
+                <text
+                  x={tooltipX + tooltipPadding} y={tooltipY + 18}
+                  fontFamily="'IBM Plex Mono', monospace"
+                  fontSize={13} fontWeight="bold" fill="#ffffff"
+                >
+                  {node.id}
+                </text>
+                <text
+                  x={tooltipX + tooltipPadding} y={tooltipY + 36}
+                  fontFamily="'IBM Plex Sans', sans-serif"
+                  fontSize={11} fill="#d1d5db"
+                >
+                  {line1}
+                </text>
+                {hasLine2 && (
+                  <text
+                    x={tooltipX + tooltipPadding} y={tooltipY + 50}
+                    fontFamily="'IBM Plex Sans', sans-serif"
+                    fontSize={11} fill="#d1d5db"
+                  >
+                    {line2}
+                  </text>
+                )}
+              </g>
             </g>
           );
         })()}

@@ -416,38 +416,58 @@ export function CanopyView({
           const promise = pt ? promiseMap.get(pt.node.id) : null;
           if (!pt || !promise) return null;
 
-          const tooltipWidth = Math.min(width * 0.7, 300);
-          const tooltipHeight = 52;
+          const tooltipWidth = Math.min(width * 0.75, 300);
+          const tooltipPadding = 10;
+          const line1 = promise.body.slice(0, 45);
+          const line2Raw = promise.body.slice(45);
+          const line2 = line2Raw.length > 40 ? line2Raw.slice(0, 40) + "\u2026" : line2Raw;
+          const hasLine2 = line2Raw.length > 0;
+          const tooltipHeight = hasLine2 ? 66 : 52;
           const tooltipX = Math.max(8, Math.min(pt.treeX - tooltipWidth / 2, width - tooltipWidth - 8));
-          // Above the tree if room, below ground otherwise
           const treeTop = pt.treeGroundY - (30 + pt.node.downstreamCount * 12) * pt.scale;
           const tooltipY = treeTop - tooltipHeight - 8 > 0
             ? treeTop - tooltipHeight - 8
             : pt.treeGroundY + 40;
-          const bodyText = promise.body.length > 60 ? promise.body.slice(0, 60) + "\u2026" : promise.body;
+          const clipId = `canopy-tooltip-clip-${pt.node.id}`;
 
           return (
             <g style={{ pointerEvents: "none" }}>
+              <defs>
+                <clipPath id={clipId}>
+                  <rect x={tooltipX} y={tooltipY} width={tooltipWidth} height={tooltipHeight} rx={6} />
+                </clipPath>
+              </defs>
               <rect
                 x={tooltipX} y={tooltipY}
                 width={tooltipWidth} height={tooltipHeight}
                 rx={6}
                 fill="#1a1a2e" opacity={0.95}
               />
-              <text
-                x={tooltipX + 10} y={tooltipY + 18}
-                fontFamily="'IBM Plex Mono', monospace"
-                fontSize={13} fontWeight="bold" fill="#ffffff"
-              >
-                {pt.node.id}
-              </text>
-              <text
-                x={tooltipX + 10} y={tooltipY + 36}
-                fontFamily="'IBM Plex Sans', sans-serif"
-                fontSize={11} fill="#d1d5db"
-              >
-                {bodyText}
-              </text>
+              <g clipPath={`url(#${clipId})`}>
+                <text
+                  x={tooltipX + tooltipPadding} y={tooltipY + 18}
+                  fontFamily="'IBM Plex Mono', monospace"
+                  fontSize={13} fontWeight="bold" fill="#ffffff"
+                >
+                  {pt.node.id}
+                </text>
+                <text
+                  x={tooltipX + tooltipPadding} y={tooltipY + 36}
+                  fontFamily="'IBM Plex Sans', sans-serif"
+                  fontSize={11} fill="#d1d5db"
+                >
+                  {line1}
+                </text>
+                {hasLine2 && (
+                  <text
+                    x={tooltipX + tooltipPadding} y={tooltipY + 50}
+                    fontFamily="'IBM Plex Sans', sans-serif"
+                    fontSize={11} fill="#d1d5db"
+                  >
+                    {line2}
+                  </text>
+                )}
+              </g>
             </g>
           );
         })()}

@@ -72,6 +72,50 @@ code, pre, .font-mono {
   border-radius: 2px;
 }
 
+/* ── SVG Network Visualization Animations ── */
+
+/* Watershed: pulse on cascade-affected nodes */
+@keyframes watershed-pulse {
+  0%, 100% { stroke-opacity: 0.5; }
+  50% { stroke-opacity: 1; }
+}
+
+.watershed-pulse {
+  animation: watershed-pulse 1.5s ease-in-out infinite;
+}
+
+/* Canopy: tree sway (desktop only, staggered timing) */
+@keyframes canopy-sway {
+  0%, 100% { transform: rotate(-1deg); }
+  50% { transform: rotate(1deg); }
+}
+
+.canopy-sway-0 { animation: canopy-sway 3s ease-in-out infinite; }
+.canopy-sway-1 { animation: canopy-sway 4s ease-in-out infinite; }
+.canopy-sway-2 { animation: canopy-sway 5s ease-in-out infinite; }
+
+/* Strata: fracture line growth animation */
+@keyframes strata-fracture-grow {
+  from {
+    stroke-dashoffset: 200;
+    stroke-dasharray: 200;
+  }
+  to {
+    stroke-dashoffset: 0;
+    stroke-dasharray: 200;
+  }
+}
+
+.strata-fracture-grow {
+  animation: strata-fracture-grow 1.5s ease-out forwards;
+}
+
+/* Cascade status transition for canopy trees */
+.canopy-cascade-transition ellipse,
+.canopy-cascade-transition rect {
+  transition: all 0.8s ease;
+}
+
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -1,20 +1,16 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useMemo, useState } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import type { Promise as PromiseType, Agent, Threat } from "@/lib/types/promise";
 import type { FiveFieldDiagnostic, HeuristicCPTEntry, ProbabilisticCascadeResult } from "@/lib/types/analysis";
-import type { NodeVisualEncoding } from "@/lib/utils/visual-encoding";
-import { precomputeNodeEncodings, precomputeEdgeEncodings } from "@/lib/utils/visual-encoding";
-import { getStatusColor } from "@/lib/utils/colors";
 import { buildPromiseGraph } from "@/lib/simulation/graph";
 import { layoutWatershed, layoutCanopy, layoutStrata } from "@/lib/simulation/layouts";
 import { calculateNetworkHealth } from "@/lib/simulation/cascade";
-import { ATTENTION_BETA } from "@/lib/simulation/softmax";
-import { PixelRenderer } from "./PixelRenderer";
-import { renderCanopyPixelScene } from "@/lib/rendering/canopy";
-import { renderWatershedPixelScene } from "@/lib/rendering/watershed";
-import { renderStrataPixelScene } from "@/lib/rendering/strata";
 import type { ViewMode } from "./ViewSwitcher";
+import type { SVGNodeData, SVGEdgeData, DomainBand } from "./svg-view-types";
+import { WatershedView } from "./WatershedView";
+import { CanopyView } from "./CanopyView";
+import { StrataView } from "./StrataView";
 
 interface ProceduralGraphProps {
   promises: PromiseType[];
@@ -36,17 +32,6 @@ interface ProceduralGraphProps {
   attentionAllocation?: Record<string, number>;
 }
 
-/** Sprite animation interval in ms. */
-const SPRITE_FRAME_INTERVAL = 300;
-
-interface HitBox {
-  id: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
 export function ProceduralGraph({
   promises,
   agents,
@@ -64,33 +49,19 @@ export function ProceduralGraph({
   viewMode,
   attentionAllocation,
 }: ProceduralGraphProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const reducedMotion = useRef(false);
-  const hitBoxesRef = useRef<HitBox[]>([]);
-  const [hoveredNode, setHoveredNode] = useState<{ id: string; x: number; y: number } | null>(null);
-
-  // Pixel resolution: 32px on mobile, 64px on desktop
-  const [resolution, setResolution] = useState<32 | 64>(
-    typeof window !== "undefined" && window.innerWidth < 768 ? 32 : 64
-  );
-
-  // Listen for resize to switch resolution
-  useEffect(() => {
-    const handleResize = () => {
-      setResolution(window.innerWidth < 768 ? 32 : 64);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   // Check prefers-reduced-motion
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    reducedMotion.current = mq.matches;
-    const handler = (e: MediaQueryListEvent) => { reducedMotion.current = e.matches; };
+    setReducedMotion(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
+
+  const isMobile = width < 768;
 
   // Build graph with layout
   const graph = useMemo(() => {
@@ -103,18 +74,7 @@ export function ProceduralGraph({
     }
   }, [promises, agents, threats, width, height, viewMode]);
 
-  // Precompute encodings
-  const nodeEncodings = useMemo(() => {
-    if (!diagnostic) return {};
-    return precomputeNodeEncodings(promises, diagnostic, getStatusColor);
-  }, [promises, diagnostic]);
-
-  const edgeEncodings = useMemo(() => {
-    if (!diagnostic || !cpts) return {};
-    return precomputeEdgeEncodings(promises, diagnostic, cpts);
-  }, [promises, diagnostic, cpts]);
-
-  // Build node map for quick lookup
+  // Node map for quick lookup
   const nodeMap = useMemo(
     () => new Map(graph.nodes.map((n) => [n.id, n])),
     [graph.nodes]
@@ -145,85 +105,49 @@ export function ProceduralGraph({
     return counts;
   }, [promises]);
 
-  // Prepare pixel-art render data
-  // Baseline k when attention is evenly distributed (used for scaling)
-  const attentionBaselineK = ATTENTION_BETA;
-
-  const renderData = useMemo(() => {
+  // Build SVG node data
+  const svgNodes: SVGNodeData[] = useMemo(() => {
     const promiseNodes = graph.nodes.filter((n) => n.type === "promise");
+    return promiseNodes.map((n) => ({
+      id: n.id,
+      x: n.x ?? 0,
+      y: n.y ?? 0,
+      domain: n.domain ?? "Other",
+      status: n.status ?? "declared",
+      downstreamCount: downstreamCounts.get(n.id) ?? 0,
+      isSelected: selectedPromiseId === n.id,
+      isAffected: affectedIds.has(n.id),
+      layerIndex: 0,
+    }));
+  }, [graph, selectedPromiseId, affectedIds, downstreamCounts]);
 
-    const defaultEncoding: NodeVisualEncoding = {
-      radius: 20,
-      saturation: 70,
-      pulse: { period: 0, amplitude: 0 },
-      rpnPriority: "low",
-      rpn: 0,
-      glowFilter: null,
-      glowRadius: 0,
-      severity: 3,
-      channelCapacity: 1.0,
-      superspreaderScore: 0,
-      agencyCost: 0,
-      moralHazard: 0,
-      incentiveCompatible: "no",
-      directDependents: 0,
-      domainsSpanned: 0,
-    };
-
-    const pixelNodes = promiseNodes.map((n) => {
-      let encoding = nodeEncodings[n.id] ?? defaultEncoding;
-
-      // Scale radius and saturation by attention allocation when active.
-      // k / baseline gives a relative scale: 1.0 = normal, <1 = neglected, >1 = prioritized.
-      if (attentionAllocation && attentionAllocation[n.id] !== undefined) {
-        const k = attentionAllocation[n.id];
-        const kScale = k / attentionBaselineK;
-        // Radius: range ~70–130% of base (never fully disappears, never huge)
-        const radiusScale = 0.7 + 0.6 * Math.min(1.0, Math.max(0.0, kScale));
-        // Saturation: range ~20–100% (fades out for neglected promises)
-        const satScale = 0.2 + 0.8 * Math.min(1.0, Math.max(0.0, kScale));
-        encoding = {
-          ...encoding,
-          radius: Math.round(encoding.radius * radiusScale),
-          saturation: Math.round(encoding.saturation * satScale),
+  // Build SVG edge data
+  const svgEdges: SVGEdgeData[] = useMemo(() => {
+    return graph.edges
+      .filter((e) => e.type === "depends_on")
+      .map((e) => {
+        const src = nodeMap.get(e.source);
+        const tgt = nodeMap.get(e.target);
+        return {
+          edgeId: `${e.source}->${e.target}`,
+          sourceId: e.source,
+          targetId: e.target,
+          sourceX: src?.x ?? 0,
+          sourceY: src?.y ?? 0,
+          targetX: tgt?.x ?? 0,
+          targetY: tgt?.y ?? 0,
+          sourceStatus: src?.status ?? "declared",
+          targetStatus: tgt?.status ?? "declared",
+          downstreamCount: downstreamCounts.get(e.source) ?? 0,
         };
-      }
+      });
+  }, [graph.edges, nodeMap, downstreamCounts]);
 
-      return {
-        id: n.id,
-        x: n.x ?? 0,
-        y: n.y ?? 0,
-        domain: n.domain ?? "Other",
-        status: n.status ?? "declared",
-        encoding,
-        isSelected: selectedPromiseId === n.id,
-        isAffected: affectedIds.has(n.id),
-        downstreamCount: downstreamCounts.get(n.id) ?? 0,
-        layerIndex: 0,
-      };
-    });
-
-    // Build edges for dependency connections
-    const depEdges = graph.edges.filter((e) => e.type === "depends_on");
-    const pixelEdges = depEdges.map((e) => {
-      const src = nodeMap.get(e.source);
-      const tgt = nodeMap.get(e.target);
-      return {
-        sourceX: src?.x ?? 0,
-        sourceY: src?.y ?? 0,
-        targetX: tgt?.x ?? 0,
-        targetY: tgt?.y ?? 0,
-        sourceStatus: src?.status ?? "declared",
-        edgeId: `${e.source}->${e.target}`,
-        downstreamCount: downstreamCounts.get(e.source) ?? 0,
-      };
-    });
-
-    // Domains
-    const domainSet = new Set(pixelNodes.map((n) => n.domain));
+  // Domain bands for strata view
+  const domainBands: DomainBand[] = useMemo(() => {
+    const domainSet = new Set(svgNodes.map((n) => n.domain));
     const domains = [...domainSet];
 
-    // Strata domain bands — sort by cross-domain dependency count (most = deepest)
     const domainDependedOn = new Map<string, number>();
     for (const domain of domains) domainDependedOn.set(domain, 0);
     for (const p of promises) {
@@ -234,248 +158,56 @@ export function ProceduralGraph({
         }
       }
     }
-    const sortedDomains = [...domains].sort((a, b) => (domainDependedOn.get(b) ?? 0) - (domainDependedOn.get(a) ?? 0));
-    const bandHeight = height / Math.max(1, sortedDomains.length);
-    const domainBands = sortedDomains.map((domain, i) => ({
+
+    const sorted = [...domains].sort((a, b) => (domainDependedOn.get(b) ?? 0) - (domainDependedOn.get(a) ?? 0));
+    const bandHeight = height / Math.max(1, sorted.length);
+
+    return sorted.map((domain, i) => ({
       domain,
       y: i * bandHeight,
       height: bandHeight,
       layerIndex: i,
       dependedOnCount: domainDependedOn.get(domain) ?? 0,
     }));
+  }, [svgNodes, promises, promiseMap, height]);
 
-    // Set layer index on nodes
-    const domainLayerMap = new Map(sortedDomains.map((d, i) => [d, i]));
-    for (const n of pixelNodes) {
-      n.layerIndex = domainLayerMap.get(n.domain) ?? 0;
-    }
-
-    // Violated IDs for fracture lines
-    const violatedIds = new Set(pixelNodes.filter((n) => n.status === "violated").map((n) => n.id));
-
-    return { pixelNodes, pixelEdges, domains, domainBands, violatedIds };
-  }, [graph, nodeEncodings, selectedPromiseId, affectedIds, nodeMap, height, width, promises, promiseMap, downstreamCounts, attentionAllocation, attentionBaselineK]);
-
-  // Main render + sprite animation
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || width <= 0 || height <= 0) return;
-
-    let spriteFrame = 0;
-
-    function draw() {
-      if (!canvas) return;
-      let renderer: PixelRenderer;
-      try {
-        renderer = new PixelRenderer(canvas, resolution, width, height);
-      } catch {
-        return;
-      }
-
-      renderer.clear();
-      const { pixelNodes, pixelEdges, domains, domainBands, violatedIds } = renderData;
-
-      let hitBoxes: HitBox[] = [];
-
-      switch (viewMode) {
-        case "canopy":
-          hitBoxes = renderCanopyPixelScene(
-            renderer, pixelNodes, pixelEdges, domains,
-            networkHealth, spriteFrame, reducedMotion.current
-          );
-          break;
-        case "watershed":
-          hitBoxes = renderWatershedPixelScene(
-            renderer, pixelNodes, pixelEdges,
-            spriteFrame, reducedMotion.current
-          );
-          break;
-        case "strata":
-          hitBoxes = renderStrataPixelScene(
-            renderer, pixelNodes, domainBands, violatedIds,
-            spriteFrame, reducedMotion.current
-          );
-          break;
-      }
-
-      hitBoxesRef.current = hitBoxes;
-    }
-
-    // Initial draw
-    draw();
-
-    // Sprite-frame animation: setInterval, NOT requestAnimationFrame
-    // If reduced motion is preferred, don't animate
-    if (reducedMotion.current) return;
-
-    const intervalId = setInterval(() => {
-      spriteFrame++;
-      draw();
-    }, SPRITE_FRAME_INTERVAL);
-
-    return () => clearInterval(intervalId);
-  }, [width, height, viewMode, renderData, resolution, networkHealth]);
-
-  // Click handler using hit-box map with 44px minimum touch target (WCAG)
-  const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!onNodeClick) return;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-
-      for (const box of hitBoxesRef.current) {
-        // Expand hit area to minimum 44x44px for touch accessibility
-        const padX = Math.max(0, (44 - box.w) / 2);
-        const padY = Math.max(0, (44 - box.h) / 2);
-        if (
-          mx >= box.x - padX && mx <= box.x + box.w + padX &&
-          my >= box.y - padY && my <= box.y + box.h + padY
-        ) {
-          onNodeClick(box.id);
-          return;
-        }
-      }
-    },
-    [onNodeClick]
-  );
-
-  // Mousemove for tooltip hover (uses same padded hit areas as click)
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-
-      for (const box of hitBoxesRef.current) {
-        const padX = Math.max(0, (44 - box.w) / 2);
-        const padY = Math.max(0, (44 - box.h) / 2);
-        if (
-          mx >= box.x - padX && mx <= box.x + box.w + padX &&
-          my >= box.y - padY && my <= box.y + box.h + padY
-        ) {
-          setHoveredNode({ id: box.id, x: e.clientX - rect.left, y: e.clientY - rect.top });
-          return;
-        }
-      }
-      setHoveredNode(null);
-    },
-    []
-  );
-
-  const handleMouseLeave = useCallback(() => setHoveredNode(null), []);
-
-  // Find hovered promise data for tooltip
-  const hoveredPromise = hoveredNode ? promiseMap.get(hoveredNode.id) : null;
-
-  // Rₑ and information deficit overlays
+  // Diagnostic data
   const Re = diagnostic?.epidemiology.Re ?? null;
   const cascadeProne = diagnostic?.epidemiology.cascadeProne ?? false;
   const unobservablePercent = diagnostic?.information.unobservablePercent ?? null;
 
-  const isMobile = width < 768;
+  const handleNodeHover = useCallback((id: string) => setHoveredNode(id), []);
+  const handleNodeBlur = useCallback(() => setHoveredNode(null), []);
 
-  // Compute label positions with simple collision avoidance
-  const labelPositions = useMemo(() => {
-    const raw = renderData.pixelNodes.map((node) => {
-      const box = hitBoxesRef.current.find((b) => b.id === node.id);
-      if (!box) return null;
-      return {
-        id: node.id,
-        x: box.x + box.w / 2,
-        y: box.y - (isMobile ? 14 : 10),
-        priority: node.downstreamCount,
-      };
-    }).filter(Boolean) as Array<{ id: string; x: number; y: number; priority: number }>;
-
-    // Sort by priority descending so high-priority labels get placed first
-    raw.sort((a, b) => b.priority - a.priority);
-
-    const labelH = isMobile ? 15 : 13;
-    const labelW = 40;
-    const placed: Array<{ id: string; x: number; y: number }> = [];
-
-    for (const label of raw) {
-      let finalY = label.y;
-      // Check for overlaps with already-placed labels
-      for (const other of placed) {
-        const overlapX = Math.abs(label.x - other.x) < labelW;
-        const overlapY = Math.abs(finalY - other.y) < labelH;
-        if (overlapX && overlapY) {
-          finalY = other.y + labelH + 4;
-        }
-      }
-      placed.push({ id: label.id, x: label.x, y: finalY });
-    }
-
-    return placed;
-  }, [renderData.pixelNodes, hitBoxesRef.current, isMobile]);
+  // Shared props for SVG views
+  const viewProps = {
+    nodes: svgNodes,
+    edges: svgEdges,
+    width,
+    height,
+    networkHealth,
+    domainBands,
+    onNodeClick,
+    hoveredNodeId: hoveredNode,
+    onNodeHover: handleNodeHover,
+    onNodeBlur: handleNodeBlur,
+    focusedNodeId: selectedPromiseId,
+    affectedIds,
+    cascadeActive,
+    promiseMap,
+    isMobile,
+    reducedMotion,
+    unobservablePercent,
+  };
 
   return (
     <div className="relative w-full h-full">
-      <canvas
-        ref={canvasRef}
-        onClick={handleClick}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className="w-full cursor-pointer"
-        style={{ imageRendering: "pixelated" }}
-        role="img"
-        aria-label={`${viewMode} visualization of promise network. ${promises.length} promises across ${renderData.domains.length} domains. Network health: ${networkHealth} out of 100.`}
-      />
-
-      {/* HTML text labels — screen reader accessible, crisp at any zoom */}
-      {labelPositions.map((pos) => (
-        <span
-          key={pos.id}
-          className={`absolute font-mono pointer-events-none whitespace-nowrap ${
-            isMobile ? "text-[11px]" : "text-[9px]"
-          }`}
-          style={{
-            left: pos.x,
-            top: pos.y,
-            transform: "translateX(-50%)",
-            color: "#1f2937",
-          }}
-          aria-hidden="true"
-        >
-          {pos.id}
-        </span>
-      ))}
-
-      {/* Tooltip on hover */}
-      {hoveredNode && hoveredPromise && (
-        <div
-          className="absolute z-50 px-3 py-2 rounded-lg bg-gray-900/90 backdrop-blur-sm text-xs text-white shadow-lg pointer-events-none"
-          style={{
-            left: Math.min(hoveredNode.x + 12, width - 200),
-            top: hoveredNode.y + 12,
-          }}
-        >
-          <div className="font-mono font-bold">{hoveredPromise.id}</div>
-          <div className="text-white/70 mt-0.5">
-            {hoveredPromise.body.length > 60
-              ? hoveredPromise.body.slice(0, 60) + "…"
-              : hoveredPromise.body}
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span
-              className="inline-block w-2 h-2 rounded-full"
-              style={{ backgroundColor: getStatusColor(hoveredPromise.status) }}
-            />
-            <span className="capitalize">{hoveredPromise.status}</span>
-            <span className="text-white/50">
-              {downstreamCounts.get(hoveredPromise.id) ?? 0} dependents
-            </span>
-          </div>
-        </div>
-      )}
+      {/* SVG visualization */}
+      <div className="w-full overflow-hidden">
+        {viewMode === "watershed" && <WatershedView {...viewProps} />}
+        {viewMode === "canopy" && <CanopyView {...viewProps} />}
+        {viewMode === "strata" && <StrataView {...viewProps} />}
+      </div>
 
       {/* Rₑ Indicator overlay */}
       {Re !== null && (
@@ -496,21 +228,6 @@ export function ProceduralGraph({
           <span className="text-white/60">
             {cascadeProne ? "Cascade-Prone" : Re < 0.8 ? "Contained" : "Near Threshold"}
           </span>
-        </div>
-      )}
-
-      {/* Information deficit watermark — improved contrast */}
-      {unobservablePercent !== null && unobservablePercent > 0 && (
-        <div
-          className="absolute bottom-3 right-3 font-mono text-sm select-none pointer-events-none"
-          style={{
-            color: viewMode === "strata" ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.3)",
-            textShadow: viewMode === "strata" ? "0 1px 3px rgba(0,0,0,0.5)" : "none",
-            fontSize: "14px",
-          }}
-          aria-hidden="true"
-        >
-          {Math.round(unobservablePercent)}% UNOBSERVABLE
         </div>
       )}
 

@@ -259,7 +259,7 @@ export function ProceduralGraph({
   // Main render + sprite animation
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || width <= 0 || height <= 0) return;
 
     let spriteFrame = 0;
 
@@ -316,7 +316,7 @@ export function ProceduralGraph({
     return () => clearInterval(intervalId);
   }, [width, height, viewMode, renderData, resolution, networkHealth]);
 
-  // Click handler using hit-box map
+  // Click handler using hit-box map with 44px minimum touch target (WCAG)
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (!onNodeClick) return;
@@ -328,7 +328,13 @@ export function ProceduralGraph({
       const my = e.clientY - rect.top;
 
       for (const box of hitBoxesRef.current) {
-        if (mx >= box.x && mx <= box.x + box.w && my >= box.y && my <= box.y + box.h) {
+        // Expand hit area to minimum 44x44px for touch accessibility
+        const padX = Math.max(0, (44 - box.w) / 2);
+        const padY = Math.max(0, (44 - box.h) / 2);
+        if (
+          mx >= box.x - padX && mx <= box.x + box.w + padX &&
+          my >= box.y - padY && my <= box.y + box.h + padY
+        ) {
           onNodeClick(box.id);
           return;
         }
@@ -337,7 +343,7 @@ export function ProceduralGraph({
     [onNodeClick]
   );
 
-  // Mousemove for tooltip hover
+  // Mousemove for tooltip hover (uses same padded hit areas as click)
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const canvas = canvasRef.current;
@@ -348,7 +354,12 @@ export function ProceduralGraph({
       const my = e.clientY - rect.top;
 
       for (const box of hitBoxesRef.current) {
-        if (mx >= box.x && mx <= box.x + box.w && my >= box.y && my <= box.y + box.h) {
+        const padX = Math.max(0, (44 - box.w) / 2);
+        const padY = Math.max(0, (44 - box.h) / 2);
+        if (
+          mx >= box.x - padX && mx <= box.x + box.w + padX &&
+          my >= box.y - padY && my <= box.y + box.h + padY
+        ) {
           setHoveredNode({ id: box.id, x: e.clientX - rect.left, y: e.clientY - rect.top });
           return;
         }
@@ -368,14 +379,43 @@ export function ProceduralGraph({
   const cascadeProne = diagnostic?.epidemiology.cascadeProne ?? false;
   const unobservablePercent = diagnostic?.information.unobservablePercent ?? null;
 
-  // Promise node labels as HTML overlays
+  const isMobile = width < 768;
+
+  // Compute label positions with simple collision avoidance
   const labelPositions = useMemo(() => {
-    return hitBoxesRef.current.map((box) => ({
-      id: box.id,
-      x: box.x + box.w / 2,
-      y: box.y - 4,
-    }));
-  }, [hitBoxesRef.current]);
+    const raw = renderData.pixelNodes.map((node) => {
+      const box = hitBoxesRef.current.find((b) => b.id === node.id);
+      if (!box) return null;
+      return {
+        id: node.id,
+        x: box.x + box.w / 2,
+        y: box.y - (isMobile ? 14 : 10),
+        priority: node.downstreamCount,
+      };
+    }).filter(Boolean) as Array<{ id: string; x: number; y: number; priority: number }>;
+
+    // Sort by priority descending so high-priority labels get placed first
+    raw.sort((a, b) => b.priority - a.priority);
+
+    const labelH = isMobile ? 15 : 13;
+    const labelW = 40;
+    const placed: Array<{ id: string; x: number; y: number }> = [];
+
+    for (const label of raw) {
+      let finalY = label.y;
+      // Check for overlaps with already-placed labels
+      for (const other of placed) {
+        const overlapX = Math.abs(label.x - other.x) < labelW;
+        const overlapY = Math.abs(finalY - other.y) < labelH;
+        if (overlapX && overlapY) {
+          finalY = other.y + labelH + 4;
+        }
+      }
+      placed.push({ id: label.id, x: label.x, y: finalY });
+    }
+
+    return placed;
+  }, [renderData.pixelNodes, hitBoxesRef.current, isMobile]);
 
   return (
     <div className="relative w-full h-full">
@@ -391,25 +431,23 @@ export function ProceduralGraph({
       />
 
       {/* HTML text labels — screen reader accessible, crisp at any zoom */}
-      {renderData.pixelNodes.map((node) => {
-        const box = hitBoxesRef.current.find((b) => b.id === node.id);
-        if (!box) return null;
-        return (
-          <span
-            key={node.id}
-            className="absolute font-mono text-[9px] pointer-events-none whitespace-nowrap"
-            style={{
-              left: box.x + box.w / 2,
-              top: box.y - 10,
-              transform: "translateX(-50%)",
-              color: "#1f2937",
-            }}
-            aria-hidden="true"
-          >
-            {node.id}
-          </span>
-        );
-      })}
+      {labelPositions.map((pos) => (
+        <span
+          key={pos.id}
+          className={`absolute font-mono pointer-events-none whitespace-nowrap ${
+            isMobile ? "text-[11px]" : "text-[9px]"
+          }`}
+          style={{
+            left: pos.x,
+            top: pos.y,
+            transform: "translateX(-50%)",
+            color: "#1f2937",
+          }}
+          aria-hidden="true"
+        >
+          {pos.id}
+        </span>
+      ))}
 
       {/* Tooltip on hover */}
       {hoveredNode && hoveredPromise && (
@@ -461,10 +499,15 @@ export function ProceduralGraph({
         </div>
       )}
 
-      {/* Information deficit watermark */}
+      {/* Information deficit watermark — improved contrast */}
       {unobservablePercent !== null && unobservablePercent > 0 && (
         <div
-          className="absolute bottom-3 right-3 text-white/10 font-mono text-sm select-none pointer-events-none"
+          className="absolute bottom-3 right-3 font-mono text-sm select-none pointer-events-none"
+          style={{
+            color: viewMode === "strata" ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.3)",
+            textShadow: viewMode === "strata" ? "0 1px 3px rgba(0,0,0,0.5)" : "none",
+            fontSize: "14px",
+          }}
           aria-hidden="true"
         >
           {Math.round(unobservablePercent)}% UNOBSERVABLE

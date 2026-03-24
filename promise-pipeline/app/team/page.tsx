@@ -9,6 +9,7 @@ import { TeamPromiseBoard } from "@/components/team/TeamPromiseBoard";
 import { TeamHealthBarometer } from "@/components/team/TeamHealthBarometer";
 import { MemberLoad } from "@/components/team/MemberLoad";
 import { TeamCascadeView } from "@/components/team/TeamCascadeView";
+import { NestedPLogo } from "@/components/brand/NestedPLogo";
 
 const STORAGE_KEY = "promise-pipeline-team";
 
@@ -154,13 +155,16 @@ export default function TeamPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div>
+          <div className="flex items-center gap-3">
+            <NestedPLogo mode="flow" size={48} />
+            <div>
             <h1 className="font-serif text-2xl font-bold text-gray-900">
               {data.teamName}
             </h1>
             <p className="text-sm text-gray-500">
               {data.members.length} members · {data.promises.length} promises
             </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <button

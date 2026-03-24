@@ -2,55 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-
-const NAV_P_PATH = "M 0,340 L 0,0 L 200,0 C 340,0 340,280 200,280 L 60,280 L 60,340 Z";
-const NAV_LAYERS = [
-  { fill: "#c93b3b", scale: 1 },
-  { fill: "#7b41d6", scale: 0.618 },
-  { fill: "#3e60cf", scale: 0.382 },
-  { fill: "#2a2a4e", scale: 0.236 },
-  { fill: "#2a8f6a", scale: 0.146 },
-];
-const BREATHE_OFFSETS = ["0s", "0.8s", "1.6s", "2.4s", "3.2s"];
-
-function NavMark() {
-  return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 340 340"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      className="flex-shrink-0 block"
-    >
-      <defs>
-        <style>{`
-          @keyframes pp-breathe {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.82; }
-          }
-          .pp-nav-layer {
-            transform-origin: 0 0;
-            animation: pp-breathe 5s ease-in-out infinite;
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .pp-nav-layer { animation: none !important; }
-          }
-        `}</style>
-      </defs>
-      {NAV_LAYERS.map((layer, i) => (
-        <path
-          key={i}
-          d={NAV_P_PATH}
-          fill={layer.fill}
-          transform={`scale(${layer.scale})`}
-          className="pp-nav-layer"
-          style={{ animationDelay: BREATHE_OFFSETS[i] }}
-        />
-      ))}
-    </svg>
-  );
-}
+import { NestedPLogo } from "@/components/brand/NestedPLogo";
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -61,7 +13,7 @@ export function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2">
-              <NavMark />
+              <NestedPLogo mode="breathe" size={28} className="flex-shrink-0" />
               <span className="font-serif font-semibold text-lg text-gray-900">
                 Promise Pipeline
               </span>

@@ -4,6 +4,14 @@ import PortableTextRenderer from "@/components/blog/PortableTextRenderer";
 import MarkdownRenderer from "@/components/blog/MarkdownRenderer";
 import { getPostBySlug } from "@/lib/blog";
 import { InlineServiceCTA } from "@/components/cta/InlineServiceCTA";
+import { NestedPLogo } from "@/components/brand/NestedPLogo";
+
+const BLOG_LOGO_MODES: Record<string, string> = {
+  civic: "cascade",
+  ai: "shadow",
+  general: "breathe",
+  teams: "grow",
+};
 
 // Individual blog post page — tries Sanity first, falls back to local markdown.
 
@@ -98,9 +106,16 @@ export default async function BlogPostPage({
         </Link>
 
         <article>
-          <h1 className="font-serif text-3xl font-bold text-gray-900 mb-4">
-            {post.title}
-          </h1>
+          <div className="flex items-center gap-3 mb-4">
+            <NestedPLogo
+              mode={BLOG_LOGO_MODES[post.vertical || "general"] || "breathe"}
+              size={32}
+              className="inline-block flex-shrink-0"
+            />
+            <h1 className="font-serif text-3xl font-bold text-gray-900">
+              {post.title}
+            </h1>
+          </div>
 
           <div className="flex items-center gap-3 text-sm text-gray-500 mb-8">
             {(post.author?.name || post.author) && (

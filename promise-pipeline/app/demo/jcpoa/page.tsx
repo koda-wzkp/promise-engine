@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useReducer, useMemo, useCallback } from "react";
+import { useState, useReducer, useMemo, useCallback, useEffect } from "react";
 import { jcpoaData } from "@/lib/data/jcpoa";
 import { InlineServiceCTA } from "@/components/cta/InlineServiceCTA";
 import { jcpoaTimeline } from "@/lib/data/jcpoa-timeline";
@@ -83,6 +83,16 @@ const tabs: { id: Tab; label: string }[] = [
 
 export default function JCPOAPage() {
   const [activeTab, setActiveTab] = useState<Tab>("summary");
+  const [jcpoaCascade, setJcpoaCascade] = useState<number | null>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setJcpoaCascade(null);
+      setTimeout(() => setJcpoaCascade(0), 50);
+    }, 8000);
+    const initial = setTimeout(() => setJcpoaCascade(0), 2000);
+    return () => { clearInterval(interval); clearTimeout(initial); };
+  }, []);
   const [simState, dispatch] = useReducer(simulationReducer, {
     mode: "actual",
     activeQuery: null,
@@ -176,7 +186,7 @@ export default function JCPOAPage() {
 
       {/* Tab content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === "summary" && <SummaryTab data={jcpoaData} />}
+        {activeTab === "summary" && <SummaryTab data={jcpoaData} logoMode="cascade" logoCascadeTarget={jcpoaCascade} />}
         {activeTab === "network" && (
           <NetworkTab
             promises={jcpoaData.promises}

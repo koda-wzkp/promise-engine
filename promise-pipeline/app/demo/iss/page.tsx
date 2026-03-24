@@ -205,7 +205,7 @@ export default function ISSPage() {
 
       {/* Tab content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === "summary" && <SummaryTab data={issData} />}
+        {activeTab === "summary" && <SummaryTab data={issData} logoMode="grow" />}
         {activeTab === "network" && (
           <NetworkTab
             promises={issData.promises}

@@ -221,7 +221,7 @@ function HeroSection() {
         onMouseEnter={() => setHeroHovered(true)}
         onMouseLeave={() => setHeroHovered(false)}
       >
-        <div className="mx-auto mb-8">
+        <div className="mx-auto mb-8" style={{ overflow: "visible" }}>
           <NestedPLogo
             mode={heroHovered ? "peel" : "breathe"}
             size={64}

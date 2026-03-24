@@ -618,12 +618,13 @@ export function NestedPLogo({
   }, []);
 
   return (
-    <div ref={containerRef} className={`inline-block ${className}`}>
+    <div ref={containerRef} className={`inline-block ${className}`} style={{ overflow: "visible" }}>
       <svg
         ref={svgRef}
         width={size}
         height={size}
-        viewBox="0 0 340 340"
+        viewBox="-30 -30 420 420"
+        style={{ overflow: "visible" }}
         xmlns="http://www.w3.org/2000/svg"
         role="img"
         aria-label="Promise Pipeline nested P logo"

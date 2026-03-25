@@ -16,7 +16,13 @@
     "Transition",
     "Research"
   ],
-  "exportedAt": "2026-03-20T19:02:47.564Z",
+  "fingerprints": {
+    "sha256": "33A9AE36C833F8405A64601AFEDCD76FDAE65C516F8EE5F438DE21B3CB06790E",
+    "poseidonRoot": "03c12ee0f530d19ccab5148c517ee3f473ee8c3ed46c5bc9db01815e4349e14b",
+    "promiseCount": 27,
+    "computedAt": "2026-03-25T03:43:25.299Z"
+  },
+  "exportedAt": "2026-03-25T03:43:25.385Z",
   "promises": [
     {
       "id": "ISS-F01",
@@ -38,7 +44,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "voluntary"
+      "origin": "voluntary",
+      "_crypto": {
+        "poseidonHash": "1eeffd36be7fd0f5e5fa2c5c56f16e0715ee76b0722b8d68133551d3449524f5"
+      }
     },
     {
       "id": "ISS-F02",
@@ -60,7 +69,10 @@
         "ISS-F01"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "0243c1fc1d9a50c48356e4b1d8824b046b6f3ee82a0debb79f352052046e137a"
+      }
     },
     {
       "id": "ISS-F03",
@@ -80,7 +92,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "127c13b048e0487abaa4cc1c18aae4948bba2416b5f32f05dd8082b7bea042a3"
+      }
     },
     {
       "id": "ISS-F04",
@@ -102,7 +117,10 @@
         "ISS-F01"
       ],
       "polarity": "give",
-      "origin": "voluntary"
+      "origin": "voluntary",
+      "_crypto": {
+        "poseidonHash": "087e699194e65670f9e9ea5ce37260b3f1863b6470fba3417e26e8671c93c2c5"
+      }
     },
     {
       "id": "ISS-CT01",
@@ -122,7 +140,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "01c6725701020e551bcafe0fa2693fafe2b446280378e7c964038c06947d53da"
+      }
     },
     {
       "id": "ISS-CT02",
@@ -142,7 +163,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "22795b5051c15c52222f3f634cb85c1b6a08030afd0408c2b6ab93873b85f946"
+      }
     },
     {
       "id": "ISS-CT03",
@@ -164,7 +188,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "161b904f42ba9cae5ab945279ef838cd77ef7730e77010f1c5d306fbdce92b3b"
+      }
     },
     {
       "id": "ISS-CS01",
@@ -186,7 +213,10 @@
         "ISS-RS01"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "03aa8607f1dbfe049cce141c87333e377a54f99f987dc16d9cc61936a3a4ef7b"
+      }
     },
     {
       "id": "ISS-CS02",
@@ -208,7 +238,10 @@
         "ISS-CT02"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "28bc8205c29016088a6e843cd234aafe37d6a8ae3b971806327efcd705c8b5ab"
+      }
     },
     {
       "id": "ISS-CS03",
@@ -230,7 +263,10 @@
         "ISS-OO01"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "034cf81968707de03218bf83403f2cc8ffc6cb27b9a5a2804f503d5f8c1c0b5b"
+      }
     },
     {
       "id": "ISS-RS01",
@@ -250,7 +286,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "01771e88cc89ba8e812cdb0ded1fd0551e7d7902a9633163ad614c838a45ea86"
+      }
     },
     {
       "id": "ISS-RS02",
@@ -270,7 +309,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "29ba40ea1dad9db5b83fba805b4fc0097d7f70ffd8dd7579b6cd5fa8c8322844"
+      }
     },
     {
       "id": "ISS-RS03",
@@ -292,7 +334,10 @@
         "ISS-F03"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "0dcd5c23d01fc6a1b43250acf338f113afaa122478ae0e6dad2bbed57624caa8"
+      }
     },
     {
       "id": "ISS-SM01",
@@ -314,7 +359,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "183c15e3eef0ecb7f4813edac824b0d65a89022c47c1c21c87896eceee286b6e"
+      }
     },
     {
       "id": "ISS-SM02",
@@ -336,7 +384,10 @@
         "ISS-RS01"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "2c08d41f86d0edf3cb738742e5eacf0cabc1d198b8b151f12bb928763b88b0e8"
+      }
     },
     {
       "id": "ISS-OO01",
@@ -359,7 +410,10 @@
         "ISS-RS03"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "1a5a58c2eb067735c2aa7b325d4cc9e188741268d509fb0145ff1ca07f8da0bc"
+      }
     },
     {
       "id": "ISS-OO02",
@@ -381,7 +435,10 @@
         "ISS-F02"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "065e3cbc46373aef5d557ede526f07dbaadc52645ff2c4c6406f0fccf267c3c1"
+      }
     },
     {
       "id": "ISS-OO03",
@@ -403,7 +460,10 @@
         "ISS-F02"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "0936f99f20ff96b9d309ecfd1fa98e560d784c97e498921c64243dac567a47f3"
+      }
     },
     {
       "id": "ISS-OO04",
@@ -425,7 +485,10 @@
         "ISS-F02"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "2174191c2b18db5696e189a5cff7741af0f9fdfb44f9091e0205d90d9cdbef4f"
+      }
     },
     {
       "id": "ISS-D01",
@@ -447,7 +510,10 @@
         "ISS-F04"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "090b72bda3f946504c93d85141cbd35765487b05ca58f7c4191eb870c0d83ed1"
+      }
     },
     {
       "id": "ISS-D02",
@@ -464,12 +530,15 @@
       },
       "depends_on": [
         "ISS-D01",
-        "ISS-OO01",
         "ISS-F03",
+        "ISS-OO01",
         "ISS-RS03"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "18ff3acbfd465a55e2630742b23ba57d2e172acbe8f4220e84d50ec236a4f8d7"
+      }
     },
     {
       "id": "ISS-T01",
@@ -493,7 +562,10 @@
         "ISS-F01"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "04a4a79f88f8c1591f0ff7d97e95e3902b4c20129c979dae4bbaf2f61630b87c"
+      }
     },
     {
       "id": "ISS-T02",
@@ -517,7 +589,10 @@
         "ISS-F02"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "0a2d6cae05232914d4fd56b9065f804a0ead4a6b6ac744c423c1eca57b90a512"
+      }
     },
     {
       "id": "ISS-T03",
@@ -539,7 +614,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "0d5a3f743d14820fee663abe53f273f2572511b3c6d94b6abef9a21d113d6ca5"
+      }
     },
     {
       "id": "ISS-T04",
@@ -560,7 +638,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "1b5ecf8c809eebb041409af12940c769c9732b43001cfa6943a5e936aaab87a1"
+      }
     },
     {
       "id": "ISS-T05",
@@ -582,7 +663,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "0800ec830cfb2802a9305f5b2a82d0101c434d19ffa20d9fa32141f45fcb649c"
+      }
     },
     {
       "id": "ISS-R01",
@@ -601,12 +685,15 @@
         "frequency": "quarterly"
       },
       "depends_on": [
-        "ISS-RS01",
+        "ISS-CS01",
         "ISS-CT02",
-        "ISS-CS01"
+        "ISS-RS01"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "109f67833bea705c09c927630ce29a750b9da29026d165a663c0448c3aee8e33"
+      }
     }
   ],
   "agents": [

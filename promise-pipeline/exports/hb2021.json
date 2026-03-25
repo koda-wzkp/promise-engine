@@ -14,7 +14,13 @@
     "Tribal",
     "Workforce"
   ],
-  "exportedAt": "2026-03-20T19:02:47.563Z",
+  "fingerprints": {
+    "sha256": "8956C7066650B7A76B7F401FBECD0A1C8C134C27BD23FD8F81A5F1B9C0A87916",
+    "poseidonRoot": "27960458a072495e694fe982fe5b556331614e0f4424a565500969bb27b498b3",
+    "promiseCount": 20,
+    "computedAt": "2026-03-25T03:43:24.988Z"
+  },
+  "exportedAt": "2026-03-25T03:43:25.043Z",
   "promises": [
     {
       "id": "P001",
@@ -45,7 +51,10 @@
         "P006"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "2e12698041b1cec1bfd24ba5c000a33ba6e694ceee7bb5d8a0e929560508a59d"
+      }
     },
     {
       "id": "P002",
@@ -74,7 +83,10 @@
         "P016"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "1d751ebe8fdc75fcc21ae61450559f8bfab008d9b9cdf87b746d1baff6e036b7"
+      }
     },
     {
       "id": "P003",
@@ -103,7 +115,10 @@
         "P016"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "2fc6125c964ecb95205f60fd5144838328ffce040ff35f5fb1c9906593cb5b72"
+      }
     },
     {
       "id": "P004",
@@ -135,7 +150,10 @@
       ],
       "polarity": "give",
       "origin": "imposed",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "0a93da069c8f893448f40d819a3ed94d7041037479deda351a4114dbcc1dcbcd"
+      }
     },
     {
       "id": "P005",
@@ -162,7 +180,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "1b739e595a48bcf959783e37c0f87be11321060630361bee2230f600caa7e1bc"
+      }
     },
     {
       "id": "P006",
@@ -189,7 +210,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "2e27a9cf4da7504d5f800182021b38101766ef11e7936653a0602d6febd8b189"
+      }
     },
     {
       "id": "P007",
@@ -218,7 +242,10 @@
         "P002"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "030ca021d311cce34497da91c13e6adac213d7255a6c76654e79c83ab62cb64f"
+      }
     },
     {
       "id": "P008",
@@ -247,7 +274,10 @@
         "P003"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "291abe841e998951999c3a18d3d1fc620ed5607994bddcf5e0f01bb8a1d3a0b0"
+      }
     },
     {
       "id": "P009",
@@ -281,7 +311,10 @@
         "PGE",
         "PUC",
         "DOE"
-      ]
+      ],
+      "_crypto": {
+        "poseidonHash": "152d68e1dd6ad6115de3481fa10424da95b59a69ad79b447c1273b6874467fa7"
+      }
     },
     {
       "id": "P010",
@@ -308,7 +341,10 @@
       "scope": [
         "PGE",
         "PUC"
-      ]
+      ],
+      "_crypto": {
+        "poseidonHash": "1a0e23ff44079f36a10e6eae9cd9f4590367954c7566e83c354a3d1c35fc0eb1"
+      }
     },
     {
       "id": "P011",
@@ -335,7 +371,10 @@
       "origin": "imposed",
       "scope": [
         "PUC"
-      ]
+      ],
+      "_crypto": {
+        "poseidonHash": "0c5afb5014e439dc22218d362d68abf1ef80223decb8b85685325832659d01f7"
+      }
     },
     {
       "id": "P012",
@@ -362,7 +401,10 @@
       "scope": [
         "PAC",
         "PUC"
-      ]
+      ],
+      "_crypto": {
+        "poseidonHash": "1adaba610ecb0c748347f0e52325b0f84882180575f8c554c129d16c1c0d39c5"
+      }
     },
     {
       "id": "P013",
@@ -389,7 +431,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "1143a65adc40de8bd8bf650bcf176dedeb7800319c16414b095da0ea5d3c88fa"
+      }
     },
     {
       "id": "P014",
@@ -415,7 +460,10 @@
         "P013"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "000bead3ec1258d8c8578cef8e6d1121722eccad2e24086b54d9d595a6a8d2cd"
+      }
     },
     {
       "id": "P015",
@@ -444,7 +492,10 @@
         "P006"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "0ffece8fc60d21a3bac1dde92ff6196404b6120040865ded41b2eccc47a7df8c"
+      }
     },
     {
       "id": "P016",
@@ -470,7 +521,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "2cfe32e9bc1b6fd08d67ea97c600a18211dfabd731442ab4f60886ce42cf2070"
+      }
     },
     {
       "id": "P017",
@@ -496,7 +550,10 @@
         "P016"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "015e32ed63568b6b5c3f6f80fbde54d46e12666a1c1448f8f259c41b9b791379"
+      }
     },
     {
       "id": "P018",
@@ -526,7 +583,10 @@
         "P003"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "213aa0fd2167e3c05324513df07949fb175c52c728d66b37b003ade72d5d7d2f"
+      }
     },
     {
       "id": "P019",
@@ -555,7 +615,10 @@
         "P018"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "1373c543e8bcd7376cb64c23b0c35917bb38714a13e4800239b3eb3d1dbaea89"
+      }
     },
     {
       "id": "P020",
@@ -584,7 +647,10 @@
         "P005"
       ],
       "polarity": "give",
-      "origin": "imposed"
+      "origin": "imposed",
+      "_crypto": {
+        "poseidonHash": "0dba7052afa25886e20141e9047568b80fd84c288ef6fe1071c8da876a2ee117"
+      }
     }
   ],
   "agents": [

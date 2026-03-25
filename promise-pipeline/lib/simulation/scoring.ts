@@ -1,6 +1,28 @@
 import { Promise, PromiseStatus } from "../types/promise";
 import { calculateBetweenness, countDependents } from "./graph";
 
+/**
+ * Map a promise's verification.method to a verification structure key
+ * in the empirical cascade params file.
+ */
+export function inferVerificationStructure(promise: Promise): string {
+  const method = promise.verification?.method;
+  switch (method) {
+    case 'filing':
+    case 'audit':
+      return 'numeric_templated_periodic';
+    case 'benchmark':
+      return 'qualitative_judgment_periodic';
+    case 'self-report':
+      return 'qualitative_event_driven';
+    case 'sensor':
+      return 'numeric_templated_periodic';
+    case 'none':
+    default:
+      return 'none';
+  }
+}
+
 export const STATUS_WEIGHTS: Record<PromiseStatus, number> = {
   verified: 100,
   declared: 60,
@@ -266,4 +288,28 @@ export function identifyHighLeverageNodes(
         0.5 * (betweenness[p.id] || 0),
     }))
     .sort((a, b) => b.leverage - a.leverage);
+}
+
+/**
+ * Identify Zeno-trapped promises: declared, no coherent coupling,
+ * and isolated (no dependencies in either direction).
+ *
+ * These promises have no structural pathway to resolution — not failing,
+ * just invisible. Adding a dependency or verification mechanism would
+ * move them out of stasis.
+ */
+export function identifyZenoTraps(
+  promises: Promise[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params: Record<string, any>,
+): string[] {
+  return promises
+    .filter(p => {
+      const structure = inferVerificationStructure(p);
+      const coupling = params[structure]?.coherent_coupling ?? 0;
+      const isIsolated = p.depends_on.length === 0
+        && !promises.some(other => other.depends_on.includes(p.id));
+      return p.status === 'declared' && coupling === 0 && isIsolated;
+    })
+    .map(p => p.id);
 }

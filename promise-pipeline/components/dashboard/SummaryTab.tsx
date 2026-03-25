@@ -5,7 +5,7 @@ import { DashboardData, PromiseStatus } from "@/lib/types/promise";
 import { NetworkHealthBar } from "@/components/simulation/NetworkHealthBar";
 import { StatusBadge } from "@/components/promise/StatusBadge";
 import { calculateNetworkHealth, identifyBottlenecks } from "@/lib/simulation/cascade";
-import { statusBreakdown, domainHealthScores, calculateNetworkEntropy, identifyHighLeverageNodes } from "@/lib/simulation/scoring";
+import { statusBreakdown, domainHealthScores, calculateNetworkEntropy, identifyHighLeverageNodes, identifyZenoTraps } from "@/lib/simulation/scoring";
 import { getGradeFromScore } from "@/lib/utils/formatting";
 import { statusColors } from "@/lib/utils/colors";
 import { runDiagnostic } from "@/lib/analysis";
@@ -15,6 +15,7 @@ import { VerificationUrgency } from "./VerificationUrgency";
 import { NestedPLogo } from "@/components/brand/NestedPLogo";
 import { classifyLindbladRegime, getOptimalReviewInterval, projectLindbladState } from "@/lib/simulation/lindblad";
 import { computeBelief } from "@/lib/simulation/bayesian";
+import empiricalCascadeParamsRaw from "@/parameters/empirical_cascade_params.json";
 
 interface SummaryTabProps {
   data: DashboardData;
@@ -77,6 +78,15 @@ export function SummaryTab({ data, logoMode, logoCascadeTarget }: SummaryTabProp
     }
     return { composting, computing, zenoRisk };
   }, [data.promises]);
+
+  // Zeno trap detection — promises with no structural pathway to resolution
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const empiricalParams = (empiricalCascadeParamsRaw as any)?.verification_structures ?? {};
+  const zenoTrappedIds = useMemo(
+    () => identifyZenoTraps(data.promises, empiricalParams),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data.promises],
+  );
 
   const medianDeps = leverageNodes.length > 0
     ? leverageNodes[Math.floor(leverageNodes.length / 2)].dependentCount
@@ -442,6 +452,20 @@ export function SummaryTab({ data, logoMode, logoCascadeTarget }: SummaryTabProp
             relative to {lindbladCounts.zenoRisk !== 1 ? "their" : "its"} natural resolution timescale.</>
           )}
         </p>
+        {zenoTrappedIds.length > 0 && (
+          <div className="mt-3 p-3 rounded-lg border" style={{ backgroundColor: '#fffbeb', borderColor: '#fcd34d' }}>
+            <p className="text-sm font-medium" style={{ color: '#78350f' }}>
+              {zenoTrappedIds.length} promise{zenoTrappedIds.length !== 1 ? 's have' : ' has'} no structural pathway to resolution
+            </p>
+            <p className="text-xs mt-1" style={{ color: '#92400e' }}>
+              No dependencies, no verification. Adding a dependency connection or verification mechanism
+              would move {zenoTrappedIds.length !== 1 ? 'them' : 'it'} out of stasis.
+            </p>
+            <p className="text-xs mt-1 font-mono" style={{ color: '#78350f' }}>
+              {zenoTrappedIds.join(', ')}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

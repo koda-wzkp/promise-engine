@@ -218,10 +218,16 @@ export function CascadeResults({
                 ? generateFactoryNarrative(promise, promises, ap.newStatus)
                 : null;
 
+              const isIncoherent = ap.propagationType === 'incoherent';
+
               return (
                 <div
                   key={ap.promiseId}
-                  className="flex flex-col gap-1 p-2 bg-gray-50 rounded text-sm"
+                  className={`flex flex-col gap-1 p-2 rounded text-sm ${
+                    isIncoherent
+                      ? 'bg-amber-50 border border-dashed border-amber-400'
+                      : 'bg-gray-50'
+                  }`}
                 >
                   <div className="flex items-start gap-2">
                     <span className="font-mono text-xs text-gray-500 shrink-0">
@@ -237,14 +243,31 @@ export function CascadeResults({
                           {promise?.body}
                         </p>
                       )}
-                      <div className="flex items-center gap-1 mt-1">
-                        <StatusBadge status={ap.originalStatus} size="xs" />
-                        <span className="text-xs text-gray-400">→</span>
-                        <StatusBadge status={ap.newStatus} size="xs" />
-                        <span className="text-xs text-gray-400 ml-1">
-                          (depth {ap.cascadeDepth})
-                        </span>
-                      </div>
+                      {isIncoherent ? (
+                        <div className="flex items-center gap-1 mt-1">
+                          <StatusBadge status={ap.originalStatus} size="xs" />
+                          <span
+                            className="text-xs font-medium px-1.5 py-0.5 rounded"
+                            style={{ color: '#78350f', backgroundColor: '#fffbeb' }}
+                          >
+                            At risk (score: {ap.riskScore?.toFixed(2) ?? '—'}) — weak structural connection
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 mt-1">
+                          <StatusBadge status={ap.originalStatus} size="xs" />
+                          <span className="text-xs text-gray-400">→</span>
+                          <StatusBadge status={ap.newStatus} size="xs" />
+                          <span className="text-xs text-gray-400 ml-1">
+                            (depth {ap.cascadeDepth})
+                          </span>
+                          {ap.newStatus !== ap.originalStatus && (
+                            <span className="text-xs text-gray-400 ml-1">
+                              (structural cascade)
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 

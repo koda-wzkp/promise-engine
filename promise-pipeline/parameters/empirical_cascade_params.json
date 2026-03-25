@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "description": "Empirical cascade parameters by verification structure — coherent coupling strength determines propagation mode in cascade simulation",
+  "source": "Benthos cascade validation, March 2026",
+  "verification_structures": {
+    "numeric_templated_periodic": {
+      "prior_compliance": 0.85,
+      "k": 1.10,
+      "coupling_weight": 0.576,
+      "coherent_coupling": 0.42,
+      "enaqt_viable": true,
+      "optimal_review_period": 1.26
+    },
+    "qualitative_judgment_periodic": {
+      "prior_compliance": 0.72,
+      "k": 0.72,
+      "coupling_weight": 0.390,
+      "coherent_coupling": 0.28,
+      "enaqt_viable": true,
+      "optimal_review_period": 2.10
+    },
+    "qualitative_event_driven": {
+      "prior_compliance": 0.45,
+      "k": 0.37,
+      "coupling_weight": 0.210,
+      "coherent_coupling": 0.08,
+      "enaqt_viable": false,
+      "optimal_review_period": 3.50
+    },
+    "none": {
+      "prior_compliance": 0.27,
+      "k": 0.37,
+      "coupling_weight": 0.100,
+      "coherent_coupling": 0.0,
+      "enaqt_viable": false,
+      "optimal_review_period": null
+    }
+  }
+}

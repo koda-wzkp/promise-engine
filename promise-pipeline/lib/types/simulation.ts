@@ -25,6 +25,8 @@ export interface AffectedPromise {
   newStatus: PromiseStatus;
   cascadeDepth: number;
   reason: string;
+  propagationType: 'coherent' | 'incoherent';
+  riskScore?: number;  // 0-1, only for incoherent propagation
   lindbladProjection?: LindbladCascadeProjection;
 }
 

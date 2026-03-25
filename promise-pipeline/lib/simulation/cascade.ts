@@ -6,8 +6,13 @@ import {
   CertaintyImpact,
   NetworkHealthScore,
 } from "../types/simulation";
-import { calculateNetworkEntropy, STATUS_WEIGHTS, CERTAINTY_WEIGHTS, healthScore, domainHealthScores } from "./scoring";
+import { calculateNetworkEntropy, STATUS_WEIGHTS, CERTAINTY_WEIGHTS, healthScore, domainHealthScores, inferVerificationStructure } from "./scoring";
 import { analyzePromiseDynamics } from "./lindblad";
+import empiricalCascadeParamsRaw from "@/parameters/empirical_cascade_params.json";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const empiricalCascadeParams: Record<string, any> | null =
+  (empiricalCascadeParamsRaw as any)?.verification_structures ?? null;
 
 const DEGRADATION_ORDER: PromiseStatus[] = [
   "verified",
@@ -151,28 +156,59 @@ export function simulateCascade(
     const originalStatus = originalStatuses.get(id)!;
 
     if (query.newStatus === "violated" || query.newStatus === "degraded") {
-      // Degrade dependents, diminishing with depth
-      const degradeLevels = Math.max(1, 2 - depth + 1);
-      const newStatus = degradeStatus(originalStatus, degradeLevels > 0 ? 1 : 0);
+      // Determine coherent vs incoherent propagation using empirical params
+      const sourcePromise = promiseMap.get(query.promiseId)!;
+      const sourceStructure = inferVerificationStructure(sourcePromise);
+      const targetStructure = inferVerificationStructure(promise);
 
-      if (newStatus !== originalStatus) {
-        promise.status = newStatus;
+      // Use the WEAKER coupling of the two endpoints
+      const sourceCoupling = empiricalCascadeParams?.[sourceStructure]?.coherent_coupling ?? null;
+      const targetCoupling = empiricalCascadeParams?.[targetStructure]?.coherent_coupling ?? null;
+
+      // If params aren't loaded, default to coherent (existing behavior)
+      const edgeCoupling = sourceCoupling !== null && targetCoupling !== null
+        ? Math.min(sourceCoupling, targetCoupling)
+        : 1;  // fallback: coherent
+
+      if (edgeCoupling > 0.1) {
+        // COHERENT: structured pathway — propagate as before (hard degrade)
+        const degradeLevels = Math.max(1, 2 - depth + 1);
+        const newStatus = degradeStatus(originalStatus, degradeLevels > 0 ? 1 : 0);
+
+        if (newStatus !== originalStatus) {
+          promise.status = newStatus;
+          affected.push({
+            promiseId: id,
+            originalStatus,
+            newStatus,
+            cascadeDepth: depth,
+            reason: `Structural cascade from ${query.promiseId}`,
+            propagationType: 'coherent',
+          });
+          maxDepth = Math.max(maxDepth, depth);
+
+          // Continue propagation
+          const nextDeps = dependents.get(id) || [];
+          for (const nextId of nextDeps) {
+            if (!visited.has(nextId)) {
+              queue.push({ id: nextId, depth: depth + 1 });
+            }
+          }
+        }
+      } else {
+        // INCOHERENT: no structured pathway — flag at risk, don't change status
+        const weight = empiricalCascadeParams?.[targetStructure]?.coupling_weight ?? 0.1;
+        const riskScore = Math.min(1, weight / depth);
         affected.push({
           promiseId: id,
           originalStatus,
-          newStatus,
+          newStatus: originalStatus,  // STATUS UNCHANGED
           cascadeDepth: depth,
-          reason: `Depends on ${query.promiseId} which changed to ${query.newStatus}`,
+          reason: `At risk — weak structural connection to ${query.promiseId}`,
+          propagationType: 'incoherent',
+          riskScore,
         });
         maxDepth = Math.max(maxDepth, depth);
-
-        // Continue propagation
-        const nextDeps = dependents.get(id) || [];
-        for (const nextId of nextDeps) {
-          if (!visited.has(nextId)) {
-            queue.push({ id: nextId, depth: depth + 1 });
-          }
-        }
       }
     } else if (query.newStatus === "unverifiable") {
       // Flag as at risk but don't change status
@@ -182,6 +218,7 @@ export function simulateCascade(
         newStatus: originalStatus,
         cascadeDepth: depth,
         reason: `Upstream promise ${query.promiseId} is now unverifiable — this promise is at risk`,
+        propagationType: 'coherent',
       });
       maxDepth = Math.max(maxDepth, depth);
     } else if (query.newStatus === "verified") {
@@ -196,6 +233,7 @@ export function simulateCascade(
           newStatus: originalStatus,
           cascadeDepth: depth,
           reason: `All dependencies now verified — this promise is reinforced`,
+          propagationType: 'coherent',
         });
       }
     }
@@ -220,6 +258,7 @@ export function simulateCascade(
                 newStatus,
                 cascadeDepth: 1,
                 reason: `Threat ${threat.id}: ${threat.body}`,
+                propagationType: 'coherent',
               });
             }
           }
@@ -436,7 +475,19 @@ export function generateCascadeNarrative(
   const healthDelta = result.newNetworkHealth - result.originalNetworkHealth;
   const healthDir = healthDelta < 0 ? "decreases" : "increases";
 
-  let narrative = `Changing "${sourcePromise.body}" to ${result.query.newStatus} affects ${result.affectedPromises.length} downstream promise${result.affectedPromises.length !== 1 ? "s" : ""} across ${result.domainsAffected.length} domain${result.domainsAffected.length !== 1 ? "s" : ""} (${result.domainsAffected.join(", ")}). `;
+  const coherent = result.affectedPromises.filter(a => a.propagationType === 'coherent');
+  const incoherent = result.affectedPromises.filter(a => a.propagationType === 'incoherent');
+
+  let narrative = `Changing "${sourcePromise.body}" to ${result.query.newStatus} `;
+
+  if (coherent.length > 0) {
+    narrative += `structurally affects ${coherent.length} downstream promise${coherent.length > 1 ? 's' : ''}`;
+  }
+  if (incoherent.length > 0) {
+    if (coherent.length > 0) narrative += ` and `;
+    narrative += `puts ${incoherent.length} weakly-connected promise${incoherent.length > 1 ? 's' : ''} at risk`;
+  }
+  narrative += ` across ${result.domainsAffected.length} domain${result.domainsAffected.length !== 1 ? "s" : ""} (${result.domainsAffected.join(", ")}). `;
 
   narrative += `Network health ${healthDir} from ${Math.round(result.originalNetworkHealth)} to ${Math.round(result.newNetworkHealth)} (${healthDelta > 0 ? "+" : ""}${Math.round(healthDelta)}). `;
 

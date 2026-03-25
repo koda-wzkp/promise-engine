@@ -113,6 +113,60 @@ export function TrajectoryTab({ trajectories }: TrajectoryTabProps) {
               <span>Required target</span>
             </div>
           </div>
+
+          {/* Lindblad Analysis — PGE */}
+          {trajectory.agentId === "PGE" && (
+            <div style={{
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: 8,
+              padding: '14px 16px',
+              marginTop: 12,
+              marginBottom: 24,
+            }}>
+              <div style={{ fontFamily: 'IBM Plex Serif, serif', fontWeight: 600, fontSize: 14, marginBottom: 6, color: '#1f2937' }}>
+                Lindblad Analysis
+              </div>
+              <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6, margin: 0 }}>
+                PGE&apos;s emissions reduction (P001) is in the <strong>transitional regime</strong> (k = 0.66)
+                with audit-based verification through Oregon DEQ. The Lindblad projection shows P(met)
+                rising — resolution is trending, driven by the strongest verification infrastructure in
+                the network. The crossover point (where resolution becomes more probable than the current
+                state) occurs at approximately <strong>cycle 5</strong>. PGE&apos;s clean energy plan (P002,
+                verified) is the upstream dependency — its verified status keeps the emissions trajectory
+                on a correctable path. Current review frequency (annual DEQ audit) matches the optimal
+                interval for the transitional regime.
+              </p>
+            </div>
+          )}
+
+          {/* Lindblad Analysis — PacifiCorp */}
+          {trajectory.agentId === "PAC" && (
+            <div style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: 8,
+              padding: '14px 16px',
+              marginTop: 12,
+              marginBottom: 24,
+            }}>
+              <div style={{ fontFamily: 'IBM Plex Serif, serif', fontWeight: 600, fontSize: 14, marginBottom: 6, color: '#991b1b' }}>
+                Lindblad Analysis — Cascade Risk
+              </div>
+              <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6, margin: 0 }}>
+                PacifiCorp&apos;s emissions reduction (P004) is <strong>degraded</strong> with its upstream
+                dependency (P003, clean energy plan) also degraded after PUC rejection. The Weibull
+                parameter for planning promises at this network position (k = 0.55) indicates a
+                transitional regime — the promise could recover with intervention or decay further
+                without it. The Lindblad projection shows this is currently in a <strong>met-rising
+                crossover</strong> (resolution still more probable than failure), but the crossover
+                window is narrowing. Historical data from comparable institutional commitments shows
+                planning rejections at this network position have a mean resolution time of 6–8 review
+                cycles. Each cycle of delay increases downstream cascade probability. The PacifiCorp
+                trajectory diverging from the target line is the visual expression of this narrowing window.
+              </p>
+            </div>
+          )}
         </div>
       ))}
     </div>

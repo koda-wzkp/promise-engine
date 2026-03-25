@@ -27,6 +27,7 @@ export function Navbar() {
             <NavLink href="/demo/iss">ISS</NavLink>
             <NavLink href="/services">Services</NavLink>
             <NavLink href="/blog">Blog</NavLink>
+            <NavLink href="/learn">Learn</NavLink>
             <NavLink href="/about">About</NavLink>
           </div>
 
@@ -56,6 +57,7 @@ export function Navbar() {
             <MobileNavLink href="/demo/iss" onClick={() => setMobileOpen(false)}>ISS</MobileNavLink>
             <MobileNavLink href="/services" onClick={() => setMobileOpen(false)}>Services</MobileNavLink>
             <MobileNavLink href="/blog" onClick={() => setMobileOpen(false)}>Blog</MobileNavLink>
+            <MobileNavLink href="/learn" onClick={() => setMobileOpen(false)}>Learn</MobileNavLink>
             <MobileNavLink href="/about" onClick={() => setMobileOpen(false)}>About</MobileNavLink>
           </div>
         </div>

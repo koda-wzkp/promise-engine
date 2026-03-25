@@ -26,7 +26,8 @@ export interface AffectedPromise {
   cascadeDepth: number;
   reason: string;
   propagationType: 'coherent' | 'incoherent';
-  riskScore?: number;  // 0-1, only for incoherent propagation
+  degradationProbability?: number;  // 0-1, for coherent edges (from transition tensor)
+  riskScore?: number;               // 0-1, for incoherent edges
   lindbladProjection?: LindbladCascadeProjection;
 }
 
@@ -52,6 +53,12 @@ export interface CascadeResult {
   certaintyImpacts: CertaintyImpact[];
   originalNetworkEntropy: number;   // 0-100 before simulation
   newNetworkEntropy: number;        // 0-100 after simulation
+
+  // Empirical cascade calibration (from Benthos March 2026)
+  coherentCount: number;            // promises affected through verified edges
+  incoherentCount: number;          // promises flagged at-risk through unverified edges
+  percolationRisk?: 'safe' | 'warning' | 'critical';
+  zenoTrappedCount: number;         // promises with no pathway to resolution
 }
 
 export interface NetworkHealthScore {

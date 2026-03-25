@@ -291,6 +291,131 @@ export function identifyHighLeverageNodes(
 }
 
 /**
+ * Compute percolation-based network fragility.
+ *
+ * Uses empirical findings: random p_c ~ 0.45, targeted p_c ~ 0.10.
+ * The targeted threshold matters most — hub promises are critical infrastructure.
+ * 4.4x robustness asymmetry between random and targeted failure.
+ */
+export function computePercolationRisk(promises: Promise[]): {
+  riskLevel: 'safe' | 'warning' | 'critical';
+  failureFraction: number;
+  estimatedThreshold: number;
+  safetyMargin: number;
+  hubPromises: string[];
+} {
+  const n = promises.length;
+  if (n === 0) return {
+    riskLevel: 'safe', failureFraction: 0,
+    estimatedThreshold: 1, safetyMargin: 1, hubPromises: []
+  };
+
+  // Count failures
+  const failed = promises.filter(p => p.status === 'violated').length;
+  const failureFraction = failed / n;
+
+  // Compute degree (number of dependents) per promise
+  const dependentCount: Record<string, number> = {};
+  for (const p of promises) {
+    dependentCount[p.id] = 0;
+  }
+  for (const p of promises) {
+    for (const depId of p.depends_on) {
+      if (dependentCount[depId] !== undefined) {
+        dependentCount[depId]++;
+      }
+    }
+  }
+
+  // Mean degree
+  const degrees = Object.values(dependentCount);
+  const meanDegree = degrees.reduce((a, b) => a + b, 0) / n;
+
+  // Estimated targeted threshold: empirical p_c ~ 0.10 for scale-free networks
+  // Adjust by mean degree: higher degree = lower targeted threshold
+  // Use 1/mean_degree as rough estimate, clamped to [0.05, 0.50]
+  const estimatedThreshold = Math.max(0.05, Math.min(0.50,
+    meanDegree > 0 ? 1 / meanDegree : 0.45
+  ));
+
+  const safetyMargin = estimatedThreshold - failureFraction;
+
+  // Identify hub promises (top 10% by degree)
+  const sortedByDegree = Object.entries(dependentCount)
+    .sort((a, b) => b[1] - a[1]);
+  const hubCount = Math.max(1, Math.ceil(n * 0.1));
+  const hubPromises = sortedByDegree.slice(0, hubCount).map(([id]) => id);
+
+  let riskLevel: 'safe' | 'warning' | 'critical';
+  if (safetyMargin > 0.2) {
+    riskLevel = 'safe';
+  } else if (safetyMargin > 0) {
+    riskLevel = 'warning';
+  } else {
+    riskLevel = 'critical';
+  }
+
+  return { riskLevel, failureFraction, estimatedThreshold, safetyMargin, hubPromises };
+}
+
+/**
+ * Identify Zeno-trapped promises with detailed breakdown.
+ *
+ * A Zeno trap is a promise where:
+ * 1. status === 'declared' or 'unverifiable'
+ * 2. coherent_coupling for its verification structure <= 0.1
+ * 3. structurally isolated (no depends_on and nothing depends on it)
+ *
+ * The Zeno effect (rho = -0.191): more frequent observation suppresses
+ * state transitions. These promises sit in the ecological regime
+ * (k < 0.4) indefinitely. The fix is adding verification infrastructure
+ * or a dependency connection.
+ */
+export function identifyZenoTrapsDetailed(
+  promises: Promise[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params: Record<string, any> | null,
+): {
+  trappedIds: string[];
+  isolatedIds: string[];
+  weakCouplingIds: string[];
+} {
+  const allDependedOn = new Set<string>();
+  for (const p of promises) {
+    for (const depId of p.depends_on) {
+      allDependedOn.add(depId);
+    }
+  }
+
+  const trappedIds: string[] = [];
+  const isolatedIds: string[] = [];
+  const weakCouplingIds: string[] = [];
+
+  for (const p of promises) {
+    if (p.status !== 'declared' && p.status !== 'unverifiable') continue;
+
+    const structure = inferVerificationStructure(p);
+    const coupling = params?.[structure]?.coherent_coupling ?? 0;
+    const isIsolated = p.depends_on.length === 0 && !allDependedOn.has(p.id);
+
+    if (coupling <= 0.1) {
+      weakCouplingIds.push(p.id);
+    }
+
+    if (isIsolated) {
+      isolatedIds.push(p.id);
+    }
+
+    // Zeno trapped = weak coupling AND isolated
+    if (coupling <= 0.1 && isIsolated) {
+      trappedIds.push(p.id);
+    }
+  }
+
+  return { trappedIds, isolatedIds, weakCouplingIds };
+}
+
+/**
  * Identify Zeno-trapped promises: declared, no coherent coupling,
  * and isolated (no dependencies in either direction).
  *
@@ -303,13 +428,5 @@ export function identifyZenoTraps(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: Record<string, any>,
 ): string[] {
-  return promises
-    .filter(p => {
-      const structure = inferVerificationStructure(p);
-      const coupling = params[structure]?.coherent_coupling ?? 0;
-      const isIsolated = p.depends_on.length === 0
-        && !promises.some(other => other.depends_on.includes(p.id));
-      return p.status === 'declared' && coupling === 0 && isIsolated;
-    })
-    .map(p => p.id);
+  return identifyZenoTrapsDetailed(promises, params).trappedIds;
 }

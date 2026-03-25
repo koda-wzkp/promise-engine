@@ -134,15 +134,15 @@ export function CascadeResults({
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="text-center p-2 bg-gray-50 rounded">
           <p className="text-xl font-bold text-gray-900">
-            {result.affectedPromises.length}
+            {result.coherentCount ?? result.affectedPromises.filter(a => a.propagationType === 'coherent' && a.newStatus !== a.originalStatus).length}
           </p>
-          <p className="text-xs text-gray-500">Affected</p>
+          <p className="text-xs text-gray-500">Structural</p>
         </div>
         <div className="text-center p-2 bg-gray-50 rounded">
           <p className="text-xl font-bold text-gray-900">
-            {result.domainsAffected.length}
+            {result.incoherentCount ?? result.affectedPromises.filter(a => a.propagationType === 'incoherent').length}
           </p>
-          <p className="text-xs text-gray-500">Domains</p>
+          <p className="text-xs text-gray-500">At Risk</p>
         </div>
         <div className="text-center p-2 bg-gray-50 rounded">
           <p className="text-xl font-bold text-gray-900">
@@ -151,6 +151,36 @@ export function CascadeResults({
           <p className="text-xs text-gray-500">Max Depth</p>
         </div>
       </div>
+
+      {/* Percolation risk indicator */}
+      {result.percolationRisk && result.percolationRisk !== 'safe' && (
+        <div
+          className="mb-4 p-3 rounded-lg border"
+          style={{
+            backgroundColor: result.percolationRisk === 'critical' ? '#fef2f2' : '#fffbeb',
+            borderColor: result.percolationRisk === 'critical' ? '#fca5a5' : '#fcd34d',
+          }}
+        >
+          <p
+            className="text-sm font-medium"
+            style={{ color: result.percolationRisk === 'critical' ? '#991b1b' : '#78350f' }}
+          >
+            {result.percolationRisk === 'critical'
+              ? 'Network past fragility threshold — systemic risk'
+              : 'Network approaching fragility threshold'}
+          </p>
+        </div>
+      )}
+
+      {/* Zeno trap indicator */}
+      {result.zenoTrappedCount > 0 && (
+        <div className="mb-4 p-3 rounded-lg border" style={{ backgroundColor: '#fffbeb', borderColor: '#fcd34d' }}>
+          <p className="text-sm" style={{ color: '#78350f' }}>
+            {result.zenoTrappedCount} promise{result.zenoTrappedCount > 1 ? 's have' : ' has'} no structural pathway to resolution.
+            Adding verification infrastructure or dependency connections would activate {result.zenoTrappedCount > 1 ? 'them' : 'it'}.
+          </p>
+        </div>
+      )}
 
       {/* Triggered threats */}
       {result.triggeredThreats.length > 0 && (
@@ -263,7 +293,9 @@ export function CascadeResults({
                           </span>
                           {ap.newStatus !== ap.originalStatus && (
                             <span className="text-xs text-gray-400 ml-1">
-                              (structural cascade)
+                              {ap.degradationProbability !== undefined
+                                ? `structural cascade (p=${ap.degradationProbability.toFixed(2)})`
+                                : '(structural cascade)'}
                             </span>
                           )}
                         </div>

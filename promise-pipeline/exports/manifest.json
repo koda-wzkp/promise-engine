@@ -1,20 +1,38 @@
 {
-  "exportedAt": "2026-03-20T19:02:47.562Z",
+  "exportedAt": "2026-03-25T03:43:24.915Z",
   "networks": [
     {
       "id": "hb2021",
       "name": "Oregon HB 2021",
-      "promiseCount": 20
+      "promiseCount": 20,
+      "fingerprints": {
+        "sha256": "8956C7066650B7A76B7F401FBECD0A1C8C134C27BD23FD8F81A5F1B9C0A87916",
+        "poseidonRoot": "27960458a072495e694fe982fe5b556331614e0f4424a565500969bb27b498b3",
+        "promiseCount": 20,
+        "computedAt": "2026-03-25T03:43:24.988Z"
+      }
     },
     {
       "id": "jcpoa",
       "name": "Joint Comprehensive Plan of Action",
-      "promiseCount": 22
+      "promiseCount": 22,
+      "fingerprints": {
+        "sha256": "D2CC2BB5E15FA5F882FC7B6BB5DB1693E89E46555602D6934C63FC522EF6D247",
+        "poseidonRoot": "2e21fb6c1f7acfee5abee25b88f98ce4e440a95df20fb36713aef1269821f83d",
+        "promiseCount": 22,
+        "computedAt": "2026-03-25T03:43:25.114Z"
+      }
     },
     {
       "id": "iss",
       "name": "International Space Station",
-      "promiseCount": 27
+      "promiseCount": 27,
+      "fingerprints": {
+        "sha256": "33A9AE36C833F8405A64601AFEDCD76FDAE65C516F8EE5F438DE21B3CB06790E",
+        "poseidonRoot": "03c12ee0f530d19ccab5148c517ee3f473ee8c3ed46c5bc9db01815e4349e14b",
+        "promiseCount": 27,
+        "computedAt": "2026-03-25T03:43:25.299Z"
+      }
     }
   ]
 }

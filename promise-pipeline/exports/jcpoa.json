@@ -13,7 +13,13 @@
     "Cooperation",
     "Governance"
   ],
-  "exportedAt": "2026-03-20T19:02:47.564Z",
+  "fingerprints": {
+    "sha256": "D2CC2BB5E15FA5F882FC7B6BB5DB1693E89E46555602D6934C63FC522EF6D247",
+    "poseidonRoot": "2e21fb6c1f7acfee5abee25b88f98ce4e440a95df20fb36713aef1269821f83d",
+    "promiseCount": 22,
+    "computedAt": "2026-03-25T03:43:25.114Z"
+  },
+  "exportedAt": "2026-03-25T03:43:25.195Z",
   "promises": [
     {
       "id": "JCPOA-001",
@@ -38,7 +44,10 @@
       ],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "1337baa0021fedc2d84540145723dd60793347b8f430c0ebbdc7994f27eae72d"
+      }
     },
     {
       "id": "JCPOA-002",
@@ -63,7 +72,10 @@
       ],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "210d57841e5dc4acd0c492e12c42f2b9b50d7284692d0f6754ef700d860eccd0"
+      }
     },
     {
       "id": "JCPOA-003",
@@ -88,7 +100,10 @@
       ],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "0d97e89d21e32823a14fb5fb3e9284bc0cb50dc15c10de3b938bd0d8d66a27d5"
+      }
     },
     {
       "id": "JCPOA-004",
@@ -113,7 +128,10 @@
       ],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "124d5a7462e838821254bae4368d22c1b07767184d8052817806135d789408bd"
+      }
     },
     {
       "id": "JCPOA-005",
@@ -138,7 +156,10 @@
       ],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "1c0bc695fb0965544df0c2b34b2238c0685422624c65218168a1ebb46069f792"
+      }
     },
     {
       "id": "JCPOA-006",
@@ -161,7 +182,10 @@
       "depends_on": [],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "297277063211b5bf36cc55519b7b2f01b86bdee17ee65a6ccc48037dbb59685e"
+      }
     },
     {
       "id": "JCPOA-007",
@@ -183,7 +207,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "2eb81dd095c1ed4686ba3e2af59c14586fac06dfdd619429d21fca3b7d0531bc"
+      }
     },
     {
       "id": "JCPOA-008",
@@ -203,7 +230,10 @@
       "depends_on": [],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "13128ee380640ea2cdbfde6d067fc207ae8b6348d97067949d0d08e62e5da546"
+      }
     },
     {
       "id": "JCPOA-009",
@@ -226,7 +256,10 @@
       ],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "0ca95c73138e91e76d5dd0d637418e5bc0117ea89fb03196acf6517149141095"
+      }
     },
     {
       "id": "JCPOA-010",
@@ -245,7 +278,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "304cbb0536d941707fd804330ac481113476af6997c8b38ef74506fa263dfa2d"
+      }
     },
     {
       "id": "JCPOA-011",
@@ -265,7 +301,10 @@
       "depends_on": [],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "abandoned"
+      "violationType": "abandoned",
+      "_crypto": {
+        "poseidonHash": "19f97543ef554c19a9618f3bba9b90797902de70f59a8c21aed488d22b740aee"
+      }
     },
     {
       "id": "JCPOA-012",
@@ -286,7 +325,10 @@
         "JCPOA-011"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "147da5477ce4e16ba89eebb60ea1e1fb99017ca8857637b5f94a711df77db9b6"
+      }
     },
     {
       "id": "JCPOA-013",
@@ -306,7 +348,10 @@
       "depends_on": [],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "abandoned"
+      "violationType": "abandoned",
+      "_crypto": {
+        "poseidonHash": "030b458bb3f21d78dd38c1915bff6eb669bf5ef1f0bd66292906580f64eb2133"
+      }
     },
     {
       "id": "JCPOA-014",
@@ -325,7 +370,10 @@
       ],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "abandoned"
+      "violationType": "abandoned",
+      "_crypto": {
+        "poseidonHash": "0e255e9be3c093d545754ecc5135ff26329ea69cea660087eb556d94f0f19bc6"
+      }
     },
     {
       "id": "JCPOA-015",
@@ -342,7 +390,10 @@
       "depends_on": [],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "abandoned"
+      "violationType": "abandoned",
+      "_crypto": {
+        "poseidonHash": "169d638af1f1fdc3d05bd517628cc61bd0071f1b3038f38542961424d0081f55"
+      }
     },
     {
       "id": "JCPOA-016",
@@ -364,7 +415,10 @@
         "JCPOA-012"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "092be1ca1556c79e3ec2a50b01b86bbc90a4b3e60cd481019c2a63a8f2bc2188"
+      }
     },
     {
       "id": "JCPOA-017",
@@ -386,7 +440,10 @@
         "JCPOA-012"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "0a69c706a5d5271921a2a909cd83ca5c196eeaa65c242947f2e42088efa8fa32"
+      }
     },
     {
       "id": "JCPOA-018",
@@ -402,7 +459,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "0ed91e529da01efb2e9f7853f0bd8ccbb68a70b6759e8fb154e4534e40b834ce"
+      }
     },
     {
       "id": "JCPOA-019",
@@ -426,7 +486,10 @@
       ],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "19b722f3471098c076595d8dd2d39d0d2b9257f6fe3f1cd55598386afe7b81bb"
+      }
     },
     {
       "id": "JCPOA-020",
@@ -445,7 +508,10 @@
       },
       "depends_on": [],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "116837121f8a7f2dd5cfb463cde6c4cb9fb257220a99a18db9f91b734a2d0fa9"
+      }
     },
     {
       "id": "JCPOA-021",
@@ -466,7 +532,10 @@
         "JCPOA-011"
       ],
       "polarity": "give",
-      "origin": "negotiated"
+      "origin": "negotiated",
+      "_crypto": {
+        "poseidonHash": "1638aa61f985a965fa35a66dd70c2bff25b2bcbfdddceab2cc7cc801ec9a3403"
+      }
     },
     {
       "id": "JCPOA-022",
@@ -486,7 +555,10 @@
       "depends_on": [],
       "polarity": "give",
       "origin": "negotiated",
-      "violationType": "fault"
+      "violationType": "fault",
+      "_crypto": {
+        "poseidonHash": "2b340267ed89599c5ff00cdfdc8a12c2157f3797ccaf86284acf8dcd30769c10"
+      }
     }
   ],
   "agents": [

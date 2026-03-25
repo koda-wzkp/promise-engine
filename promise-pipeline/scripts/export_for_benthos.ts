@@ -26,6 +26,10 @@ import {
   issAgents,
 } from "../lib/data/iss";
 
+import { computeNetworkFingerprints } from "../lib/encoding/computeFingerprints";
+import { poseidonHashPromise } from "../lib/encoding/poseidonHash";
+import type { Promise as PPPromise, Agent, NetworkFingerprint } from "../lib/types/promise";
+
 interface ExportedNetwork {
   id: string;
   name: string;
@@ -34,6 +38,7 @@ interface ExportedNetwork {
   agentCount: number;
   domainCount: number;
   domains: string[];
+  fingerprints: NetworkFingerprint;
   exportedAt: string;
   promises: unknown[];
   agents: unknown[];
@@ -68,7 +73,7 @@ fs.mkdirSync(outputDir, { recursive: true });
 
 const manifest: {
   exportedAt: string;
-  networks: { id: string; name: string; promiseCount: number }[];
+  networks: { id: string; name: string; promiseCount: number; fingerprints: NetworkFingerprint }[];
 } = {
   exportedAt: new Date().toISOString(),
   networks: [],
@@ -76,6 +81,17 @@ const manifest: {
 
 for (const net of networks) {
   const domains = [...new Set(net.promises.map((p) => p.domain))];
+
+  // Compute dual fingerprints (SHA-256 + Poseidon)
+  const fingerprints = computeNetworkFingerprints(net.promises, net.agents);
+
+  // Attach per-promise Poseidon hash to _crypto field
+  const promisesWithCrypto = net.promises.map((p) => ({
+    ...p,
+    _crypto: {
+      poseidonHash: poseidonHashPromise(p).toString(16).padStart(64, "0"),
+    },
+  }));
 
   const exported: ExportedNetwork = {
     id: net.id,
@@ -85,8 +101,9 @@ for (const net of networks) {
     agentCount: net.agents.length,
     domainCount: domains.length,
     domains,
+    fingerprints,
     exportedAt: new Date().toISOString(),
-    promises: net.promises,
+    promises: promisesWithCrypto,
     agents: net.agents,
   };
 
@@ -98,6 +115,7 @@ for (const net of networks) {
     id: net.id,
     name: net.name,
     promiseCount: net.promises.length,
+    fingerprints,
   });
 }
 

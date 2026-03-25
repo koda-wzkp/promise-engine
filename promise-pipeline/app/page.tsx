@@ -221,16 +221,25 @@ function HeroSection() {
         onMouseEnter={() => setHeroHovered(true)}
         onMouseLeave={() => setHeroHovered(false)}
       >
-        <div className="mx-auto mb-8" style={{ overflow: "visible" }}>
+        <div className="mx-auto mb-12 mt-4" style={{ overflow: "visible" }}>
           <NestedPLogo
             mode={heroHovered ? "peel" : "breathe"}
-            size={64}
+            size={96}
             isHovered={heroHovered}
             className="mx-auto"
           />
         </div>
-        <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 text-balance">
-          A trust primitive for commitment networks.
+        <span style={{
+          fontFamily: 'IBM Plex Mono, monospace',
+          fontSize: 12,
+          color: '#6b7280',
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+        }}>
+          A trust primitive for commitment networks
+        </span>
+        <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 mt-3 text-balance">
+          Make common sense computable.
         </h1>
         <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
           Dashboards show you what&apos;s broken. Promise Pipeline shows you what

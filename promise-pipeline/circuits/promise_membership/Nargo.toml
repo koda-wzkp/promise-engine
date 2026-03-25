@@ -1,0 +1,7 @@
+[package]
+name = "promise_membership"
+type = "bin"
+authors = ["Conor Nolan-Finkel"]
+compiler_version = ">=0.30.0"
+
+[dependencies]

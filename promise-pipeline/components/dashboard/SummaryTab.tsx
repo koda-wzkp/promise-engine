@@ -5,7 +5,7 @@ import { DashboardData, PromiseStatus } from "@/lib/types/promise";
 import { NetworkHealthBar } from "@/components/simulation/NetworkHealthBar";
 import { StatusBadge } from "@/components/promise/StatusBadge";
 import { calculateNetworkHealth, identifyBottlenecks } from "@/lib/simulation/cascade";
-import { statusBreakdown, domainHealthScores, calculateNetworkEntropy, identifyHighLeverageNodes, identifyZenoTraps } from "@/lib/simulation/scoring";
+import { statusBreakdown, domainHealthScores, calculateNetworkEntropy, identifyHighLeverageNodes, identifyZenoTraps, computePercolationRisk, identifyZenoTrapsDetailed } from "@/lib/simulation/scoring";
 import { getGradeFromScore } from "@/lib/utils/formatting";
 import { statusColors } from "@/lib/utils/colors";
 import { runDiagnostic } from "@/lib/analysis";
@@ -87,6 +87,55 @@ export function SummaryTab({ data, logoMode, logoCascadeTarget }: SummaryTabProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data.promises],
   );
+
+  // Detailed Zeno trap info
+  const zenoDetailed = useMemo(
+    () => identifyZenoTrapsDetailed(data.promises, empiricalParams),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data.promises],
+  );
+
+  // Percolation risk diagnostic
+  const percolation = useMemo(
+    () => computePercolationRisk(data.promises),
+    [data.promises],
+  );
+
+  // Cascade calibration: count coherent vs incoherent edges
+  const cascadeCalibration = useMemo(() => {
+    let coherent = 0;
+    let incoherent = 0;
+    for (const p of data.promises) {
+      for (const depId of p.depends_on) {
+        const dep = data.promises.find(d => d.id === depId);
+        if (!dep) continue;
+        const sourceStructure = dep.verification?.method === 'filing' || dep.verification?.method === 'audit' || dep.verification?.method === 'sensor'
+          ? 'numeric_templated_periodic'
+          : dep.verification?.method === 'benchmark'
+            ? 'qualitative_judgment_periodic'
+            : dep.verification?.method === 'self-report'
+              ? 'qualitative_event_driven'
+              : 'none';
+        const targetStructure = p.verification?.method === 'filing' || p.verification?.method === 'audit' || p.verification?.method === 'sensor'
+          ? 'numeric_templated_periodic'
+          : p.verification?.method === 'benchmark'
+            ? 'qualitative_judgment_periodic'
+            : p.verification?.method === 'self-report'
+              ? 'qualitative_event_driven'
+              : 'none';
+        const sourceCoupling = empiricalParams[sourceStructure]?.coherent_coupling ?? 0;
+        const targetCoupling = empiricalParams[targetStructure]?.coherent_coupling ?? 0;
+        const edgeCoupling = Math.min(sourceCoupling, targetCoupling);
+        if (edgeCoupling > 0.1) {
+          coherent++;
+        } else {
+          incoherent++;
+        }
+      }
+    }
+    return { coherent, incoherent };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.promises]);
 
   const medianDeps = leverageNodes.length > 0
     ? leverageNodes[Math.floor(leverageNodes.length / 2)].dependentCount
@@ -434,6 +483,112 @@ export function SummaryTab({ data, logoMode, logoCascadeTarget }: SummaryTabProp
             )}
           </div>
 
+        </div>
+      </div>
+
+      {/* ── EMPIRICAL DIAGNOSTICS ── */}
+      <div className="bg-white rounded-xl border p-6">
+        <h3 className="font-serif font-semibold text-gray-900 mb-1">Empirical Diagnostics</h3>
+        <p className="text-xs text-gray-400 mb-5">
+          Calibrated from 7,193 observed state transitions (Benthos, March 2026)
+        </p>
+
+        <div className="space-y-5">
+          {/* Network Fragility */}
+          <details open={percolation.riskLevel !== 'safe'}>
+            <summary className="text-sm font-semibold text-gray-700 cursor-pointer mb-2">Network Fragility</summary>
+            <div
+              className="rounded-lg border p-4"
+              style={{
+                backgroundColor: percolation.riskLevel === 'critical' ? '#fef2f2' : percolation.riskLevel === 'warning' ? '#fffbeb' : '#ecfdf5',
+                borderColor: percolation.riskLevel === 'critical' ? '#fca5a5' : percolation.riskLevel === 'warning' ? '#fcd34d' : '#6ee7b7',
+              }}
+            >
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Percolation threshold</span>
+                  <span className="font-mono text-gray-900">~{Math.round(percolation.estimatedThreshold * 100)}% of promises can fail before systemic collapse</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Current failure rate</span>
+                  <span className="font-mono text-gray-900">{Math.round(percolation.failureFraction * 100)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Safety margin</span>
+                  <span
+                    className="font-mono font-semibold"
+                    style={{ color: percolation.safetyMargin > 0.2 ? '#1a5f4a' : percolation.safetyMargin > 0 ? '#78350f' : '#991b1b' }}
+                  >
+                    {Math.round(percolation.safetyMargin * 100)}%
+                  </span>
+                </div>
+              </div>
+              {percolation.hubPromises.length > 0 && (
+                <div className="mt-3 pt-2 border-t" style={{ borderColor: percolation.riskLevel === 'critical' ? '#fca5a5' : percolation.riskLevel === 'warning' ? '#fcd34d' : '#6ee7b7' }}>
+                  <p className="text-xs font-medium text-gray-700 mb-1">Hub promises — protect these first:</p>
+                  <p className="text-xs font-mono text-gray-600">{percolation.hubPromises.join(', ')}</p>
+                </div>
+              )}
+            </div>
+          </details>
+
+          {/* Zeno-Trapped Promises */}
+          {zenoDetailed.trappedIds.length > 0 && (
+            <details>
+              <summary className="text-sm font-semibold text-gray-700 cursor-pointer mb-2">
+                Zeno-Trapped Promises ({zenoDetailed.trappedIds.length})
+              </summary>
+              <div className="rounded-lg border p-4" style={{ backgroundColor: '#fffbeb', borderColor: '#fcd34d' }}>
+                <p className="text-sm mb-2" style={{ color: '#78350f' }}>
+                  {zenoDetailed.trappedIds.length} promise{zenoDetailed.trappedIds.length !== 1 ? 's have' : ' has'} no pathway to resolution:
+                </p>
+                <div className="space-y-1.5">
+                  {zenoDetailed.trappedIds.map((id: string) => {
+                    const p = data.promises.find(pr => pr.id === id);
+                    if (!p) return null;
+                    return (
+                      <div key={id} className="text-xs">
+                        <span className="font-mono font-semibold" style={{ color: '#78350f' }}>{id}</span>
+                        <span className="text-gray-600 ml-2">{p.body.slice(0, 80)}{p.body.length > 80 ? '...' : ''}</span>
+                        <span className="text-gray-400 ml-2">[{p.domain}, {p.verification?.method || 'none'}]</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs mt-3" style={{ color: '#92400e' }}>
+                  Recommendation: add verification infrastructure or structural dependencies
+                </p>
+              </div>
+            </details>
+          )}
+
+          {/* Cascade Calibration */}
+          <details>
+            <summary className="text-sm font-semibold text-gray-700 cursor-pointer mb-2">Cascade Calibration</summary>
+            <div className="rounded-lg border border-gray-200 p-4 bg-gray-50">
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Coherent edges</span>
+                  <span className="font-mono text-gray-900">
+                    {cascadeCalibration.coherent}
+                    <span className="text-gray-400 ml-1 text-xs font-sans">verified → verified, deterministic propagation</span>
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Incoherent edges</span>
+                  <span className="font-mono text-gray-900">
+                    {cascadeCalibration.incoherent}
+                    <span className="text-gray-400 ml-1 text-xs font-sans">involving unverified, probabilistic at-risk flagging</span>
+                  </span>
+                </div>
+              </div>
+              {cascadeCalibration.incoherent > cascadeCalibration.coherent && (
+                <p className="text-xs mt-2" style={{ color: '#78350f' }}>
+                  Majority of dependency edges lack coherent coupling — cascade predictions rely heavily on at-risk flagging rather than structural propagation.
+                </p>
+              )}
+            </div>
+          </details>
         </div>
       </div>
 

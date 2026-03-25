@@ -6,13 +6,19 @@ import {
   CertaintyImpact,
   NetworkHealthScore,
 } from "../types/simulation";
-import { calculateNetworkEntropy, STATUS_WEIGHTS, CERTAINTY_WEIGHTS, healthScore, domainHealthScores, inferVerificationStructure } from "./scoring";
+import { calculateNetworkEntropy, STATUS_WEIGHTS, CERTAINTY_WEIGHTS, healthScore, domainHealthScores, computePercolationRisk, identifyZenoTrapsDetailed } from "./scoring";
+import { inferVerificationStructure } from "./scoring";
 import { analyzePromiseDynamics } from "./lindblad";
-import empiricalCascadeParamsRaw from "@/parameters/empirical_cascade_params.json";
+import {
+  loadEmpiricalParams,
+  TRANSITION_TENSOR,
+  STATUS_MAP,
+  REVERSE_STATUS_MAP,
+  EmpiricalParams,
+} from "./empiricalParams";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const empiricalCascadeParams: Record<string, any> | null =
-  (empiricalCascadeParamsRaw as any)?.verification_structures ?? null;
+// Load params once at module level
+const empiricalParams = loadEmpiricalParams();
 
 const DEGRADATION_ORDER: PromiseStatus[] = [
   "verified",
@@ -27,6 +33,18 @@ function degradeStatus(current: PromiseStatus, levels: number = 1): PromiseStatu
   if (idx === -1) return current;
   const newIdx = Math.min(idx + levels, DEGRADATION_ORDER.length - 1);
   return DEGRADATION_ORDER[newIdx];
+}
+
+/** Severity ordering for transition tensor comparisons */
+function statusSeverity(status: string): number {
+  const map: Record<string, number> = {
+    'verified': 0,
+    'declared': 1,
+    'degraded': 2,
+    'violated': 3,
+    'unverifiable': 1,
+  };
+  return map[status] ?? 1;
 }
 
 /**
@@ -127,6 +145,10 @@ export function simulateCascade(
       certaintyImpacts: [],
       originalNetworkEntropy: currentEntropy,
       newNetworkEntropy: currentEntropy,
+      coherentCount: 0,
+      incoherentCount: 0,
+      percolationRisk: 'safe',
+      zenoTrappedCount: 0,
     };
   }
 
@@ -162,19 +184,17 @@ export function simulateCascade(
       const targetStructure = inferVerificationStructure(promise);
 
       // Use the WEAKER coupling of the two endpoints
-      const sourceCoupling = empiricalCascadeParams?.[sourceStructure]?.coherent_coupling ?? null;
-      const targetCoupling = empiricalCascadeParams?.[targetStructure]?.coherent_coupling ?? null;
+      const sourceCoupling = empiricalParams?.[sourceStructure]?.coherent_coupling ?? null;
+      const targetCoupling = empiricalParams?.[targetStructure]?.coherent_coupling ?? null;
 
       // If params aren't loaded, default to coherent (existing behavior)
       const edgeCoupling = sourceCoupling !== null && targetCoupling !== null
         ? Math.min(sourceCoupling, targetCoupling)
-        : 1;  // fallback: coherent
+        : null;
 
-      if (edgeCoupling > 0.1) {
-        // COHERENT: structured pathway — propagate as before (hard degrade)
-        const degradeLevels = Math.max(1, 2 - depth + 1);
-        const newStatus = degradeStatus(originalStatus, degradeLevels > 0 ? 1 : 0);
-
+      if (edgeCoupling === null) {
+        // ─── FALLBACK: original BFS uniform degradation (no empirical params) ───
+        const newStatus = degradeStatus(originalStatus, 1);
         if (newStatus !== originalStatus) {
           promise.status = newStatus;
           affected.push({
@@ -182,12 +202,11 @@ export function simulateCascade(
             originalStatus,
             newStatus,
             cascadeDepth: depth,
-            reason: `Structural cascade from ${query.promiseId}`,
+            reason: `Cascade from ${query.promiseId}`,
             propagationType: 'coherent',
           });
           maxDepth = Math.max(maxDepth, depth);
 
-          // Continue propagation
           const nextDeps = dependents.get(id) || [];
           for (const nextId of nextDeps) {
             if (!visited.has(nextId)) {
@@ -195,9 +214,93 @@ export function simulateCascade(
             }
           }
         }
+      } else if (edgeCoupling > 0.1) {
+        // ─── COHERENT EDGE: use transition tensor ───
+        const sourceStatus = STATUS_MAP[sourcePromise.status] || 'Declared';
+        const transitions = TRANSITION_TENSOR[sourceStatus];
+
+        if (transitions) {
+          const currentSeverity = statusSeverity(originalStatus);
+          let bestWorseState: string | null = null;
+          let bestProb = 0;
+          let totalWorseProb = 0;
+
+          for (const [toState, prob] of Object.entries(transitions)) {
+            const mappedStatus = REVERSE_STATUS_MAP[toState];
+            if (mappedStatus && statusSeverity(mappedStatus) > currentSeverity) {
+              totalWorseProb += prob;
+              if (prob > bestProb) {
+                bestProb = prob;
+                bestWorseState = mappedStatus;
+              }
+            }
+          }
+
+          if (totalWorseProb > 0.05 && bestWorseState) {
+            // Degrade with depth attenuation
+            const depthFactor = Math.pow(0.8, depth - 1);
+            const effectiveProb = totalWorseProb * depthFactor;
+
+            if (effectiveProb > 0.05) {
+              promise.status = bestWorseState as PromiseStatus;
+              affected.push({
+                promiseId: id,
+                originalStatus,
+                newStatus: bestWorseState as PromiseStatus,
+                cascadeDepth: depth,
+                reason: `Structural cascade from ${query.promiseId} (p=${effectiveProb.toFixed(2)})`,
+                propagationType: 'coherent',
+                degradationProbability: effectiveProb,
+              });
+              maxDepth = Math.max(maxDepth, depth);
+
+              // Continue propagation through coherent edges
+              const nextDeps = dependents.get(id) || [];
+              for (const nextId of nextDeps) {
+                if (!visited.has(nextId)) {
+                  queue.push({ id: nextId, depth: depth + 1 });
+                }
+              }
+            } else {
+              // Weak cascade — flag but don't change status
+              affected.push({
+                promiseId: id,
+                originalStatus,
+                newStatus: originalStatus,
+                cascadeDepth: depth,
+                reason: `Weak cascade from ${query.promiseId} (p=${effectiveProb.toFixed(2)})`,
+                propagationType: 'coherent',
+                riskScore: effectiveProb,
+              });
+              maxDepth = Math.max(maxDepth, depth);
+            }
+          }
+        } else {
+          // No transition data — fall back to hard degrade
+          const newStatus = degradeStatus(originalStatus, 1);
+          if (newStatus !== originalStatus) {
+            promise.status = newStatus;
+            affected.push({
+              promiseId: id,
+              originalStatus,
+              newStatus,
+              cascadeDepth: depth,
+              reason: `Structural cascade from ${query.promiseId}`,
+              propagationType: 'coherent',
+            });
+            maxDepth = Math.max(maxDepth, depth);
+
+            const nextDeps = dependents.get(id) || [];
+            for (const nextId of nextDeps) {
+              if (!visited.has(nextId)) {
+                queue.push({ id: nextId, depth: depth + 1 });
+              }
+            }
+          }
+        }
       } else {
-        // INCOHERENT: no structured pathway — flag at risk, don't change status
-        const weight = empiricalCascadeParams?.[targetStructure]?.coupling_weight ?? 0.1;
+        // ─── INCOHERENT EDGE: flag at-risk, don't change status ───
+        const weight = empiricalParams?.[targetStructure]?.coupling_weight ?? 0.1;
         const riskScore = Math.min(1, weight / depth);
         affected.push({
           promiseId: id,
@@ -311,24 +414,21 @@ export function simulateCascade(
     )
   );
 
-  const summary = generateCascadeNarrative(
-    {
-      query,
-      originalNetworkHealth: originalHealth,
-      newNetworkHealth: newHealth,
-      affectedPromises: affected,
-      triggeredThreats: triggeredThreatIds,
-      cascadeDepth: maxDepth,
-      domainsAffected,
-      summary: "",
-      certaintyImpacts,
-      originalNetworkEntropy: originalEntropy,
-      newNetworkEntropy: newEntropy,
-    },
-    promises
-  );
+  // Empirical cascade calibration metrics
+  const coherentCount = affected.filter(
+    a => a.propagationType === 'coherent' && a.newStatus !== a.originalStatus
+  ).length;
+  const incoherentCount = affected.filter(
+    a => a.propagationType === 'incoherent'
+  ).length;
 
-  return {
+  // Percolation risk — post-cascade
+  const postPerc = computePercolationRisk(newPromises);
+
+  // Zeno traps — post-cascade
+  const zenoResult = identifyZenoTrapsDetailed(newPromises, empiricalParams);
+
+  const cascadeResult: CascadeResult = {
     query,
     originalNetworkHealth: originalHealth,
     newNetworkHealth: newHealth,
@@ -336,11 +436,19 @@ export function simulateCascade(
     triggeredThreats: triggeredThreatIds,
     cascadeDepth: maxDepth,
     domainsAffected,
-    summary,
+    summary: "",
     certaintyImpacts,
     originalNetworkEntropy: originalEntropy,
     newNetworkEntropy: newEntropy,
+    coherentCount,
+    incoherentCount,
+    percolationRisk: postPerc.riskLevel,
+    zenoTrappedCount: zenoResult.trappedIds.length,
   };
+
+  cascadeResult.summary = generateCascadeNarrative(cascadeResult, promises);
+
+  return cascadeResult;
 }
 
 /**
@@ -499,6 +607,13 @@ export function generateCascadeNarrative(
     narrative += `This change triggers ${result.triggeredThreats.length} threat${result.triggeredThreats.length !== 1 ? "s" : ""}, causing lateral cascade effects across domains. `;
   }
 
+  // Percolation context
+  if (result.percolationRisk === 'warning') {
+    narrative += `The network is approaching its fragility threshold — additional failures may trigger systemic collapse. `;
+  } else if (result.percolationRisk === 'critical') {
+    narrative += `WARNING: The network has exceeded its fragility threshold. Cascades are likely to propagate systemically. `;
+  }
+
   // Highlight most significant affected promise
   const worstAffected = result.affectedPromises.find(
     (a) => a.newStatus === "violated"
@@ -512,7 +627,12 @@ export function generateCascadeNarrative(
 
   // Certainty cascade effects
   if (result.certaintyImpacts && result.certaintyImpacts.length > 0) {
-    narrative += `Additionally, ${result.certaintyImpacts.length} promise${result.certaintyImpacts.length !== 1 ? "s lose" : " loses"} verification certainty through verification dependency chains.`;
+    narrative += `Additionally, ${result.certaintyImpacts.length} promise${result.certaintyImpacts.length !== 1 ? "s lose" : " loses"} verification certainty through verification dependency chains. `;
+  }
+
+  // Zeno traps
+  if (result.zenoTrappedCount > 0) {
+    narrative += `${result.zenoTrappedCount} promise${result.zenoTrappedCount > 1 ? 's have' : ' has'} no structural pathway to resolution.`;
   }
 
   return narrative;

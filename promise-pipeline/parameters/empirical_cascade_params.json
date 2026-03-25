@@ -1,13 +1,13 @@
 {
-  "version": "1.0",
-  "description": "Empirical cascade parameters by verification structure — coherent coupling strength determines propagation mode in cascade simulation",
+  "version": "2.0",
+  "description": "Empirical cascade parameters by verification structure — coherent coupling from ENAQT calibration (Benthos March 2026, 7,193 observed transitions)",
   "source": "Benthos cascade validation, March 2026",
   "verification_structures": {
     "numeric_templated_periodic": {
       "prior_compliance": 0.85,
       "k": 1.10,
       "coupling_weight": 0.576,
-      "coherent_coupling": 0.42,
+      "coherent_coupling": 0.380,
       "enaqt_viable": true,
       "optimal_review_period": 1.26
     },
@@ -15,8 +15,8 @@
       "prior_compliance": 0.72,
       "k": 0.72,
       "coupling_weight": 0.390,
-      "coherent_coupling": 0.28,
-      "enaqt_viable": true,
+      "coherent_coupling": 0.009,
+      "enaqt_viable": false,
       "optimal_review_period": 2.10
     },
     "qualitative_event_driven": {
@@ -27,6 +27,22 @@
       "enaqt_viable": false,
       "optimal_review_period": 3.50
     },
+    "deadline_driven_single": {
+      "prior_compliance": 0.60,
+      "k": 0.55,
+      "coupling_weight": 0.300,
+      "coherent_coupling": 0.130,
+      "enaqt_viable": true,
+      "optimal_review_period": null
+    },
+    "binary_gate": {
+      "prior_compliance": 0.50,
+      "k": 0.50,
+      "coupling_weight": 0.150,
+      "coherent_coupling": 0.0,
+      "enaqt_viable": false,
+      "optimal_review_period": null
+    },
     "none": {
       "prior_compliance": 0.27,
       "k": 0.37,
@@ -35,5 +51,23 @@
       "enaqt_viable": false,
       "optimal_review_period": null
     }
+  },
+  "percolation": {
+    "random_pc": 0.45,
+    "targeted_pc": 0.10,
+    "robustness_asymmetry": 4.4
+  },
+  "memory_kernel": {
+    "tau_m": 0.1,
+    "markovian": true
+  },
+  "measurement_backaction": {
+    "delta_k": 0.176
+  },
+  "bond_dimension": {
+    "chi": 2
+  },
+  "zeno_correlation": {
+    "rho": -0.191
   }
 }

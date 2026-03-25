@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 const C = {
   bg: "#faf9f6", surface: "#ffffff", surfaceDark: "#f5f3ee",
@@ -50,17 +50,13 @@ export { EDGES };
 
 export default function PromiseGraph({ promises, agents, selectedId, onPromiseClick }) {
   const [tooltip, setTooltip] = useState(null);
-  const svgRef = useRef(null);
   const mono = "'IBM Plex Mono', monospace";
 
   const handleNodeClick = useCallback((promise) => {
     onPromiseClick(promise.id);
   }, [onPromiseClick]);
 
-  const showTooltip = useCallback((promise, e) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
+  const showTooltip = useCallback((promise) => {
     const pos = NODE_POSITIONS[promise.id];
     setTooltip({
       promise,
@@ -79,7 +75,6 @@ export default function PromiseGraph({ promises, agents, selectedId, onPromiseCl
   return (
     <div style={{ position: "relative" }}>
       <svg
-        ref={svgRef}
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         style={{ width: "100%", height: "auto", background: C.surface, borderRadius: 8, border: `1px solid ${C.border}` }}
       >
@@ -133,7 +128,7 @@ export default function PromiseGraph({ promises, agents, selectedId, onPromiseCl
                   e.preventDefault();
                   handleNodeClick(promise);
                 }}
-                onMouseEnter={(e) => showTooltip(promise, e)}
+                onMouseEnter={() => showTooltip(promise)}
                 onMouseLeave={hideTooltip}
               />
               {/* Visible node */}

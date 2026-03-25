@@ -1,6 +1,14 @@
 "use client";
 
-export function AboutTab() {
+import type { Promise as PPPromise, Agent } from "@/lib/types/promise";
+import { NetworkFingerprintDisplay } from "./NetworkFingerprintDisplay";
+
+interface AboutTabProps {
+  promises?: PPPromise[];
+  agents?: Agent[];
+}
+
+export function AboutTab({ promises, agents }: AboutTabProps = {}) {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="bg-white rounded-xl border p-6">
@@ -68,6 +76,10 @@ export function AboutTab() {
           Promise Pipeline is open source under the AGPL-3.0 license.
         </p>
       </div>
+
+      {promises && agents && (
+        <NetworkFingerprintDisplay promises={promises} agents={agents} />
+      )}
     </div>
   );
 }

@@ -205,7 +205,7 @@ export default function HB2021Page() {
             onPromiseClick={handleWhatIf}
           />
         )}
-        {activeTab === "about" && <AboutTab />}
+        {activeTab === "about" && <AboutTab promises={hb2021Data.promises} agents={hb2021Data.agents} />}
       </div>
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <InlineServiceCTA variant="demo" />

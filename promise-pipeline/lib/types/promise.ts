@@ -91,6 +91,20 @@ export interface Promise {
   scope?: string[];
   origin?: PromiseOrigin;
   violationType?: ViolationType;
+
+  // Cryptographic layer (computed, not user-entered)
+  _crypto?: {
+    sha256Fingerprint?: string;    // 96 hex chars (header + content hash)
+    poseidonHash?: string;         // Field element as hex string
+  };
+}
+
+// ─── NETWORK FINGERPRINT ───
+export interface NetworkFingerprint {
+  sha256: string;        // SHA-256 of sorted SHA-256 fingerprints (64 hex)
+  poseidonRoot: string;  // Poseidon Merkle root as hex string
+  promiseCount: number;
+  computedAt: string;    // ISO timestamp
 }
 
 // ─── PROMISE FACTORY ───

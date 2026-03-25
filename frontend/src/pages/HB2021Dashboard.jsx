@@ -1,6 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceLine } from "recharts";
 import { api } from "../utils/api";
+import PromiseGraph, { EDGES } from "../components/network/PromiseGraph";
+import WhatIfPanel from "../components/simulation/WhatIfPanel";
 
 // ─── DATA ───
 const AGENTS = [
@@ -134,8 +136,13 @@ function generateNarrative() {
 export default function HB2021Dashboard() {
   const [tab, setTab] = useState("summary");
   const [domainFilter, setDomainFilter] = useState("All");
+  const [selectedPromise, setSelectedPromise] = useState(null);
   const [liveData, setLiveData] = useState(null);
   const [apiStatus, setApiStatus] = useState("loading"); // loading | connected | offline
+
+  const handlePromiseClick = useCallback((id) => {
+    setSelectedPromise(prev => prev === id ? null : id);
+  }, []);
 
   // Fetch live data from API (falls back to hardcoded data gracefully)
   useEffect(() => {
@@ -175,6 +182,7 @@ export default function HB2021Dashboard() {
   const tabDefs = [
     { id: "summary", label: "Summary" },
     { id: "trajectory", label: "Emissions Trajectory" },
+    { id: "network", label: "Network" },
     { id: "promises", label: "All Promises" },
     { id: "insights", label: "Key Findings" },
     { id: "about", label: "About" },
@@ -435,6 +443,30 @@ export default function HB2021Dashboard() {
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* NETWORK */}
+        {tab === "network" && (
+          <div>
+            <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 16, lineHeight: 1.6 }}>
+              Each node is a promise. Arrows show dependencies &mdash; when an upstream promise breaks, downstream promises are at risk. Tap a node to open the What If panel.
+            </div>
+            <PromiseGraph
+              promises={PROMISES}
+              agents={AGENTS}
+              selectedId={selectedPromise}
+              onPromiseClick={handlePromiseClick}
+            />
+            {selectedPromise && (
+              <WhatIfPanel
+                promise={PROMISES.find(p => p.id === selectedPromise)}
+                promises={PROMISES}
+                edges={EDGES}
+                agents={AGENTS}
+                onClose={() => setSelectedPromise(null)}
+              />
             )}
           </div>
         )}

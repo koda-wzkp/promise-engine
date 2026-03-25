@@ -66,8 +66,8 @@ export function AboutTab({ promises, agents }: AboutTabProps = {}) {
           <li>Promise data sourced from Oregon HB 2021 statutory text, PUC filings, and DEQ reports</li>
           <li>Dependencies inferred from legislative structure and regulatory requirements</li>
           <li>Status assessments based on publicly available compliance data as of 2024</li>
-          <li>Network health calculated as weighted average: Verified=100, Declared=60, Degraded=30, Violated=0, Unverifiable=20</li>
-          <li>Cascade simulation uses deterministic BFS propagation with diminishing degradation by depth</li>
+          <li>Network health calculated as a weighted average of promise statuses: Verified=100, Declared=60, Degraded=30, Violated=0, Unverifiable=20</li>
+          <li>Cascade simulation traces how failure propagates through the dependency graph, with diminishing impact at each level of distance from the source</li>
         </ul>
       </div>
 

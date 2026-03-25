@@ -9,29 +9,70 @@ export function ISSAboutTab() {
   return (
     <div className="space-y-6 max-w-3xl">
 
+      {/* What is Promise Theory */}
+      <div className="bg-white rounded-xl border p-6">
+        <h2 className="font-serif text-xl font-bold text-gray-900 mb-3">
+          What is Promise Theory?
+        </h2>
+        <p className="text-sm text-gray-700 leading-relaxed mb-3">
+          Promise Theory, developed by Mark Burgess, is a framework for understanding
+          voluntary cooperation in complex systems. Unlike top-down obligation models,
+          Promise Theory starts from the premise that every agent is autonomous — they
+          can only make promises about their own behavior, never impose obligations on others.
+        </p>
+        <p className="text-sm text-gray-700 leading-relaxed mb-3">
+          A <strong>promise</strong> is a declaration of intent by an autonomous agent.
+          It has a <em>promiser</em> (who commits), a <em>promisee</em> (who benefits),
+          a <em>body</em> (what is committed), and a <em>polarity</em> (+give or −accept).
+          A complete interaction requires both: the promiser gives, and the promisee accepts.
+        </p>
+        <p className="text-sm text-gray-700 leading-relaxed">
+          Promise Pipeline applies this theory to real-world accountability by modeling
+          commitments as a network of interdependent promises. When one promise fails,
+          we can trace the <em>cascade</em> through the dependency graph — which downstream
+          commitments break, which domains are affected, and where to intervene.
+        </p>
+      </div>
+
       {/* What is this dashboard */}
       <div className="bg-white rounded-xl border p-6">
         <h2 className="font-serif text-xl font-bold text-gray-900 mb-3">
-          The ISS as a Promise Network
+          About This Dashboard
         </h2>
         <p className="text-sm text-gray-700 leading-relaxed mb-3">
-          420 metric tons of metal and science is held in orbit by promises —
-          promises between governments, between agencies, between companies. The
-          station is the promise graph made physical.
+          This dashboard analyzes the International Space Station as a promise network — a
+          live, multi-agency commitment structure involving 27 promises across 21 agents and
+          9 domains. The ISS is the most complex international engineering collaboration in
+          human history, and every aspect of it runs on interdependent commitments between
+          national space agencies, commercial providers, and international partners.
         </p>
         <p className="text-sm text-gray-700 leading-relaxed mb-3">
-          Five space agencies (NASA, Roscosmos, ESA, JAXA, CSA) and multiple
-          commercial partners maintain a continuous human presence that has lasted
-          over 25 years. The ISS has been occupied without interruption since
-          November 2, 2000. The structure cannot exist without the promise network
-          being mostly fulfilled. Gravity is the ultimate enforcement mechanism.
+          The Network tab lets you run &quot;What If&quot; simulations: what happens if
+          Boeing&apos;s Starliner program continues to slip? What if Roscosmos doesn&apos;t
+          extend its commitment past 2028? What if commercial station readiness is delayed?
+          The dependency graph shows which promises are structurally connected, so failure
+          in one area visibly propagates to others.
         </p>
         <p className="text-sm text-gray-700 leading-relaxed">
-          This dashboard tracks 23 promises across 9 domains, drawn from publicly
-          available data as of March 17, 2026. Every promise has a promiser,
-          promisee, verification method, and dependency chain. The network shows
-          which promises are structural bedrock and which are cascading risks.
+          The ISS scores higher than our legislative case studies because operational space
+          programs have robust verification infrastructure — mission control doesn&apos;t
+          rely on self-reporting. But even at 74/100 network health, the graph reveals
+          structural risks that status dashboards alone would miss.
         </p>
+      </div>
+
+      {/* Methodology */}
+      <div className="bg-white rounded-xl border p-6">
+        <h2 className="font-serif text-xl font-bold text-gray-900 mb-3">
+          Methodology
+        </h2>
+        <ul className="text-sm text-gray-700 space-y-2 list-disc pl-5">
+          <li>Promise data sourced from NASA OIG reports, ESA program documentation, bilateral ISS agreements, and publicly available program status updates</li>
+          <li>Dependencies inferred from operational and contractual relationships — crew transport depends on vehicle readiness, which depends on provider commitments, which depend on funding authorization</li>
+          <li>Status assessments based on publicly available program milestones and agency reporting as of early 2026</li>
+          <li>Network health calculated as a weighted average of promise statuses: Verified=100, Declared=60, Degraded=30, Violated=0, Unverifiable=20</li>
+          <li>Cascade simulation traces how failure propagates through the dependency graph, with diminishing impact at each level of distance from the source</li>
+        </ul>
       </div>
 
       {/* Promise Theory framework */}
@@ -193,6 +234,12 @@ export function ISSAboutTab() {
           with weak verification (transition readiness, Roscosmos internal
           commitments) are the ones at risk. The pattern holds across every domain
           Promise Pipeline has analyzed.
+        </p>
+      </div>
+
+      <div className="bg-gray-50 rounded-xl border p-6 text-center">
+        <p className="text-sm text-gray-600">
+          Promise Pipeline is open source under the AGPL-3.0 license.
         </p>
       </div>
     </div>

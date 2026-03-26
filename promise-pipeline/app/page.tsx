@@ -90,6 +90,80 @@ export default function LandingPage() {
       {/* Use Cases */}
       <UseCases />
 
+      {/* All Demos */}
+      <section id="demos" className="py-16" style={{ backgroundColor: "#faf9f6" }}>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <h2 className="font-serif text-3xl font-bold text-gray-900 text-center mb-3">
+            Live Dashboards
+          </h2>
+          <p className="text-center text-gray-500 mb-10 text-sm">
+            Four real promise networks, fully modeled and simulable.
+          </p>
+          <div className="grid md:grid-cols-2 gap-4">
+            {[
+              {
+                href: "/demo/hb2021",
+                label: "Oregon HB 2021",
+                subtitle: "100% Clean Electricity by 2040",
+                desc: "20 promises · 11 agents · 7 domains",
+                tag: "Civic",
+                tagColor: "bg-green-100 text-green-800",
+                accent: "#059669",
+              },
+              {
+                href: "/demo/jcpoa",
+                label: "JCPOA",
+                subtitle: "Iran Nuclear Agreement",
+                desc: "22 promises · 11 agents · 8 domains",
+                tag: "Arms Control",
+                tagColor: "bg-red-100 text-red-800",
+                accent: "#dc2626",
+              },
+              {
+                href: "/demo/gresham",
+                label: "Gresham CAP",
+                subtitle: "Gresham Climate Action Plan",
+                desc: "42 promises · 24 agents · 6 domains",
+                tag: "Municipal",
+                tagColor: "bg-blue-100 text-blue-800",
+                accent: "#2563eb",
+              },
+              {
+                href: "/demo/iss",
+                label: "ISS",
+                subtitle: "International Space Station",
+                desc: "Multi-party operations agreement",
+                tag: "Infrastructure",
+                tagColor: "bg-purple-100 text-purple-800",
+                accent: "#7c3aed",
+              },
+            ].map((demo) => (
+              <Link
+                key={demo.href}
+                href={demo.href}
+                className="group bg-white rounded-xl border p-6 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="font-serif font-bold text-gray-900 text-lg group-hover:text-gray-700">
+                      {demo.label}
+                    </p>
+                    <p className="text-sm text-gray-500">{demo.subtitle}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${demo.tagColor}`}>
+                    {demo.tag}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-400">{demo.desc}</p>
+                <p className="mt-3 text-sm font-medium" style={{ color: demo.accent }}>
+                  Open dashboard →
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Services CTA */}
       <section className="py-16 bg-gray-900 text-white">
         <div className="max-w-xl mx-auto px-4 sm:px-6 text-center">
@@ -252,14 +326,20 @@ function HeroSection() {
           >
             See the HB 2021 Demo
           </Link>
+          <a
+            href="#demos"
+            className="px-6 py-3 bg-transparent text-gray-700 border border-gray-300 rounded-lg font-medium hover:border-gray-500 hover:text-gray-900 transition-colors"
+          >
+            View All Demos
+          </a>
         </div>
 
         <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
-            { value: "85,000+", label: "Observations analyzed" },
-            { value: "69", label: "Promises tracked" },
-            { value: "43", label: "Agents mapped" },
-            { value: "3", label: "Live dashboards" },
+            { value: "267,000+", label: "Observations analyzed" },
+            { value: "111", label: "Promises tracked" },
+            { value: "80+", label: "Agents mapped" },
+            { value: "4", label: "Live dashboards" },
           ].map((stat) => (
             <div key={stat.label}>
               <p className="text-3xl font-bold text-gray-900">{stat.value}</p>

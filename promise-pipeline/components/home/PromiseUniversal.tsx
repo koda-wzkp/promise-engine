@@ -223,6 +223,58 @@ const CODE_BLOCKS: CodeBlock[] = [
       [va("  fedcba9876543210")],
     ],
   },
+  {
+    label: "COBOL",
+    lines: [
+      [kw("01 "), ty("PROMISE"), pu(".")],
+      [pl("   "), kw("05 "), fi("PROMISE-ID"), pl("     "), kw("PIC "), ty("X(20)"), pu(".")],
+      [pl("   "), kw("05 "), fi("BODY"), pl("          "), kw("PIC "), ty("X(200)"), pu(".")],
+      [pl("   "), kw("05 "), fi("PROMISER"), pl("      "), kw("PIC "), ty("X(50)"), pu(".")],
+      [pl("   "), kw("05 "), fi("PROMISEE"), pl("      "), kw("PIC "), ty("X(50)"), pu(".")],
+      [pl("   "), kw("05 "), fi("STATUS"), pl("        "), kw("PIC "), ty("X(10)"), pu(".")],
+    ],
+  },
+  {
+    label: "FORTRAN 77",
+    lines: [
+      [pl("      "), ty("CHARACTER"), pu("*20 "), fi("PROMID")],
+      [pl("      "), ty("CHARACTER"), pu("*200 "), fi("BODY")],
+      [pl("      "), ty("CHARACTER"), pu("*50 "), fi("PRMISR")],
+      [pl("      "), ty("CHARACTER"), pu("*50 "), fi("PRMSEE")],
+      [pl("      "), ty("CHARACTER"), pu("*10 "), fi("STATUS")],
+      [],
+      [pl("      "), kw("COMMON "), pu("/"), ty("PROMISE"), pu("/ ")],
+      [pl("     "), pu("& "), fi("PROMID"), pu(","), fi("BODY"), pu(",")],
+      [pl("     "), pu("& "), fi("PRMISR"), pu(","), fi("PRMSEE"), pu(","), fi("STATUS")],
+    ],
+  },
+  {
+    label: "LOLCODE",
+    lines: [
+      [kw("HAI "), va("1.2")],
+      [pl("  "), kw("I HAS A "), fi("PROMIS"), kw(" ITZ A "), ty("BUKKIT")],
+      [pl("    "), fi("PROMIS"), kw(" HAS A "), fi("ID"), kw(" ITZ "), va('"HB2021-P001"')],
+      [pl("    "), fi("PROMIS"), kw(" HAS A "), fi("BODY"), kw(" ITZ "), va('"100% CLEEN ENERJIEZ"')],
+      [pl("    "), fi("PROMIS"), kw(" HAS A "), fi("PROMISER"), kw(" ITZ "), va('"STATE OF OREGON"')],
+      [pl("    "), fi("PROMIS"), kw(" HAS A "), fi("STATUS"), kw(" ITZ "), va('"DECLARD"')],
+      [pl("  "), kw("VISIBLE "), fi("PROMIS")],
+      [kw("KTHXBYE")],
+    ],
+  },
+  {
+    label: "Shakespeare",
+    lines: [
+      [ty("Romeo"), pu(", "), pl("a promise kept.")],
+      [ty("Juliet"), pu(", "), pl("a promise made.")],
+      [],
+      [kw("Act I"), pu(": "), pl("The Declaration.")],
+      [kw("Scene I"), pu(": "), pl("The Commitment.")],
+      [],
+      [pu("["), kw("Enter "), ty("Romeo"), kw(" and "), ty("Juliet"), pu("]")],
+      [ty("Romeo"), pu(": "), pl("Thou art the sum")],
+      [pl("  "), pl("of a promise and trust.")],
+    ],
+  },
 ];
 
 // ─── Token colors ─────────────────────────────────────────────────────────────

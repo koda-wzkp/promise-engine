@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useReducer } from "react";
 import { TeamMember, TeamPromise, TeamDashboardData } from "@/lib/types/team";
 import { PromiseStatus, PromiseOrigin } from "@/lib/types/promise";
 import { CascadeResult } from "@/lib/types/simulation";
@@ -11,9 +11,25 @@ import { MemberLoad } from "@/components/team/MemberLoad";
 import { TeamCascadeView } from "@/components/team/TeamCascadeView";
 import { NestedPLogo } from "@/components/brand/NestedPLogo";
 
+// Phase 3 imports
+import { TeamGarden } from "@/components/team/TeamGarden";
+import { JoinTeamFlow } from "@/components/team/JoinTeamFlow";
+import { CreateTeamFlow } from "@/components/team/CreateTeamFlow";
+import { gardenReducer, loadGardenState, saveGardenState } from "@/lib/garden/gardenReducer";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import {
+  subscribeToTeam,
+  unsubscribeFromTeam,
+  syncStatusToTeam,
+  fetchTeam,
+  createTeam,
+  joinTeam,
+} from "@/lib/supabase/teamSync";
+import type { Team } from "@/lib/types/phase3";
+
 const STORAGE_KEY = "promise-pipeline-team";
 
-type View = "board" | "health" | "members" | "cascade";
+type View = "board" | "health" | "members" | "cascade" | "garden";
 
 function loadTeamData(): TeamDashboardData {
   if (typeof window === "undefined") return defaultTeamData();
@@ -53,10 +69,78 @@ export default function TeamPage() {
   const [showCreateMember, setShowCreateMember] = useState(false);
   const [showCreatePromise, setShowCreatePromise] = useState(false);
 
+  // Phase 3: Garden state for team promise projection
+  const [gardenState, dispatch] = useReducer(gardenReducer, null, () => loadGardenState());
+  const [showJoinTeam, setShowJoinTeam] = useState(false);
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
+
   useEffect(() => {
     setData(loadTeamData());
     setLoaded(true);
   }, []);
+
+  // Phase 3: Save garden state when it changes
+  useEffect(() => {
+    if (loaded) saveGardenState(gardenState);
+  }, [gardenState, loaded]);
+
+  // Phase 3: Subscribe to team real-time updates via Supabase
+  useEffect(() => {
+    if (gardenState.team?.id && isSupabaseConfigured()) {
+      subscribeToTeam(gardenState.team.id, dispatch);
+      return () => unsubscribeFromTeam();
+    }
+  }, [gardenState.team?.id]);
+
+  // Phase 3: Team garden handlers
+  const handleJoinTeam = useCallback(
+    async (teamId: string, name: string, role: string) => {
+      const userId = gardenState.userId ?? `user-${Date.now()}`;
+      if (!gardenState.userId) {
+        dispatch({ type: "SET_USER_ID", userId });
+      }
+
+      const success = await joinTeam(teamId, userId, name, role);
+      if (success) {
+        const team = await fetchTeam(teamId);
+        if (team) dispatch({ type: "SET_TEAM", team });
+      }
+      setShowJoinTeam(false);
+    },
+    [gardenState.userId]
+  );
+
+  const handleCreateTeam = useCallback(
+    async (name: string) => {
+      const userId = gardenState.userId ?? `user-${Date.now()}`;
+      if (!gardenState.userId) {
+        dispatch({ type: "SET_USER_ID", userId });
+      }
+
+      const team = await createTeam(name, userId);
+      if (team) dispatch({ type: "SET_TEAM", team });
+      setShowCreateTeam(false);
+    },
+    [gardenState.userId]
+  );
+
+  const handleTeamStatusUpdate = useCallback(
+    (promiseId: string, status: PromiseStatus) => {
+      dispatch({ type: "TEAM_STATUS_UPDATE", promiseId, newStatus: status });
+      // Sync to Supabase
+      syncStatusToTeam(promiseId, status);
+    },
+    []
+  );
+
+  const handleCreateTeamSubPromise = useCallback(
+    (teamPromiseId: string) => {
+      // Navigate to personal page with sub-promise creation context
+      // For now, dispatch the team sub-promise creation
+      // The personal page handles the actual sub-promise modal
+    },
+    []
+  );
 
   useEffect(() => {
     if (loaded) {
@@ -137,6 +221,7 @@ export default function TeamPage() {
 
   const views: { id: View; label: string }[] = [
     { id: "board", label: "Board" },
+    { id: "garden", label: "Garden" },
     { id: "health", label: "Health" },
     { id: "members", label: "Members" },
     { id: "cascade", label: "What If" },
@@ -167,6 +252,22 @@ export default function TeamPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            {!gardenState.team && (
+              <>
+                <button
+                  onClick={() => setShowJoinTeam(true)}
+                  className="px-3 py-1.5 text-sm font-medium border rounded-lg hover:bg-gray-50"
+                >
+                  Join Team
+                </button>
+                <button
+                  onClick={() => setShowCreateTeam(true)}
+                  className="px-3 py-1.5 text-sm font-medium border rounded-lg hover:bg-gray-50"
+                >
+                  Create Team
+                </button>
+              </>
+            )}
             <button
               onClick={() => setShowCreateMember(true)}
               className="px-3 py-1.5 text-sm font-medium border rounded-lg hover:bg-gray-50"
@@ -241,6 +342,53 @@ export default function TeamPage() {
           <TeamCascadeView
             promises={data.promises}
             members={data.members}
+          />
+        )}
+        {view === "garden" && gardenState.team && (
+          <TeamGarden
+            team={gardenState.team}
+            currentUserId={gardenState.userId}
+            onStatusUpdate={handleTeamStatusUpdate}
+            onCreateSubPromise={handleCreateTeamSubPromise}
+          />
+        )}
+        {view === "garden" && !gardenState.team && (
+          <div className="text-center py-16 bg-white rounded-xl border">
+            <h3 className="font-serif text-lg font-semibold text-gray-700 mb-2">
+              No team garden yet
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Join or create a team to see the shared garden view.
+              Team promises flow down to your personal garden.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => setShowJoinTeam(true)}
+                className="px-4 py-2 border text-sm rounded-lg hover:bg-gray-50"
+              >
+                Join Team
+              </button>
+              <button
+                onClick={() => setShowCreateTeam(true)}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+              >
+                Create Team
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Phase 3 modals */}
+        {showJoinTeam && (
+          <JoinTeamFlow
+            onJoin={handleJoinTeam}
+            onClose={() => setShowJoinTeam(false)}
+          />
+        )}
+        {showCreateTeam && (
+          <CreateTeamFlow
+            onCreate={handleCreateTeam}
+            onClose={() => setShowCreateTeam(false)}
           />
         )}
 

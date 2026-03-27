@@ -120,6 +120,20 @@ export interface GardenState {
   userId?: string;
   /** Partner connections where this user is the partner (not the promiser) */
   sharedWithMe: SharedPlant[];
+
+  // Phase 3 extensions (imported from phase3.ts, stored inline for persistence)
+  /** Team the user belongs to (if any) */
+  team?: import("./phase3").Team;
+  /** Contribution settings */
+  contribution?: import("./phase3").ContributionState;
+  /** Personal artifact collection */
+  artifacts?: import("./phase3").Artifact[];
+  /** Received gifts */
+  receivedGifts?: import("./phase3").ReceivedGift[];
+  /** Predictions (only for contributors) */
+  predictions?: import("./phase3").Prediction[];
+  /** Benchmarks (only for contributors) */
+  benchmarks?: import("./phase3").Benchmark[];
 }
 
 export interface SharedPlant {
@@ -173,7 +187,27 @@ export type GardenAction =
   | { type: "SET_USER_ID"; userId: string }
 
   // Phase 2: Shared plants (partner's perspective)
-  | { type: "SYNC_SHARED_PLANTS"; plants: SharedPlant[] };
+  | { type: "SYNC_SHARED_PLANTS"; plants: SharedPlant[] }
+
+  // Phase 3: Team
+  | { type: "TEAM_PROMISE_RECEIVED"; teamPromise: import("./phase3").TeamGardenPromise; teamId: string }
+  | { type: "CREATE_TEAM_SUB_PROMISE"; teamPromiseId: string; subPromise: GardenPromise }
+  | { type: "TEAM_STATUS_UPDATE"; promiseId: string; newStatus: PromiseStatus }
+  | { type: "SET_TEAM"; team: import("./phase3").Team }
+  | { type: "LEAVE_TEAM" }
+
+  // Phase 3: Contribution
+  | { type: "ENABLE_CONTRIBUTION"; level: import("./phase3").ContributionLevel }
+  | { type: "DISABLE_CONTRIBUTION" }
+  | { type: "CONTRIBUTION_SENT"; batchId: string }
+  | { type: "UPGRADE_CONTRIBUTION_LEVEL"; level: import("./phase3").ContributionLevel }
+  | { type: "SYNC_PREDICTIONS"; predictions: import("./phase3").Prediction[] }
+  | { type: "SYNC_BENCHMARKS"; benchmarks: import("./phase3").Benchmark[] }
+
+  // Phase 3: Gifting
+  | { type: "MINT_ARTIFACT"; promiseId: string }
+  | { type: "GIFT_ARTIFACT"; artifactId: string; toUserId: string; options: import("./phase3").GiftOptions }
+  | { type: "RECEIVE_GIFT"; gift: import("./phase3").ReceivedGift };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 

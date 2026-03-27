@@ -5,10 +5,12 @@
  * with Phase 1 localStorage schema.
  */
 
-import { GardenAction, GardenState, GardenPromise, DEFAULT_CAMERA, toGardenPromise } from "../types/garden";
+import { GardenAction, GardenState, GardenPromise, GardenNotification, DEFAULT_CAMERA, toGardenPromise } from "../types/garden";
 import { PersonalPromise } from "../types/personal";
 import { recomputeAllParentStatuses } from "./parentStatus";
 import { propagateGardenCascade, generateCascadeNotifications } from "./gardenCascade";
+import { DEFAULT_CONTRIBUTION_STATE } from "../types/phase3";
+import type { Artifact } from "../types/phase3";
 
 const STORAGE_KEY = "promise-garden-data";
 
@@ -37,7 +39,7 @@ export function loadGardenState(): GardenState {
       };
     }
 
-    // Phase 2 format
+    // Phase 2/3 format
     if (parsed.promises) {
       return {
         promises: (parsed.promises as any[]).map(toGardenPromise),
@@ -45,6 +47,13 @@ export function loadGardenState(): GardenState {
         notifications: parsed.notifications ?? [],
         userId: parsed.userId,
         sharedWithMe: parsed.sharedWithMe ?? [],
+        // Phase 3 fields
+        team: parsed.team,
+        contribution: parsed.contribution ?? DEFAULT_CONTRIBUTION_STATE,
+        artifacts: parsed.artifacts ?? [],
+        receivedGifts: parsed.receivedGifts ?? [],
+        predictions: parsed.predictions ?? [],
+        benchmarks: parsed.benchmarks ?? [],
       };
     }
 
@@ -390,6 +399,210 @@ export function gardenReducer(state: GardenState, action: GardenAction): GardenS
       return { ...state, sharedWithMe: action.plants };
     }
 
+    // ── Phase 3: Team ──────────────────────────────────────────────────────
+
+    case "SET_TEAM": {
+      return { ...state, team: action.team };
+    }
+
+    case "LEAVE_TEAM": {
+      // Remove team-linked promises from personal garden
+      const promises = state.promises.filter(
+        (p) => !(p as any).teamPromiseId
+      );
+      return { ...state, team: undefined, promises };
+    }
+
+    case "TEAM_PROMISE_RECEIVED": {
+      // Create a personal-garden proxy for the team promise
+      const proxy: GardenPromise = {
+        id: `PG-team-${action.teamPromise.id}`,
+        isPersonal: true,
+        promiser: "self",
+        promisee: "team",
+        body: action.teamPromise.body,
+        domain: action.teamPromise.domain,
+        status: "declared",
+        note: "",
+        verification: action.teamPromise.verification ?? { method: "self-report" },
+        depends_on: [],
+        polarity: "give",
+        origin: "voluntary",
+        createdAt: new Date().toISOString(),
+        children: [],
+        parent: null,
+      };
+      // Tag with team metadata (stored as extra fields)
+      (proxy as any).teamPromiseId = action.teamPromise.id;
+      (proxy as any).teamId = action.teamId;
+      (proxy as any).teamSynced = true;
+
+      return {
+        ...state,
+        promises: [...state.promises, proxy],
+      };
+    }
+
+    case "CREATE_TEAM_SUB_PROMISE": {
+      // Find the personal proxy for the team promise
+      const proxyId = state.promises.find(
+        (p) => (p as any).teamPromiseId === action.teamPromiseId
+      )?.id;
+      if (!proxyId) return state;
+
+      const sub: GardenPromise = {
+        ...action.subPromise,
+        parent: proxyId,
+      };
+
+      let promises = [...state.promises, sub];
+      promises = promises.map((p) => {
+        if (p.id !== proxyId) return p;
+        return { ...p, children: [...p.children, sub.id] };
+      });
+
+      promises = recomputeAllParentStatuses(promises);
+      return { ...state, promises };
+    }
+
+    case "TEAM_STATUS_UPDATE": {
+      // Sync status from team (e.g., team lead changes status)
+      const promises = state.promises.map((p) => {
+        if ((p as any).teamPromiseId !== action.promiseId) return p;
+        return { ...p, status: action.newStatus };
+      });
+      return { ...state, promises };
+    }
+
+    // ── Phase 3: Contribution ──────────────────────────────────────────────
+
+    case "ENABLE_CONTRIBUTION": {
+      return {
+        ...state,
+        contribution: {
+          ...(state.contribution ?? DEFAULT_CONTRIBUTION_STATE),
+          enabled: true,
+          level: action.level,
+          enabledAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    case "DISABLE_CONTRIBUTION": {
+      return {
+        ...state,
+        contribution: {
+          ...(state.contribution ?? DEFAULT_CONTRIBUTION_STATE),
+          enabled: false,
+        },
+        predictions: [],
+        benchmarks: [],
+      };
+    }
+
+    case "CONTRIBUTION_SENT": {
+      const contribution = state.contribution ?? DEFAULT_CONTRIBUTION_STATE;
+      return {
+        ...state,
+        contribution: {
+          ...contribution,
+          lastSentAt: new Date().toISOString(),
+          batchesSent: contribution.batchesSent + 1,
+        },
+      };
+    }
+
+    case "UPGRADE_CONTRIBUTION_LEVEL": {
+      return {
+        ...state,
+        contribution: {
+          ...(state.contribution ?? DEFAULT_CONTRIBUTION_STATE),
+          level: action.level,
+          levelAUnlockedAt:
+            action.level === "A" ? new Date().toISOString() : undefined,
+        },
+      };
+    }
+
+    case "SYNC_PREDICTIONS": {
+      return { ...state, predictions: action.predictions };
+    }
+
+    case "SYNC_BENCHMARKS": {
+      return { ...state, benchmarks: action.benchmarks };
+    }
+
+    // ── Phase 3: Gifting ───────────────────────────────────────────────────
+
+    case "MINT_ARTIFACT": {
+      const promise = state.promises.find((p) => p.id === action.promiseId);
+      if (!promise || promise.status !== "verified") return state;
+
+      const dwellDays = promise.completedAt && promise.createdAt
+        ? Math.round(
+            (new Date(promise.completedAt).getTime() -
+              new Date(promise.createdAt).getTime()) /
+              (1000 * 60 * 60 * 24)
+          )
+        : 0;
+
+      const kRegime = promise.sensor ? "physics" : "ecological";
+      const material: Artifact["material"] =
+        kRegime === "physics" ? "crystalline" : "organic";
+
+      const artifact: Artifact = {
+        id: `ART-${Date.now()}-${promise.id}`,
+        generatedFrom: {
+          promiseId: promise.id,
+          domain: promise.domain as any,
+          body: promise.body,
+          durationTier: "medium",
+          stakesTier: "medium",
+          verificationMethod: promise.verification.method,
+          kRegime,
+        },
+        formSeed: promise.id,
+        material,
+        dwellDays,
+        mintedAt: new Date().toISOString(),
+      };
+
+      return {
+        ...state,
+        artifacts: [...(state.artifacts ?? []), artifact],
+      };
+    }
+
+    case "GIFT_ARTIFACT": {
+      const artifacts = (state.artifacts ?? []).map((a) =>
+        a.id === action.artifactId ? { ...a, gifted: true } : a
+      );
+
+      const notification: GardenNotification = {
+        id: `notif-gift-sent-${Date.now()}`,
+        type: "partner-encouragement",
+        channel: "in-app",
+        recipientId: "self",
+        promiseId: "",
+        message: `Artifact gifted successfully`,
+        createdAt: new Date().toISOString(),
+        read: false,
+      };
+
+      return {
+        ...state,
+        artifacts,
+        notifications: [...state.notifications, notification],
+      };
+    }
+
+    case "RECEIVE_GIFT": {
+      return {
+        ...state,
+        receivedGifts: [...(state.receivedGifts ?? []), action.gift],
+      };
+    }
+
     default:
       return state;
   }
@@ -409,6 +622,3 @@ function collectDescendants(id: string, promises: GardenPromise[]): string[] {
   }
   return result;
 }
-
-// Re-export notification type for convenience
-import { GardenNotification } from "../types/garden";

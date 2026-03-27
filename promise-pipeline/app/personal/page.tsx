@@ -40,15 +40,32 @@ import { SensorConnect } from "@/components/personal/SensorConnect";
 import { SharedGardenPlot } from "@/components/personal/SharedGardenPlot";
 import { WateringAction } from "@/components/personal/WateringAction";
 
+// Phase 3 imports
+import type { ContributionLevel, GiftOptions } from "@/lib/types/phase3";
+import { DEFAULT_CONTRIBUTION_STATE } from "@/lib/types/phase3";
+import { ContributionPlant } from "@/components/contribution/ContributionPlant";
+import { ContributionOptIn } from "@/components/contribution/ContributionOptIn";
+import { ContributionSettings } from "@/components/contribution/ContributionSettings";
+import { PredictionBadge } from "@/components/contribution/PredictionBadge";
+import { BenchmarkCard } from "@/components/contribution/BenchmarkCard";
+import { GiftButton } from "@/components/gifting/GiftButton";
+import { GiftOptionsModal } from "@/components/gifting/GiftOptionsModal";
+import { ReceivedGifts } from "@/components/gifting/ReceivedGifts";
+import { GiftBadge } from "@/components/gifting/GiftBadge";
+import { computeAggregate, computeSchemaContribution, canContribute } from "@/lib/contribution/compute";
+
 type View = "garden" | "timeline" | "create" | "stats";
 
-// Phase 2 modal types
+// Phase 2 + Phase 3 modal types
 type ActiveModal =
   | null
   | { type: "break-down"; promiseId: string }
   | { type: "dependencies"; promiseId: string }
   | { type: "partner"; promiseId: string }
-  | { type: "sensor"; promiseId: string };
+  | { type: "sensor"; promiseId: string }
+  | { type: "contribution-opt-in" }
+  | { type: "contribution-settings" }
+  | { type: "gift-options"; artifactId: string };
 
 function calculateStats(promises: PersonalPromise[]): PersonalStats {
   const completed = promises.filter(
@@ -299,6 +316,95 @@ export default function PersonalPage() {
     dispatch({ type: "DISCONNECT_SENSOR", promiseId: activeModal.promiseId });
   }, [activeModal]);
 
+  // Phase 3: Contribution
+  const handleEnableContribution = useCallback((level: ContributionLevel) => {
+    dispatch({ type: "ENABLE_CONTRIBUTION", level });
+    setActiveModal(null);
+  }, []);
+
+  const handleDisableContribution = useCallback(() => {
+    dispatch({ type: "DISABLE_CONTRIBUTION" });
+    setActiveModal(null);
+  }, []);
+
+  const handleUpgradeContribution = useCallback((level: ContributionLevel) => {
+    dispatch({ type: "UPGRADE_CONTRIBUTION_LEVEL", level });
+  }, []);
+
+  const handleSendContribution = useCallback(async () => {
+    const contribution = gardenState.contribution ?? DEFAULT_CONTRIBUTION_STATE;
+    if (!contribution.enabled) return;
+
+    const level = contribution.level;
+    const check = canContribute(promises, level);
+    if (!check.ready) return;
+
+    let payload: unknown;
+    if (level === "C") {
+      const month = new Date().toISOString().slice(0, 7);
+      const aggregate = computeAggregate(promises, month);
+      if (!aggregate) return;
+      payload = aggregate;
+    } else {
+      const schema = computeSchemaContribution(promises);
+      if (!schema) return;
+      payload = schema;
+    }
+
+    try {
+      const res = await fetch("/api/contribute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level,
+          contributorId: gardenState.userId ?? "anon",
+          data: payload,
+        }),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        dispatch({ type: "CONTRIBUTION_SENT", batchId: result.batchId });
+        if (result.predictions?.length > 0) {
+          dispatch({ type: "SYNC_PREDICTIONS", predictions: result.predictions });
+        }
+        if (result.benchmarks?.length > 0) {
+          dispatch({ type: "SYNC_BENCHMARKS", benchmarks: result.benchmarks });
+        }
+      }
+    } catch {
+      // Silently fail — contribution is best-effort
+    }
+  }, [gardenState.contribution, gardenState.userId, promises]);
+
+  // Phase 3: Gifting
+  const handleMintArtifact = useCallback((promiseId: string) => {
+    dispatch({ type: "MINT_ARTIFACT", promiseId });
+  }, []);
+
+  const handleGiftArtifact = useCallback(
+    (artifactId: string, toUserId: string, options: GiftOptions) => {
+      dispatch({ type: "GIFT_ARTIFACT", artifactId, toUserId, options });
+      setActiveModal(null);
+    },
+    []
+  );
+
+  // Collect accountability partners for gift recipient dropdown
+  const giftablePartners = useMemo(() => {
+    const partners: { id: string; name: string }[] = [];
+    const seen = new Set<string>();
+    for (const p of promises) {
+      if (p.partner && !seen.has(p.partner.partnerId)) {
+        seen.add(p.partner.partnerId);
+        partners.push({
+          id: p.partner.partnerId,
+          name: p.partner.partnerName ?? p.partner.partnerId,
+        });
+      }
+    }
+    return partners;
+  }, [promises]);
+
   // ── Sky gradient (count-based for the new progression) ────────────────────
   const skyGradient = getSkyGradientByCount(promises.length);
 
@@ -363,8 +469,8 @@ export default function PersonalPage() {
     { id: "create",   label: "+ New Promise" },
   ];
 
-  // Find the promise for the active modal
-  const modalPromise = activeModal
+  // Find the promise for the active modal (Phase 2 modals have promiseId)
+  const modalPromise = activeModal && "promiseId" in activeModal
     ? promises.find((p) => p.id === activeModal.promiseId) ?? null
     : null;
 
@@ -382,11 +488,28 @@ export default function PersonalPage() {
 
       {/* Header */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-4">
-        <div className="flex items-center gap-3">
-          <NestedPLogo mode="grow" size={48} />
-          <h1 className="font-serif text-2xl font-bold text-gray-900">
-            Promise Garden
-          </h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <NestedPLogo mode="grow" size={48} />
+            <h1 className="font-serif text-2xl font-bold text-gray-900">
+              Promise Garden
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Phase 3: Contribution plant */}
+            <ContributionPlant
+              contribution={gardenState.contribution ?? DEFAULT_CONTRIBUTION_STATE}
+              onClick={() =>
+                setActiveModal(
+                  (gardenState.contribution ?? DEFAULT_CONTRIBUTION_STATE).enabled
+                    ? { type: "contribution-settings" }
+                    : { type: "contribution-opt-in" }
+                )
+              }
+            />
+            {/* Phase 3: Artifact badge */}
+            <GiftBadge artifacts={gardenState.artifacts ?? []} />
+          </div>
         </div>
         <p className="text-gray-600 text-sm mt-1">
           Your personal promise tracker. Every promise plants a seed. Keeping them grows the garden.
@@ -469,6 +592,37 @@ export default function PersonalPage() {
           <div className="space-y-6">
             <ReliabilityScore stats={stats} />
             <DomainBreakdown stats={stats} />
+            {/* Phase 3: Predictions (contributors only) */}
+            {(gardenState.predictions ?? []).length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-700">Predictions</h3>
+                <PredictionBadge predictions={gardenState.predictions ?? []} />
+              </div>
+            )}
+            {/* Phase 3: Benchmarks (contributors only) */}
+            {(gardenState.benchmarks ?? []).length > 0 && (
+              <BenchmarkCard benchmarks={gardenState.benchmarks ?? []} />
+            )}
+            {/* Phase 3: Received gifts */}
+            <ReceivedGifts gifts={gardenState.receivedGifts ?? []} />
+            {/* Phase 3: Contribution opt-in nudge */}
+            {!(gardenState.contribution ?? DEFAULT_CONTRIBUTION_STATE).enabled &&
+              promises.length >= 5 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <h3 className="text-sm font-medium text-blue-900 mb-1">
+                    Help the community
+                  </h3>
+                  <p className="text-xs text-blue-700 mb-3">
+                    Share anonymous, aggregate data to improve predictions for everyone.
+                  </p>
+                  <button
+                    onClick={() => setActiveModal({ type: "contribution-opt-in" })}
+                    className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Learn More
+                  </button>
+                </div>
+              )}
           </div>
         )}
 
@@ -564,6 +718,36 @@ export default function PersonalPage() {
           partnerName={wateringNotif.partner}
           domain={wateringNotif.domain}
           onDismiss={() => setWateringNotif(null)}
+        />
+      )}
+
+      {/* ── Phase 3 Modals ──────────────────────────────────────────────── */}
+
+      {/* Contribution opt-in */}
+      {activeModal?.type === "contribution-opt-in" && (
+        <ContributionOptIn
+          onEnable={handleEnableContribution}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
+
+      {/* Contribution settings */}
+      {activeModal?.type === "contribution-settings" && (
+        <ContributionSettings
+          contribution={gardenState.contribution ?? DEFAULT_CONTRIBUTION_STATE}
+          onUpgrade={handleUpgradeContribution}
+          onDisable={handleDisableContribution}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
+
+      {/* Gift options */}
+      {activeModal?.type === "gift-options" && (
+        <GiftOptionsModal
+          artifactId={activeModal.artifactId}
+          partners={giftablePartners}
+          onSend={handleGiftArtifact}
+          onClose={() => setActiveModal(null)}
         />
       )}
     </main>

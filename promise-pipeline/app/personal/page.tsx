@@ -38,8 +38,14 @@ import { ContributionOptIn } from "@/components/personal/ContributionOptIn";
 import { ContributionPlant } from "@/components/personal/ContributionPlant";
 import { BenchmarkCard } from "@/components/personal/BenchmarkCard";
 import { shouldPromptOptIn } from "@/lib/contribution/compute";
+import { TeamGarden } from "@/components/team/TeamGarden";
+import { GardenTeamDashboard } from "@/components/team/GardenTeamDashboard";
+import { TeamPromiseCreator } from "@/components/team/TeamPromiseCreator";
+import { CreateTeamFlow } from "@/components/team/CreateTeamFlow";
+import { JoinTeamFlow } from "@/components/team/JoinTeamFlow";
+import { useTeamState } from "@/lib/garden/teamSync";
 
-type Tab = "garden" | "collection" | "stats";
+type Tab = "garden" | "team" | "collection" | "stats";
 
 // ─── STATUS DISPLAY HELPERS ──────────────────────────────────────────────────
 
@@ -304,6 +310,14 @@ export default function PersonalPage() {
 
   // Phase 3 overlay state
   const [showContributionOptIn, setShowContributionOptIn] = useState(false);
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [showJoinTeam, setShowJoinTeam] = useState(false);
+  const [showTeamPromiseCreator, setShowTeamPromiseCreator] = useState(false);
+  const [teamView, setTeamView] = useState<"garden" | "dashboard">("garden");
+
+  // Phase 3 team state
+  const CURRENT_USER = { id: "local-user", name: "You", email: "" };
+  const { teamState, createTeam, addTeamPromise, updateTeamPromiseStatus } = useTeamState(CURRENT_USER.id);
 
   // Cascade alerts: { affectedId, sourceId }
   const [cascadeAlerts, setCascadeAlerts] = useState<{ affectedId: string; sourceId: string }[]>([]);
@@ -513,6 +527,7 @@ export default function PersonalPage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "garden",     label: "Garden" },
+    { id: "team",       label: "Team" },
     { id: "collection", label: "Collection" },
     { id: "stats",      label: "Stats" },
   ];
@@ -669,6 +684,117 @@ export default function PersonalPage() {
             >
               + New promise
             </button>
+          </div>
+        )}
+
+        {/* ── TEAM ── */}
+        {activeTab === "team" && (
+          <div className="space-y-4">
+            {teamState.team ? (
+              <>
+                {/* Garden / Dashboard switcher */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTeamView("garden")}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      teamView === "garden"
+                        ? "bg-green-700 text-white"
+                        : "bg-white text-gray-700 border hover:bg-gray-50"
+                    }`}
+                  >
+                    Garden
+                  </button>
+                  <button
+                    onClick={() => setTeamView("dashboard")}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      teamView === "dashboard"
+                        ? "bg-green-700 text-white"
+                        : "bg-white text-gray-700 border hover:bg-gray-50"
+                    }`}
+                  >
+                    Dashboard
+                  </button>
+                  <div className="flex-1" />
+                  <button
+                    onClick={() => setShowTeamPromiseCreator(true)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border text-green-700 hover:bg-green-50 transition-colors"
+                  >
+                    + Promise
+                  </button>
+                </div>
+
+                {teamView === "garden" && (
+                  <TeamGarden
+                    team={teamState.team}
+                    currentUserId={CURRENT_USER.id}
+                  />
+                )}
+
+                {teamView === "dashboard" && (
+                  <GardenTeamDashboard
+                    team={teamState.team}
+                    onUpdateStatus={updateTeamPromiseStatus}
+                  />
+                )}
+
+                {showTeamPromiseCreator && (
+                  <TeamPromiseCreator
+                    members={teamState.team.members}
+                    currentUserId={CURRENT_USER.id}
+                    onAdd={addTeamPromise}
+                    dispatch={dispatch}
+                    onClose={() => setShowTeamPromiseCreator(false)}
+                  />
+                )}
+              </>
+            ) : (
+              /* No team yet */
+              <div className="space-y-4">
+                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                  <p className="text-4xl mb-3" aria-hidden="true">🌿</p>
+                  <p className="font-serif text-lg font-bold text-gray-800 mb-1">
+                    No team garden yet
+                  </p>
+                  <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
+                    Share promises with your team. Commitments visible together,
+                    personal plans private.
+                  </p>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => setShowCreateTeam(true)}
+                      className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800"
+                    >
+                      Create a team
+                    </button>
+                    <button
+                      onClick={() => setShowJoinTeam(true)}
+                      className="px-4 py-2 bg-white border text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                    >
+                      Join a team
+                    </button>
+                  </div>
+                </div>
+
+                {showCreateTeam && (
+                  <div className="bg-white rounded-2xl border p-6">
+                    <CreateTeamFlow
+                      currentUser={CURRENT_USER}
+                      onCreateTeam={createTeam}
+                      onCancel={() => setShowCreateTeam(false)}
+                    />
+                  </div>
+                )}
+
+                {showJoinTeam && (
+                  <div className="bg-white rounded-2xl border p-6">
+                    <JoinTeamFlow
+                      onJoin={async (_token) => null /* TODO: resolve invite token via Supabase */}
+                      onCancel={() => setShowJoinTeam(false)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

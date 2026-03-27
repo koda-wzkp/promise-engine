@@ -91,7 +91,11 @@ export type GardenAction =
   | { type: "SET_CONTRIBUTION_LEVEL"; level: import("../types/contribution").ContributionLevel }
   // ── Phase 3: Gifting ──────────────────────────────────────────────────────
   | { type: "GIFT_ARTIFACT"; promiseId: string; toUserId: string; options: GiftOptions }
-  | { type: "RECEIVE_GIFT"; gift: ReceivedGift };
+  | { type: "RECEIVE_GIFT"; gift: ReceivedGift }
+  // ── Phase 3: Teams ────────────────────────────────────────────────────────
+  | { type: "TEAM_PROMISE_RECEIVED"; teamPromise: import("../types/gardenTeam").GardenTeamPromise }
+  | { type: "CREATE_TEAM_SUB_PROMISE"; teamPromiseId: string; subPromise: GardenPromise }
+  | { type: "TEAM_STATUS_UPDATE"; promiseId: string; newStatus: PromiseStatus };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -631,6 +635,67 @@ function gardenReducer(state: GardenState, action: GardenAction): GardenState {
         ...state,
         receivedGifts: [...state.receivedGifts, action.gift],
       };
+
+    // ── Phase 3: Teams ─────────────────────────────────────────────────────
+
+    case "TEAM_PROMISE_RECEIVED": {
+      // Auto-create a personal sub-promise slot for the assigned team promise.
+      // The slot is private — the member fills it with their own sub-promises.
+      // Body is synced read-only from the team promise.
+      const { teamPromise } = action;
+      const slotId = `slot-${teamPromise.id}`;
+      const slot: GardenPromise = {
+        ...teamPromise,
+        id: slotId,
+        visibility: "private",
+        parent: null,    // Root from personal perspective
+        children: [],    // Member adds their private sub-promises here
+        status: "declared",
+        checkInHistory: [],
+        graftHistory: [],
+        lastCheckIn: null,
+        fossilized: false,
+        artifact: null,
+        completedAt: null,
+        reflection: null,
+        sensor: null,
+        partner: null,
+        depends_on: [],
+        createdAt: new Date().toISOString(),
+      };
+      const promises = { ...state.promises, [slotId]: slot };
+      const domains = Array.from(new Set([...state.domains, teamPromise.domain]));
+      return { ...state, promises, domains, stats: computeStats(promises) };
+    }
+
+    case "CREATE_TEAM_SUB_PROMISE": {
+      // Add a private sub-promise under a team promise slot
+      const parent = state.promises[action.teamPromiseId];
+      if (!parent) return state;
+
+      const sub: GardenPromise = { ...action.subPromise, parent: action.teamPromiseId };
+      const updatedParent: GardenPromise = {
+        ...parent,
+        children: [...parent.children, action.subPromise.id],
+      };
+      const promises = {
+        ...state.promises,
+        [action.teamPromiseId]: updatedParent,
+        [action.subPromise.id]: sub,
+      };
+      const refreshed = refreshAllFrequencies(promises);
+      return { ...state, promises: refreshed, stats: computeStats(refreshed) };
+    }
+
+    case "TEAM_STATUS_UPDATE": {
+      // Update local status of a team-linked promise slot
+      const p = state.promises[action.promiseId];
+      if (!p) return state;
+      const now = new Date().toISOString();
+      const updated: GardenPromise = { ...p, status: action.newStatus, lastCheckIn: now };
+      const promises = { ...state.promises, [action.promiseId]: updated };
+      return { ...state, promises, stats: computeStats(promises) };
+    }
 
     default:
       return state;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useGardenState } from "@/lib/garden/gardenState";
 import type { GardenPromise, AccountabilityPartner, SensorConnection } from "@/lib/types/personal";
 import type { PromiseStatus } from "@/lib/types/promise";
@@ -32,6 +32,12 @@ import { PartnerSetup } from "@/components/personal/PartnerSetup";
 import { SharedGardenPlot } from "@/components/personal/SharedGardenPlot";
 import { SensorConnect } from "@/components/personal/SensorConnect";
 import { SensorThreshold } from "@/components/personal/SensorThreshold";
+
+// Phase 3 components
+import { ContributionOptIn } from "@/components/personal/ContributionOptIn";
+import { ContributionPlant } from "@/components/personal/ContributionPlant";
+import { BenchmarkCard } from "@/components/personal/BenchmarkCard";
+import { shouldPromptOptIn } from "@/lib/contribution/compute";
 
 type Tab = "garden" | "collection" | "stats";
 
@@ -296,6 +302,9 @@ export default function PersonalPage() {
   const [sensorConnectId, setSensorConnectId] = useState<string | null>(null);
   const [sensorThresholdId, setSensorThresholdId] = useState<string | null>(null);
 
+  // Phase 3 overlay state
+  const [showContributionOptIn, setShowContributionOptIn] = useState(false);
+
   // Cascade alerts: { affectedId, sourceId }
   const [cascadeAlerts, setCascadeAlerts] = useState<{ affectedId: string; sourceId: string }[]>([]);
 
@@ -329,6 +338,17 @@ export default function PersonalPage() {
     () => computeCascadeStress(state.promises),
     [state.promises]
   );
+
+  // ── Phase 3: contribution opt-in eligibility check ──────────────────────────
+
+  // Runs once after gardenCreatedAt loads from localStorage (non-null after hydration)
+  useEffect(() => {
+    if (state.gardenCreatedAt === null) return;
+    if (shouldPromptOptIn(state.contribution, state.gardenCreatedAt)) {
+      setShowContributionOptIn(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.gardenCreatedAt]);
 
   // ── Phase 1 handlers ────────────────────────────────────────────────────────
 
@@ -634,6 +654,12 @@ export default function PersonalPage() {
               </details>
             )}
 
+            {/* Contribution plant — visible when opted in or previously contributed */}
+            <ContributionPlant
+              contribution={state.contribution}
+              dispatch={dispatch}
+            />
+
             {/* Add new */}
             <button
               onClick={() => {
@@ -653,11 +679,22 @@ export default function PersonalPage() {
 
         {/* ── STATS ── */}
         {activeTab === "stats" && (
-          <GardenStats stats={state.stats} />
+          <div className="space-y-6">
+            <GardenStats stats={state.stats} />
+            <BenchmarkCard stats={state.stats} contribution={state.contribution} />
+          </div>
         )}
       </div>
 
       {/* ── OVERLAYS ── */}
+
+      {/* Phase 3: contribution opt-in prompt */}
+      {showContributionOptIn && (
+        <ContributionOptIn
+          dispatch={dispatch}
+          onDismiss={() => setShowContributionOptIn(false)}
+        />
+      )}
 
       {showTour && !state.tourComplete && (
         <GardenTour

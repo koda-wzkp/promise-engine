@@ -8,6 +8,8 @@ import type {
   SensorConnection,
   AccountabilityPartner,
 } from "../types/personal";
+import type { ContributionState } from "../types/contribution";
+import { INITIAL_CONTRIBUTION_STATE } from "../types/contribution";
 import {
   classifyKRegime,
   expectedKValue,
@@ -20,8 +22,9 @@ import { generateArtifact } from "./artifactGeneration";
 
 const STORAGE_KEY = "promise-garden-v2";
 // v3 adds: children, parent, sensor, partner fields
-// Backward-compat: v2 data is migrated on load (new fields default to null/[])
-const STORAGE_VERSION = 3;
+// v4 adds: contribution state (Phase 3)
+// Backward-compat: v2/v3 data is migrated on load
+const STORAGE_VERSION = 4;
 
 interface StoredState {
   version: number;
@@ -29,6 +32,7 @@ interface StoredState {
   domains: string[];
   onboardingComplete: boolean;
   tourComplete: boolean;
+  contribution: ContributionState;
   createdAt: string;
   lastOpenedAt: string;
 }
@@ -41,6 +45,10 @@ export interface GardenState {
   stats: GardenStatsV2;
   onboardingComplete: boolean;
   tourComplete: boolean;
+  // ── Phase 3: Contribution ─────────────────────────────────────────────────
+  contribution: ContributionState;
+  /** ISO date the garden was first created — used for opt-in eligibility */
+  gardenCreatedAt: string | null;
 }
 
 // ─── ACTIONS ─────────────────────────────────────────────────────────────────
@@ -68,7 +76,14 @@ export type GardenAction =
   // ── Phase 2: Sensor ──────────────────────────────────────────────────────
   | { type: "CONNECT_SENSOR"; promiseId: string; sensor: SensorConnection }
   | { type: "DISCONNECT_SENSOR"; promiseId: string }
-  | { type: "SENSOR_UPDATE"; promiseId: string; newStatus: PromiseStatus };
+  | { type: "SENSOR_UPDATE"; promiseId: string; newStatus: PromiseStatus }
+  // ── Phase 3: Contribution ─────────────────────────────────────────────────
+  | { type: "ENABLE_CONTRIBUTION"; level: import("../types/contribution").ContributionLevel }
+  | { type: "DISABLE_CONTRIBUTION" }
+  | { type: "CONTRIBUTION_SENT"; batchId: string }
+  | { type: "MARK_OPT_IN_PROMPT_SHOWN" }
+  | { type: "MARK_OPT_UP_PROMPT_SHOWN" }
+  | { type: "SET_CONTRIBUTION_LEVEL"; level: import("../types/contribution").ContributionLevel };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -234,7 +249,12 @@ function gardenReducer(state: GardenState, action: GardenAction): GardenState {
       return action.state;
 
     case "COMPLETE_ONBOARDING":
-      return { ...state, onboardingComplete: true };
+      return {
+        ...state,
+        onboardingComplete: true,
+        // Record the creation timestamp for contribution eligibility
+        gardenCreatedAt: state.gardenCreatedAt ?? new Date().toISOString(),
+      };
 
     case "COMPLETE_TOUR":
       return { ...state, tourComplete: true };
@@ -516,6 +536,65 @@ function gardenReducer(state: GardenState, action: GardenAction): GardenState {
       return { ...state, promises, stats: computeStats(promises) };
     }
 
+    // ── Phase 3: Contribution ───────────────────────────────────────────────
+
+    case "ENABLE_CONTRIBUTION":
+      return {
+        ...state,
+        contribution: {
+          ...state.contribution,
+          enabled: true,
+          level: action.level,
+          enabledAt: state.contribution.enabledAt ?? new Date().toISOString(),
+        },
+      };
+
+    case "DISABLE_CONTRIBUTION":
+      return {
+        ...state,
+        contribution: {
+          ...state.contribution,
+          enabled: false,
+        },
+      };
+
+    case "SET_CONTRIBUTION_LEVEL":
+      return {
+        ...state,
+        contribution: {
+          ...state.contribution,
+          level: action.level,
+        },
+      };
+
+    case "CONTRIBUTION_SENT":
+      return {
+        ...state,
+        contribution: {
+          ...state.contribution,
+          lastSentAt: new Date().toISOString(),
+          sentBatchIds: [...state.contribution.sentBatchIds, action.batchId],
+        },
+      };
+
+    case "MARK_OPT_IN_PROMPT_SHOWN":
+      return {
+        ...state,
+        contribution: {
+          ...state.contribution,
+          promptShown: true,
+        },
+      };
+
+    case "MARK_OPT_UP_PROMPT_SHOWN":
+      return {
+        ...state,
+        contribution: {
+          ...state.contribution,
+          optUpShown: true,
+        },
+      };
+
     default:
       return state;
   }
@@ -540,6 +619,8 @@ const INITIAL_STATE: GardenState = {
   },
   onboardingComplete: false,
   tourComplete: false,
+  contribution: INITIAL_CONTRIBUTION_STATE,
+  gardenCreatedAt: null,
 };
 
 // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
@@ -551,8 +632,8 @@ function loadFromStorage(): GardenState {
     if (!raw) return INITIAL_STATE;
     const stored = JSON.parse(raw) as StoredState;
 
-    // Accept v2 (Phase 1) and v3 (Phase 2) — apply Phase 2 field migration for v2 data
-    if (stored.version !== 2 && stored.version !== 3) return INITIAL_STATE;
+    // Accept v2 (Phase 1), v3 (Phase 2), v4 (Phase 3) — migrate older data forward
+    if (stored.version < 2 || stored.version > 4) return INITIAL_STATE;
 
     const rawPromises: Record<string, any> = stored.promises ?? {};
     const migratedPromises: Record<string, GardenPromise> = {};
@@ -566,6 +647,9 @@ function loadFromStorage(): GardenState {
       onboardingComplete: stored.onboardingComplete ?? false,
       tourComplete: stored.tourComplete ?? false,
       stats: computeStats(migratedPromises),
+      // v4 migration: contribution defaults to off for existing users
+      contribution: stored.contribution ?? INITIAL_CONTRIBUTION_STATE,
+      gardenCreatedAt: stored.createdAt ?? null,
     };
   } catch {
     return INITIAL_STATE;
@@ -578,7 +662,7 @@ function saveToStorage(state: GardenState): void {
     const existing = localStorage.getItem(STORAGE_KEY);
     const createdAt = existing
       ? (JSON.parse(existing) as StoredState).createdAt
-      : new Date().toISOString();
+      : (state.gardenCreatedAt ?? new Date().toISOString());
 
     const stored: StoredState = {
       version: STORAGE_VERSION,
@@ -586,6 +670,7 @@ function saveToStorage(state: GardenState): void {
       domains: state.domains,
       onboardingComplete: state.onboardingComplete,
       tourComplete: state.tourComplete,
+      contribution: state.contribution,
       createdAt,
       lastOpenedAt: new Date().toISOString(),
     };

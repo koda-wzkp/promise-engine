@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef, useReducer } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { PersonalPromise, PersonalStats } from "@/lib/types/personal";
 import { PromiseStatus } from "@/lib/types/promise";
 import { PromiseCreator } from "@/components/personal/PromiseCreator";
@@ -19,36 +19,23 @@ import { useGardenOnboarding } from "@/lib/hooks/useGardenOnboarding";
 import { getSkyGradientByCount } from "@/lib/garden/renderer/skyGradient";
 import { NestedPLogo } from "@/components/brand/NestedPLogo";
 
-// Phase 2 imports
-import {
-  GardenPromise,
-  GardenAction,
-  CameraState,
-  toGardenPromise,
-  DEFAULT_CAMERA,
-} from "@/lib/types/garden";
-import type { SensorType, SensorThreshold, PartnerVisibility } from "@/lib/types/garden";
-import {
-  gardenReducer,
-  loadGardenState,
-  saveGardenState,
-} from "@/lib/garden/gardenReducer";
-import { SubPromiseCreator } from "@/components/personal/SubPromiseCreator";
-import { DependencyEditor } from "@/components/personal/DependencyEditor";
-import { PartnerSetup } from "@/components/personal/PartnerSetup";
-import { SensorConnect } from "@/components/personal/SensorConnect";
-import { SharedGardenPlot } from "@/components/personal/SharedGardenPlot";
-import { WateringAction } from "@/components/personal/WateringAction";
-
 type View = "garden" | "timeline" | "create" | "stats";
 
-// Phase 2 modal types
-type ActiveModal =
-  | null
-  | { type: "break-down"; promiseId: string }
-  | { type: "dependencies"; promiseId: string }
-  | { type: "partner"; promiseId: string }
-  | { type: "sensor"; promiseId: string };
+const STORAGE_KEY = "promise-garden-data";
+
+function loadPromises(): PersonalPromise[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePromises(promises: PersonalPromise[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(promises));
+}
 
 function calculateStats(promises: PersonalPromise[]): PersonalStats {
   const completed = promises.filter(
@@ -144,33 +131,29 @@ function calculateStats(promises: PersonalPromise[]): PersonalStats {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PersonalPage() {
-  // Phase 2: Use reducer instead of raw useState for promises
-  const [gardenState, dispatch] = useReducer(gardenReducer, null, () => loadGardenState());
-  const promises = gardenState.promises;
-
+  const [promises, setPromises] = useState<PersonalPromise[]>([]);
   const [view, setView] = useState<View>("garden");
   const [loaded, setLoaded] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  // True while the clearcut time-lapse is playing.
+  // Flipped to false when the loop completes or the user taps the seed.
   const [timeLapseActive, setTimeLapseActive] = useState(true);
-
-  // Phase 2: Modal state
-  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
-  const [wateringNotif, setWateringNotif] = useState<{ partner: string; domain: string } | null>(null);
 
   const seedRef = useRef<HTMLButtonElement>(null);
 
   const onboarding = useGardenOnboarding();
   const { state, showAccountPrompt } = onboarding;
 
-  // Load persisted state on mount
+  // Load persisted promises on mount
   useEffect(() => {
+    setPromises(loadPromises());
     setLoaded(true);
   }, []);
 
-  // Persist garden state whenever it changes
+  // Persist promises whenever they change
   useEffect(() => {
-    if (loaded) saveGardenState(gardenState);
-  }, [gardenState, loaded]);
+    if (loaded) savePromises(promises);
+  }, [promises, loaded]);
 
   // If the user was in the middle of first-plant creation when they last left,
   // auto-open the sheet so they can resume.
@@ -186,6 +169,7 @@ export default function PersonalPage() {
 
   /** Called from both the ClearcutOverlay seed and the SeedTray seeds */
   const handleOpenSheet = useCallback(() => {
+    // Stop the time-lapse immediately if it's still running
     setTimeLapseActive(false);
     if (state.phase === "clearcut") {
       onboarding.openSeedForFirstTime();
@@ -195,24 +179,48 @@ export default function PersonalPage() {
 
   const handleSheetClose = useCallback(() => {
     setIsSheetOpen(false);
+    // Focus returns to the seed button (clearcut) or garden (subsequent)
     setTimeout(() => seedRef.current?.focus(), 50);
   }, []);
 
+  /**
+   * Shared handler for all promise creation paths:
+   * ClearcutOverlay → PromiseCreationSheet, SeedTray → PromiseCreationSheet,
+   * and the existing "+ New Promise" tab → PromiseCreator.
+   */
   const handleCreate = useCallback(
     (promise: PersonalPromise) => {
-      const gardenPromise = toGardenPromise(promise);
-      dispatch({ type: "CREATE_PROMISE", promise: gardenPromise });
-      onboarding.plantPromise(promises.length + 1);
+      setPromises((prev) => {
+        const next = [...prev, promise];
+        // Sync onboarding count with the real promise array
+        onboarding.plantPromise(next.length);
+        return next;
+      });
       setIsSheetOpen(false);
       setView("garden");
     },
-    [onboarding, promises.length]
+    [onboarding]
   );
 
   const handleUpdateStatus = useCallback(
     (id: string, status: PromiseStatus, reflection?: string) => {
-      dispatch({ type: "UPDATE_STATUS", id, status, reflection });
+      setPromises((prev) =>
+        prev.map((p) => {
+          if (p.id !== id) return p;
+          const updated = {
+            ...p,
+            status,
+            reflection: reflection || p.reflection,
+            completedAt:
+              status === "verified" || status === "violated"
+                ? new Date().toISOString()
+                : p.completedAt,
+          };
+          return updated;
+        })
+      );
 
+      // First check-in: trigger notification prompt
       if (
         (status === "verified" || status === "violated") &&
         !state.firstCheckInComplete
@@ -222,82 +230,6 @@ export default function PersonalPage() {
     },
     [state.firstCheckInComplete, onboarding]
   );
-
-  // Phase 2: Camera
-  const handleCameraChange = useCallback((camera: Partial<CameraState>) => {
-    dispatch({ type: "SET_CAMERA", camera });
-  }, []);
-
-  // Phase 2: Sub-promises
-  const handleCreateSubPromise = useCallback(
-    (subPromise: GardenPromise) => {
-      if (!activeModal || activeModal.type !== "break-down") return;
-      dispatch({
-        type: "CREATE_SUB_PROMISE",
-        parentId: activeModal.promiseId,
-        promise: subPromise,
-      });
-    },
-    [activeModal]
-  );
-
-  // Phase 2: Dependencies
-  const handleAddDependency = useCallback((fromId: string, toId: string) => {
-    dispatch({ type: "ADD_DEPENDENCY", fromId, toId });
-  }, []);
-
-  const handleRemoveDependency = useCallback((fromId: string, toId: string) => {
-    dispatch({ type: "REMOVE_DEPENDENCY", fromId, toId });
-  }, []);
-
-  // Phase 2: Partner
-  const handleSetPartner = useCallback(
-    (partnerId: string, visibility: PartnerVisibility) => {
-      if (!activeModal || activeModal.type !== "partner") return;
-      dispatch({
-        type: "SET_PARTNER",
-        promiseId: activeModal.promiseId,
-        partnerId,
-        visibility,
-      });
-    },
-    [activeModal]
-  );
-
-  const handleRemovePartner = useCallback(() => {
-    if (!activeModal || activeModal.type !== "partner") return;
-    dispatch({ type: "REMOVE_PARTNER", promiseId: activeModal.promiseId });
-  }, [activeModal]);
-
-  const handlePartnerWater = useCallback((promiseId: string) => {
-    dispatch({ type: "PARTNER_WATER", promiseId });
-  }, []);
-
-  const handlePartnerEncourage = useCallback(
-    (promiseId: string, message: string) => {
-      dispatch({ type: "PARTNER_ENCOURAGE", promiseId, message });
-    },
-    []
-  );
-
-  // Phase 2: Sensor
-  const handleConnectSensor = useCallback(
-    (sensorType: SensorType, threshold: SensorThreshold) => {
-      if (!activeModal || activeModal.type !== "sensor") return;
-      dispatch({
-        type: "CONNECT_SENSOR",
-        promiseId: activeModal.promiseId,
-        sensorType,
-        threshold,
-      });
-    },
-    [activeModal]
-  );
-
-  const handleDisconnectSensor = useCallback(() => {
-    if (!activeModal || activeModal.type !== "sensor") return;
-    dispatch({ type: "DISCONNECT_SENSOR", promiseId: activeModal.promiseId });
-  }, [activeModal]);
 
   // ── Sky gradient (count-based for the new progression) ────────────────────
   const skyGradient = getSkyGradientByCount(promises.length);
@@ -312,11 +244,13 @@ export default function PersonalPage() {
   }
 
   // ── Clearcut / First-plant layout ─────────────────────────────────────────
+  // Shown when the user hasn't planted any promise yet.
   const isClearcut = promises.length === 0;
 
   if (isClearcut) {
     return (
       <main id="main-content" className="min-h-screen flex flex-col">
+        {/* Skip link */}
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:bg-white focus:text-gray-900 focus:rounded focus:shadow"
@@ -324,7 +258,14 @@ export default function PersonalPage() {
           Skip to main content
         </a>
 
+        {/* Full-height garden container */}
         <div className="relative flex-1" style={{ minHeight: "100svh" }}>
+          {/*
+           * Canvas layer — time-lapse while active, static clearcut after.
+           * GardenTimeLapse unmounts when timeLapseActive becomes false, which
+           * cancels its RAF loop. The static GardenView it was rendering
+           * handshakes with the ClearcutOverlay that's always on top.
+           */}
           {timeLapseActive ? (
             <GardenTimeLapse
               onComplete={() => setTimeLapseActive(false)}
@@ -340,9 +281,11 @@ export default function PersonalPage() {
             />
           )}
 
+          {/* Clearcut overlay: text + floating seed + stumps — always on top */}
           <ClearcutOverlay onSeedClick={handleOpenSheet} seedRef={seedRef} />
         </div>
 
+        {/* Inline creation sheet (appears on seed tap) */}
         {isSheetOpen && (
           <PromiseCreationSheet
             onSuccess={handleCreate}
@@ -355,6 +298,7 @@ export default function PersonalPage() {
   }
 
   // ── Garden-live layout ────────────────────────────────────────────────────
+  // Standard layout once at least one promise exists.
 
   const views: { id: View; label: string }[] = [
     { id: "garden",   label: "Garden" },
@@ -363,16 +307,12 @@ export default function PersonalPage() {
     { id: "create",   label: "+ New Promise" },
   ];
 
-  // Find the promise for the active modal
-  const modalPromise = activeModal
-    ? promises.find((p) => p.id === activeModal.promiseId) ?? null
-    : null;
-
   return (
     <main
       id="main-content"
       className="min-h-screen bg-gradient-to-b from-green-50 via-sky-lightest to-white"
     >
+      {/* Skip link */}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:bg-white focus:text-gray-900 focus:rounded focus:shadow"
@@ -414,18 +354,6 @@ export default function PersonalPage() {
         </div>
       </div>
 
-      {/* Unread notifications badge */}
-      {gardenState.notifications.filter((n) => !n.read).length > 0 && (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 mb-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800">
-            {gardenState.notifications.filter((n) => !n.read).length} new notification
-            {gardenState.notifications.filter((n) => !n.read).length !== 1 ? "s" : ""}
-            {" — "}
-            {gardenState.notifications.filter((n) => !n.read).slice(0, 2).map((n) => n.message).join("; ")}
-          </div>
-        </div>
-      )}
-
       {/* Content */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-12">
         {view === "garden" && (
@@ -434,22 +362,7 @@ export default function PersonalPage() {
               promises={promises}
               onUpdateStatus={handleUpdateStatus}
               skyGradientOverride={skyGradient}
-              camera={gardenState.camera}
-              onCameraChange={handleCameraChange}
-              onBreakDown={(id) => setActiveModal({ type: "break-down", promiseId: id })}
-              onEditDependencies={(id) => setActiveModal({ type: "dependencies", promiseId: id })}
-              onAddPartner={(id) => setActiveModal({ type: "partner", promiseId: id })}
-              onConnectSensor={(id) => setActiveModal({ type: "sensor", promiseId: id })}
             />
-
-            {/* Phase 2: Shared garden plot (for accountability partner plants) */}
-            {gardenState.sharedWithMe.length > 0 && (
-              <SharedGardenPlot
-                plants={gardenState.sharedWithMe}
-                onWater={handlePartnerWater}
-                onEncourage={handlePartnerEncourage}
-              />
-            )}
 
             {/* Dependency tooltip — after 3rd promise, one-time */}
             {state.promisesPlanted >= 3 && !state.dependencyTutorialSeen && (
@@ -508,62 +421,6 @@ export default function PersonalPage() {
           onSuccess={handleCreate}
           onClose={handleSheetClose}
           returnFocusRef={seedRef}
-        />
-      )}
-
-      {/* ── Phase 2 Modals ──────────────────────────────────────────────── */}
-
-      {/* Sub-promise creator ("Break this down") */}
-      {activeModal?.type === "break-down" && modalPromise && (
-        <SubPromiseCreator
-          parent={modalPromise as GardenPromise}
-          onCreateSubPromise={handleCreateSubPromise}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-
-      {/* Dependency editor */}
-      {activeModal?.type === "dependencies" && modalPromise && (
-        <DependencyEditor
-          promises={promises}
-          targetPromise={modalPromise as GardenPromise}
-          onAddDependency={handleAddDependency}
-          onRemoveDependency={handleRemoveDependency}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-
-      {/* Partner setup */}
-      {activeModal?.type === "partner" && modalPromise && (
-        <PartnerSetup
-          promise={modalPromise as GardenPromise}
-          isAuthenticated={!!gardenState.userId}
-          onSetPartner={handleSetPartner}
-          onRemovePartner={handleRemovePartner}
-          onRequestAuth={() => {
-            // Auth flow would go here — for now, simulate
-            dispatch({ type: "SET_USER_ID", userId: `user-${Date.now()}` });
-          }}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-
-      {/* Sensor connect */}
-      {activeModal?.type === "sensor" && modalPromise && (
-        <SensorConnect
-          promise={modalPromise as GardenPromise}
-          onConnect={handleConnectSensor}
-          onDisconnect={handleDisconnectSensor}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-
-      {/* Watering notification toast */}
-      {wateringNotif && (
-        <WateringAction
-          partnerName={wateringNotif.partner}
-          domain={wateringNotif.domain}
-          onDismiss={() => setWateringNotif(null)}
         />
       )}
     </main>

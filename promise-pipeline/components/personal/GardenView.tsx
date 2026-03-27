@@ -1,15 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PersonalPromise } from "@/lib/types/personal";
 import { PromiseStatus } from "@/lib/types/promise";
 import { StatusBadge } from "@/components/promise/StatusBadge";
 import ProceduralPlant from "./ProceduralPlant";
 import { getSkyGradient } from "@/lib/garden/renderer/skyGradient";
-import { RootSystem } from "@/components/garden/RootSystem";
-import { ZoomController, useZoomOpacity } from "@/components/garden/ZoomController";
-import type { GardenPromise, CameraState } from "@/lib/types/garden";
-import { DEFAULT_CAMERA, getZoomLevel } from "@/lib/types/garden";
 
 interface GardenViewProps {
   promises: PersonalPromise[];
@@ -33,17 +29,6 @@ interface GardenViewProps {
    * Override the minimum height of the garden scene div (default "320px").
    */
   minHeight?: string;
-
-  // ── Phase 2 props ──────────────────────────────────────────────────────
-  /** Camera state for zoom control */
-  camera?: CameraState;
-  /** Camera change handler */
-  onCameraChange?: (camera: Partial<CameraState>) => void;
-  /** Phase 2 action handlers */
-  onBreakDown?: (promiseId: string) => void;
-  onEditDependencies?: (promiseId: string) => void;
-  onAddPartner?: (promiseId: string) => void;
-  onConnectSensor?: (promiseId: string) => void;
 }
 
 const DOMAIN_LABELS: Record<string, string> = {
@@ -64,11 +49,6 @@ function computeReliability(promises: PersonalPromise[]): number {
   return kept / completed.length;
 }
 
-/** Check if a promise is a GardenPromise with Phase 2 fields */
-function isGardenPromise(p: PersonalPromise): p is GardenPromise {
-  return "children" in p && "parent" in p;
-}
-
 export function GardenView({
   promises,
   onUpdateStatus,
@@ -76,20 +56,11 @@ export function GardenView({
   skyGradientOverride,
   gardenAriaLabel,
   minHeight = "320px",
-  camera,
-  onCameraChange,
-  onBreakDown,
-  onEditDependencies,
-  onAddPartner,
-  onConnectSensor,
 }: GardenViewProps) {
   const [time, setTime] = useState(0);
   const animRef = useRef<number>(0);
   const reducedMotion = useRef(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const activeCamera = camera ?? DEFAULT_CAMERA;
-  const zoomOpacity = useZoomOpacity(activeCamera.zoom);
 
   // Detect reduced motion preference
   useEffect(() => {
@@ -117,24 +88,11 @@ export function GardenView({
     };
   }, []);
 
-  const handleCameraChange = useCallback(
-    (updates: Partial<CameraState>) => {
-      onCameraChange?.(updates);
-    },
-    [onCameraChange]
-  );
-
   if (promises.length === 0 && !forceRender) return null;
-
-  // Only show top-level promises in the garden view (sub-promises show as roots)
-  const topLevelPromises = promises.filter((p) => {
-    if (isGardenPromise(p)) return p.parent === null;
-    return true;
-  });
 
   // Group by domain
   const byDomain: Record<string, PersonalPromise[]> = {};
-  for (const p of topLevelPromises) {
+  for (const p of promises) {
     const domain = p.domain.toLowerCase();
     if (!byDomain[domain]) byDomain[domain] = [];
     byDomain[domain].push(p);
@@ -149,14 +107,7 @@ export function GardenView({
       : `Promise garden with ${promises.length} promise${promises.length === 1 ? "" : "s"}. Overall reliability: ${Math.round(reliabilityScore * 100)}%.`;
   const resolvedAriaLabel = gardenAriaLabel ?? defaultAriaLabel;
 
-  // Get children for a promise (Phase 2)
-  const getChildren = (parentId: string): GardenPromise[] => {
-    return promises.filter(
-      (p) => isGardenPromise(p) && p.parent === parentId
-    ) as GardenPromise[];
-  };
-
-  const gardenContent = (
+  return (
     <div className="space-y-0">
       {/* Garden scene */}
       <div
@@ -178,16 +129,6 @@ export function GardenView({
           {Math.round(reliabilityScore * 100)}%
         </div>
 
-        {/* Domain labels — visible at landscape/domain zoom */}
-        {zoomOpacity.landscape > 0 && Object.keys(byDomain).length > 1 && (
-          <div
-            className="absolute top-2 left-3 text-[10px] text-white/50 z-10"
-            style={{ opacity: zoomOpacity.landscape }}
-          >
-            {Object.keys(byDomain).length} domains
-          </div>
-        )}
-
         {/* Plant area — sits above ground */}
         <div
           className="relative px-4 pt-8 pb-0"
@@ -202,59 +143,22 @@ export function GardenView({
                 {DOMAIN_LABELS[domain] || `${domain} Grove`}
               </h3>
               <div className="flex items-end flex-wrap gap-2">
-                {domainPromises.map((p) => {
-                  const children = getChildren(p.id);
-                  const hasRoots = children.length > 0;
-
-                  return (
-                    <div
-                      key={p.id}
-                      className="flex flex-col items-center"
-                      style={{ minWidth: 80 }}
-                    >
-                      <ProceduralPlant
-                        promise={p}
-                        time={time}
-                        selected={selectedId === p.id}
-                        onClick={() =>
-                          setSelectedId(selectedId === p.id ? null : p.id)
-                        }
-                      />
-
-                      {/* Phase 2: Root system (sub-promises) */}
-                      {hasRoots && (
-                        <RootSystem
-                          parent={p as GardenPromise}
-                          children={children}
-                          opacity={zoomOpacity.roots}
-                          time={time}
-                          onSelectChild={(childId) => setSelectedId(childId)}
-                        />
-                      )}
-
-                      {/* Sub-promise count badge */}
-                      {hasRoots && zoomOpacity.roots < 0.3 && (
-                        <span className="text-[9px] text-white/60 bg-black/20 px-1 rounded-full mt-0.5">
-                          {children.length} root{children.length !== 1 ? "s" : ""}
-                        </span>
-                      )}
-
-                      {/* Dependency indicator */}
-                      {p.depends_on.length > 0 && (
-                        <span className="text-[9px] text-amber-200/60 mt-0.5">
-                          {p.depends_on.length} dep{p.depends_on.length !== 1 ? "s" : ""}
-                        </span>
-                      )}
-
-                      {/* Sensor indicator */}
-                      {isGardenPromise(p) && p.sensor && (
-                        <span className="text-[9px] text-blue-200/60 mt-0.5">
-                          📊 sensor
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                {domainPromises.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex flex-col items-center"
+                    style={{ minWidth: 80 }}
+                  >
+                    <ProceduralPlant
+                      promise={p}
+                      time={time}
+                      selected={selectedId === p.id}
+                      onClick={() =>
+                        setSelectedId(selectedId === p.id ? null : p.id)
+                      }
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           ))}
@@ -280,68 +184,35 @@ export function GardenView({
 
       {/* Plant detail cards (below the garden scene) */}
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {topLevelPromises.map((p) => (
+        {promises.map((p) => (
           <GardenPlantCard
             key={p.id}
             promise={p}
-            childCount={getChildren(p.id).length}
             onUpdateStatus={onUpdateStatus}
             selected={selectedId === p.id}
             onSelect={() =>
               setSelectedId(selectedId === p.id ? null : p.id)
             }
-            onBreakDown={onBreakDown}
-            onEditDependencies={onEditDependencies}
-            onAddPartner={onAddPartner}
-            onConnectSensor={onConnectSensor}
           />
         ))}
       </div>
     </div>
   );
-
-  // Wrap in ZoomController if camera management is active
-  if (onCameraChange) {
-    return (
-      <ZoomController
-        camera={activeCamera}
-        onCameraChange={handleCameraChange}
-        reducedMotion={reducedMotion.current}
-      >
-        {gardenContent}
-      </ZoomController>
-    );
-  }
-
-  return gardenContent;
 }
 
 function GardenPlantCard({
   promise,
-  childCount,
   onUpdateStatus,
   selected,
   onSelect,
-  onBreakDown,
-  onEditDependencies,
-  onAddPartner,
-  onConnectSensor,
 }: {
   promise: PersonalPromise;
-  childCount: number;
   onUpdateStatus: (id: string, status: PromiseStatus, reflection?: string) => void;
   selected: boolean;
   onSelect: () => void;
-  onBreakDown?: (promiseId: string) => void;
-  onEditDependencies?: (promiseId: string) => void;
-  onAddPartner?: (promiseId: string) => void;
-  onConnectSensor?: (promiseId: string) => void;
 }) {
   const isActive =
     promise.status === "declared" || promise.status === "degraded";
-
-  const hasPartner = isGardenPromise(promise) && !!promise.partner;
-  const hasSensor = isGardenPromise(promise) && !!promise.sensor;
 
   return (
     <div
@@ -358,30 +229,6 @@ function GardenPlantCard({
     >
       <p className="text-xs text-gray-700 line-clamp-2 mb-2">{promise.body}</p>
       <StatusBadge status={promise.status} size="xs" />
-
-      {/* Phase 2 badges */}
-      <div className="flex items-center justify-center gap-1 mt-1 flex-wrap">
-        {childCount > 0 && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-            {childCount} sub
-          </span>
-        )}
-        {promise.depends_on.length > 0 && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-            {promise.depends_on.length} dep
-          </span>
-        )}
-        {hasPartner && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-            partner
-          </span>
-        )}
-        {hasSensor && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
-            sensor
-          </span>
-        )}
-      </div>
 
       {isActive && (
         <div className="mt-3 flex gap-1 justify-center">
@@ -403,56 +250,6 @@ function GardenPlantCard({
           >
             Broken
           </button>
-        </div>
-      )}
-
-      {/* Phase 2 action buttons — visible when selected */}
-      {selected && (
-        <div className="mt-2 flex flex-wrap gap-1 justify-center">
-          {onBreakDown && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onBreakDown(promise.id);
-              }}
-              className="px-1.5 py-0.5 text-[10px] bg-amber-50 text-amber-700 rounded hover:bg-amber-100 border border-amber-200"
-            >
-              Break down
-            </button>
-          )}
-          {onEditDependencies && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditDependencies(promise.id);
-              }}
-              className="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-700 rounded hover:bg-blue-100 border border-blue-200"
-            >
-              Dependencies
-            </button>
-          )}
-          {onAddPartner && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddPartner(promise.id);
-              }}
-              className="px-1.5 py-0.5 text-[10px] bg-purple-50 text-purple-700 rounded hover:bg-purple-100 border border-purple-200"
-            >
-              Partner
-            </button>
-          )}
-          {onConnectSensor && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onConnectSensor(promise.id);
-              }}
-              className="px-1.5 py-0.5 text-[10px] bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200"
-            >
-              Sensor
-            </button>
-          )}
         </div>
       )}
 

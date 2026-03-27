@@ -68,6 +68,11 @@ function buildGardenPromise(draft: DraftPromise, domain: DomainId, index: number
     artifact: null,
     completedAt: null,
     reflection: null,
+    // Phase 2 fields
+    children: [],
+    parent: null,
+    sensor: null,
+    partner: null,
   };
 }
 

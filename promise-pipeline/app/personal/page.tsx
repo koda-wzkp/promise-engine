@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useGardenState } from "@/lib/garden/gardenState";
-import type { GardenPromise } from "@/lib/types/personal";
+import type { GardenPromise, AccountabilityPartner, SensorConnection } from "@/lib/types/personal";
 import type { PromiseStatus } from "@/lib/types/promise";
 import { computeWeather, weatherToGradient, weatherLabel } from "@/lib/garden/weatherComputation";
 import { isDue } from "@/lib/garden/adaptiveCheckin";
@@ -20,6 +20,18 @@ import { CompletionFlow } from "@/components/personal/CompletionFlow";
 import { CollectionView } from "@/components/personal/CollectionView";
 import { GardenStats } from "@/components/personal/GardenStats";
 import { FrequencySettings } from "@/components/personal/FrequencySettings";
+
+// Phase 2 components
+import { ZoomController, type ZoomLevel } from "@/components/garden/ZoomController";
+import { RootSystem } from "@/components/garden/RootSystem";
+import { DependencyEdge } from "@/components/garden/DependencyEdge";
+import { CascadeAnimation } from "@/components/garden/CascadeAnimation";
+import { SubPromiseCreator } from "@/components/personal/SubPromiseCreator";
+import { DependencyEditor } from "@/components/personal/DependencyEditor";
+import { PartnerSetup } from "@/components/personal/PartnerSetup";
+import { SharedGardenPlot } from "@/components/personal/SharedGardenPlot";
+import { SensorConnect } from "@/components/personal/SensorConnect";
+import { SensorThreshold } from "@/components/personal/SensorThreshold";
 
 type Tab = "garden" | "collection" | "stats";
 
@@ -47,21 +59,74 @@ const K_COLORS: Record<string, string> = {
   physics:    "#2563eb",
 };
 
+// ─── CASCADE STRESS COMPUTATION ──────────────────────────────────────────────
+
+/** Returns a set of promise IDs that are under cascade stress. */
+function computeCascadeStress(promises: Record<string, GardenPromise>): Set<string> {
+  const stressed = new Set<string>();
+  for (const [id, p] of Object.entries(promises)) {
+    if (p.status === "degraded" || p.status === "violated") {
+      for (const other of Object.values(promises)) {
+        if (other.depends_on.includes(id)) {
+          stressed.add(other.id);
+        }
+      }
+    }
+  }
+  return stressed;
+}
+
+/** Returns the source promise that is causing stress for a given promise. */
+function stressSource(
+  promise: GardenPromise,
+  promises: Record<string, GardenPromise>
+): GardenPromise | null {
+  for (const depId of promise.depends_on) {
+    const dep = promises[depId];
+    if (dep && (dep.status === "degraded" || dep.status === "violated")) return dep;
+  }
+  return null;
+}
+
 // ─── PLANT ITEM ──────────────────────────────────────────────────────────────
 
 function PlantItem({
   promise,
+  allPromises,
+  zoomLevel,
+  isStressed,
   onCheckIn,
   onFrequency,
+  onSubPromise,
+  onDependency,
+  onPartner,
+  onSensor,
+  onChildCheckIn,
 }: {
   promise: GardenPromise;
+  allPromises: Record<string, GardenPromise>;
+  zoomLevel: ZoomLevel;
+  isStressed: boolean;
   onCheckIn: () => void;
   onFrequency: () => void;
+  onSubPromise: () => void;
+  onDependency: () => void;
+  onPartner: () => void;
+  onSensor: () => void;
+  onChildCheckIn: (childId: string) => void;
 }) {
   const due = isDue(promise);
+  const children = promise.children
+    .map((id) => allPromises[id])
+    .filter(Boolean) as GardenPromise[];
+  const showRoots = zoomLevel >= 3;
 
   return (
-    <div className="bg-white rounded-xl border p-4">
+    <div
+      className={`bg-white rounded-xl border p-4 transition-all ${
+        isStressed ? "border-amber-300 shadow-amber-100 shadow-sm" : ""
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900 leading-snug">{promise.body}</p>
@@ -78,6 +143,21 @@ function PlantItem({
             >
               {promise.kRegime}
             </span>
+            {promise.sensor && (
+              <span className="px-2 py-0.5 text-xs rounded bg-blue-50 text-blue-700">
+                sensor
+              </span>
+            )}
+            {promise.partner && (
+              <span className="px-2 py-0.5 text-xs rounded bg-purple-50 text-purple-700">
+                {promise.partner.inviteStatus === "accepted" ? "partnered" : "invite sent"}
+              </span>
+            )}
+            {promise.children.length > 0 && (
+              <span className="px-2 py-0.5 text-xs rounded bg-gray-50 text-gray-500">
+                {promise.children.length} sub
+              </span>
+            )}
             {promise.graftHistory.length > 0 && (
               <span className="text-xs text-gray-400">
                 {promise.graftHistory.length}× renegotiated
@@ -93,6 +173,16 @@ function PlantItem({
               )}
             </p>
           )}
+
+          {/* Dependency stress indicator */}
+          {isStressed && (
+            <p className="text-xs text-amber-600 mt-1">
+              Dependency struggling
+            </p>
+          )}
+
+          {/* Dependency edges */}
+          <DependencyEdge promise={promise} allPromises={allPromises} />
         </div>
 
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -108,10 +198,56 @@ function PlantItem({
             className="text-xs text-gray-400 hover:text-gray-600 focus-visible:outline-2 focus-visible:outline-gray-400"
             aria-label={`Frequency settings for: ${promise.body}`}
           >
-            ⚙ every {Math.round(promise.checkInFrequency.adaptive)}d
+            every {Math.round(promise.checkInFrequency.adaptive)}d
           </button>
         </div>
       </div>
+
+      {/* Phase 2 action row */}
+      <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-gray-50">
+        <button
+          onClick={onSubPromise}
+          className="flex-1 py-1 text-xs text-gray-500 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-green-600"
+          aria-label="Break this down into sub-promises"
+          title="Break down"
+        >
+          Break down{promise.children.length > 0 ? ` (${promise.children.length})` : ""}
+        </button>
+        <button
+          onClick={onDependency}
+          className="flex-1 py-1 text-xs text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-blue-600"
+          aria-label="Edit dependencies"
+          title="Dependencies"
+        >
+          Depends{promise.depends_on.length > 0 ? ` (${promise.depends_on.length})` : ""}
+        </button>
+        <button
+          onClick={onPartner}
+          className="flex-1 py-1 text-xs text-gray-500 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-purple-600"
+          aria-label="Accountability partner settings"
+          title="Partner"
+        >
+          Partner{promise.partner ? " ✓" : ""}
+        </button>
+        <button
+          onClick={onSensor}
+          className="flex-1 py-1 text-xs text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-blue-600"
+          aria-label="Connect a sensor"
+          title="Sensor"
+        >
+          Sensor{promise.sensor ? " ✓" : ""}
+        </button>
+      </div>
+
+      {/* Root system — visible at zoom level 3 */}
+      {children.length > 0 && (
+        <RootSystem
+          parent={promise}
+          children={children}
+          visible={showRoots}
+          onSelectChild={onChildCheckIn}
+        />
+      )}
     </div>
   );
 }
@@ -144,21 +280,39 @@ function GardenSRDescription({ promises }: { promises: GardenPromise[] }) {
 export default function PersonalPage() {
   const { state, dispatch } = useGardenState();
   const [activeTab, setActiveTab] = useState<Tab>("garden");
+  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(1);
+
+  // Phase 1 modal state
   const [checkInId, setCheckInId] = useState<string | null>(null);
   const [renegotiateId, setRenegotiateId] = useState<string | null>(null);
   const [completeId, setCompleteId] = useState<string | null>(null);
   const [frequencyId, setFrequencyId] = useState<string | null>(null);
   const [showTour, setShowTour] = useState(false);
 
+  // Phase 2 modal state
+  const [subPromiseId, setSubPromiseId] = useState<string | null>(null);
+  const [dependencyId, setDependencyId] = useState<string | null>(null);
+  const [partnerSetupId, setPartnerSetupId] = useState<string | null>(null);
+  const [sensorConnectId, setSensorConnectId] = useState<string | null>(null);
+  const [sensorThresholdId, setSensorThresholdId] = useState<string | null>(null);
+
+  // Cascade alerts: { affectedId, sourceId }
+  const [cascadeAlerts, setCascadeAlerts] = useState<{ affectedId: string; sourceId: string }[]>([]);
+
   const promises = useMemo(() => Object.values(state.promises), [state.promises]);
 
   const activePromises = useMemo(
-    () => promises.filter((p) => !p.fossilized && p.status !== "violated" && p.artifact === null),
+    () => promises.filter((p) => !p.fossilized && p.status !== "violated" && p.artifact === null && !p.parent),
     [promises]
   );
 
   const dormantPromises = useMemo(
-    () => promises.filter((p) => p.status === "violated" && !p.fossilized && p.artifact === null),
+    () => promises.filter((p) => p.status === "violated" && !p.fossilized && p.artifact === null && !p.parent),
+    [promises]
+  );
+
+  const sharedPromises = useMemo(
+    () => promises.filter((p) => p.partner !== null),
     [promises]
   );
 
@@ -170,20 +324,42 @@ export default function PersonalPage() {
   const weather = useMemo(() => computeWeather(promises), [promises]);
   const skyGradient = weatherToGradient(weather);
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // Cascade stress — derived from promise states
+  const cascadeStress = useMemo(
+    () => computeCascadeStress(state.promises),
+    [state.promises]
+  );
+
+  // ── Phase 1 handlers ────────────────────────────────────────────────────────
 
   const handleCheckIn = useCallback(
     (promiseId: string, newStatus: PromiseStatus, note?: string) => {
+      const prev = state.promises[promiseId];
       dispatch({ type: "CHECK_IN", promiseId, newStatus, note });
+
+      // After check-in, detect new cascade stress
+      if (newStatus === "degraded" || newStatus === "violated") {
+        for (const other of Object.values(state.promises)) {
+          if (other.depends_on.includes(promiseId) && other.id !== promiseId) {
+            setCascadeAlerts((prev) => [
+              ...prev.filter((a) => a.affectedId !== other.id),
+              { affectedId: other.id, sourceId: promiseId },
+            ]);
+          }
+        }
+      }
+
+      // suppress unused variable warning
+      void prev;
     },
-    [dispatch]
+    [dispatch, state.promises]
   );
 
   const handleGardenStatus = useCallback(
     (id: string, status: PromiseStatus, note?: string) => {
-      dispatch({ type: "CHECK_IN", promiseId: id, newStatus: status, note });
+      handleCheckIn(id, status, note);
     },
-    [dispatch]
+    [handleCheckIn]
   );
 
   const handleRenegotiate = useCallback(
@@ -219,6 +395,72 @@ export default function PersonalPage() {
     [dispatch]
   );
 
+  // ── Phase 2 handlers ────────────────────────────────────────────────────────
+
+  const handleAddSubPromise = useCallback(
+    (parentId: string, sub: GardenPromise) => {
+      dispatch({ type: "CREATE_SUB_PROMISE", parentId, promise: sub });
+    },
+    [dispatch]
+  );
+
+  const handleAddDependency = useCallback(
+    (fromId: string, toId: string) => {
+      dispatch({ type: "ADD_DEPENDENCY", fromId, toId });
+    },
+    [dispatch]
+  );
+
+  const handleRemoveDependency = useCallback(
+    (fromId: string, toId: string) => {
+      dispatch({ type: "REMOVE_DEPENDENCY", fromId, toId });
+    },
+    [dispatch]
+  );
+
+  const handleSetPartner = useCallback(
+    (promiseId: string, partner: AccountabilityPartner) => {
+      dispatch({ type: "SET_PARTNER", promiseId, partner });
+    },
+    [dispatch]
+  );
+
+  const handleRemovePartner = useCallback(
+    (promiseId: string) => {
+      dispatch({ type: "REMOVE_PARTNER", promiseId });
+    },
+    [dispatch]
+  );
+
+  const handlePartnerWater = useCallback(
+    (promiseId: string) => {
+      dispatch({ type: "PARTNER_WATER", promiseId });
+    },
+    [dispatch]
+  );
+
+  const handleConnectSensor = useCallback(
+    (promiseId: string, sensor: SensorConnection) => {
+      dispatch({ type: "CONNECT_SENSOR", promiseId, sensor });
+    },
+    [dispatch]
+  );
+
+  const handleDisconnectSensor = useCallback(
+    (promiseId: string) => {
+      dispatch({ type: "DISCONNECT_SENSOR", promiseId });
+    },
+    [dispatch]
+  );
+
+  const handleSensorUpdate = useCallback(
+    (promiseId: string, newStatus: PromiseStatus) => {
+      dispatch({ type: "SENSOR_UPDATE", promiseId, newStatus });
+      setSensorThresholdId(null);
+    },
+    [dispatch]
+  );
+
   // ── Onboarding gate ─────────────────────────────────────────────────────────
 
   if (!state.onboardingComplete) {
@@ -233,12 +475,19 @@ export default function PersonalPage() {
     );
   }
 
-  // ── Modals ──────────────────────────────────────────────────────────────────
+  // ── Derived modal targets ────────────────────────────────────────────────────
 
   const checkInPromise = checkInId ? state.promises[checkInId] : null;
   const renegotiatePromise = renegotiateId ? state.promises[renegotiateId] : null;
   const completePromise = completeId ? state.promises[completeId] : null;
   const frequencyPromise = frequencyId ? state.promises[frequencyId] : null;
+  const subPromiseTarget = subPromiseId ? state.promises[subPromiseId] : null;
+  const dependencyTarget = dependencyId ? state.promises[dependencyId] : null;
+  const partnerSetupTarget = partnerSetupId ? state.promises[partnerSetupId] : null;
+  const sensorConnectTarget = sensorConnectId ? state.promises[sensorConnectId] : null;
+  const sensorThresholdTarget = sensorThresholdId ? state.promises[sensorThresholdId] : null;
+
+  const firstCascadeAlert = cascadeAlerts[0] ?? null;
 
   // ── Tab config ──────────────────────────────────────────────────────────────
 
@@ -302,16 +551,29 @@ export default function PersonalPage() {
         {/* ── GARDEN ── */}
         {activeTab === "garden" && (
           <div className="space-y-4">
-            {/* Canvas */}
+            {/* Canvas — wrapped in ZoomController */}
             <div className="rounded-2xl overflow-hidden border">
-              <GardenView
-                promises={activePromises as unknown as PersonalPromise[]}
-                onUpdateStatus={handleGardenStatus}
-                skyGradientOverride={skyGradient}
-                gardenAriaLabel={`Promise garden. ${activePromises.length} active promise${activePromises.length !== 1 ? "s" : ""}. ${weatherLabel(weather)}.`}
-                minHeight="240px"
-              />
+              <ZoomController onZoomChange={setZoomLevel} defaultLevel={1}>
+                {(level) => (
+                  <GardenView
+                    promises={activePromises as unknown as PersonalPromise[]}
+                    onUpdateStatus={handleGardenStatus}
+                    skyGradientOverride={skyGradient}
+                    gardenAriaLabel={`Promise garden. ${activePromises.length} active promise${activePromises.length !== 1 ? "s" : ""}. ${weatherLabel(weather)}. Zoom: ${level === 0 ? "landscape" : level === 1 ? "garden" : level === 2 ? "plant detail" : "roots"}.`}
+                    minHeight="240px"
+                  />
+                )}
+              </ZoomController>
             </div>
+
+            {/* Shared garden plot */}
+            {sharedPromises.length > 0 && (
+              <SharedGardenPlot
+                sharedPromises={sharedPromises}
+                onWater={(id) => { handlePartnerWater(id); }}
+                onCheckIn={(id) => setCheckInId(id)}
+              />
+            )}
 
             {/* Active promise list */}
             <div
@@ -324,8 +586,22 @@ export default function PersonalPage() {
                 <div key={p.id} role="listitem">
                   <PlantItem
                     promise={p}
+                    allPromises={state.promises}
+                    zoomLevel={zoomLevel}
+                    isStressed={cascadeStress.has(p.id)}
                     onCheckIn={() => setCheckInId(p.id)}
-                    onFrequency={() => setFrequencyId(p.id)}
+                    onFrequency={() => {
+                      if (p.sensor) {
+                        setSensorThresholdId(p.id);
+                      } else {
+                        setFrequencyId(p.id);
+                      }
+                    }}
+                    onSubPromise={() => setSubPromiseId(p.id)}
+                    onDependency={() => setDependencyId(p.id)}
+                    onPartner={() => setPartnerSetupId(p.id)}
+                    onSensor={() => setSensorConnectId(p.id)}
+                    onChildCheckIn={(childId) => setCheckInId(childId)}
                   />
                 </div>
               ))}
@@ -342,8 +618,16 @@ export default function PersonalPage() {
                     <PlantItem
                       key={p.id}
                       promise={p}
+                      allPromises={state.promises}
+                      zoomLevel={zoomLevel}
+                      isStressed={cascadeStress.has(p.id)}
                       onCheckIn={() => setCheckInId(p.id)}
                       onFrequency={() => setFrequencyId(p.id)}
+                      onSubPromise={() => setSubPromiseId(p.id)}
+                      onDependency={() => setDependencyId(p.id)}
+                      onPartner={() => setPartnerSetupId(p.id)}
+                      onSensor={() => setSensorConnectId(p.id)}
+                      onChildCheckIn={(childId) => setCheckInId(childId)}
                     />
                   ))}
                 </div>
@@ -353,8 +637,6 @@ export default function PersonalPage() {
             {/* Add new */}
             <button
               onClick={() => {
-                // Re-open onboarding for additional promises by resetting the flag
-                // (only for adding more — existing garden preserved via state.promises)
                 dispatch({ type: "COMPLETE_ONBOARDING" });
               }}
               className="w-full py-3 text-sm text-green-700 border border-dashed border-green-300 rounded-xl hover:bg-green-50 transition-colors focus-visible:outline-2 focus-visible:outline-green-600"
@@ -384,6 +666,7 @@ export default function PersonalPage() {
         />
       )}
 
+      {/* Phase 1 modals */}
       {checkInPromise && (
         <CheckInCard
           promise={checkInPromise}
@@ -419,6 +702,73 @@ export default function PersonalPage() {
           onClose={() => setFrequencyId(null)}
         />
       )}
+
+      {/* Phase 2 modals */}
+      {subPromiseTarget && (
+        <SubPromiseCreator
+          promise={subPromiseTarget}
+          subPromises={
+            subPromiseTarget.children
+              .map((id) => state.promises[id])
+              .filter(Boolean) as GardenPromise[]
+          }
+          onAdd={handleAddSubPromise}
+          onClose={() => setSubPromiseId(null)}
+        />
+      )}
+
+      {dependencyTarget && (
+        <DependencyEditor
+          promise={dependencyTarget}
+          allPromises={promises}
+          onAdd={handleAddDependency}
+          onRemove={handleRemoveDependency}
+          onClose={() => setDependencyId(null)}
+        />
+      )}
+
+      {partnerSetupTarget && (
+        <PartnerSetup
+          promise={partnerSetupTarget}
+          onSave={handleSetPartner}
+          onRemove={handleRemovePartner}
+          onClose={() => setPartnerSetupId(null)}
+        />
+      )}
+
+      {sensorConnectTarget && (
+        <SensorConnect
+          promise={sensorConnectTarget}
+          onConnect={handleConnectSensor}
+          onDisconnect={handleDisconnectSensor}
+          onClose={() => setSensorConnectId(null)}
+        />
+      )}
+
+      {sensorThresholdTarget && sensorThresholdTarget.sensor && (
+        <SensorThreshold
+          promise={sensorThresholdTarget}
+          onSimulate={handleSensorUpdate}
+          onClose={() => setSensorThresholdId(null)}
+        />
+      )}
+
+      {/* Cascade stress notification — one at a time */}
+      {firstCascadeAlert &&
+        state.promises[firstCascadeAlert.affectedId] &&
+        state.promises[firstCascadeAlert.sourceId] && (
+          <CascadeAnimation
+            affectedPromise={state.promises[firstCascadeAlert.affectedId]}
+            sourcePromise={state.promises[firstCascadeAlert.sourceId]}
+            onDismiss={() =>
+              setCascadeAlerts((prev) =>
+                prev.filter(
+                  (a) => a.affectedId !== firstCascadeAlert.affectedId
+                )
+              )
+            }
+          />
+        )}
     </main>
   );
 }

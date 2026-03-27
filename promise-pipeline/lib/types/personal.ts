@@ -4,9 +4,9 @@ export interface PersonalPromise extends Promise {
   isPersonal: true;
   origin: "voluntary";
   promisee: string;
-  reflection?: string;
+  reflection?: string | null;
   renegotiatedFrom?: string;
-  completedAt?: string;
+  completedAt?: string | null;
   createdAt: string;
 }
 
@@ -147,6 +147,67 @@ export interface GardenPromise extends PersonalPromise {
   artifact: Artifact | null;
   completedAt: string | null;
   reflection?: string | null;  // undefined | null | string all mean "no reflection yet"
+
+  // ─── Phase 2: Nesting + Dependencies ─────────────────────────────────────
+  /** IDs of sub-promises created under this promise */
+  children: string[];
+  /** Parent promise ID, or null if this is a root promise */
+  parent: string | null;
+  // Note: depends_on is inherited from Promise base type (string[])
+
+  // ─── Phase 2: Sensor Integration ─────────────────────────────────────────
+  sensor: SensorConnection | null;
+
+  // ─── Phase 2: Accountability Partner ─────────────────────────────────────
+  partner: AccountabilityPartner | null;
+}
+
+// ─── V2: SENSOR INTEGRATION ──────────────────────────────────────────────────
+
+export type SensorType = "apple-health" | "google-fit" | "screen-time" | "calendar";
+
+export interface SensorThresholdConfig {
+  operator: "<=" | ">=" | "==" | "<" | ">";
+  value: number;
+  /** Human-readable unit: "sessions/week", "hour", "minutes/day" */
+  unit: string;
+}
+
+export interface SensorConnection {
+  type: SensorType;
+  /** What is being measured: "workout_sessions", "sleep_start_hour", etc. */
+  metric: string;
+  threshold: SensorThresholdConfig;
+  connectedAt: string;
+  lastSync: string | null;
+  /**
+   * Web fallback: user-provided simulation value.
+   * Real HealthKit / Google Fit reads require a native app layer.
+   * When set, SENSOR_UPDATE uses this to determine verified/degraded.
+   */
+  simulatedValue: number | null;
+}
+
+// ─── V2: ACCOUNTABILITY PARTNER ──────────────────────────────────────────────
+
+export interface PartnerVisibility {
+  /** Partner can read the promise body text */
+  showBody: boolean;
+  /** Partner can see sub-promises (root system) */
+  showSubPromises: boolean;
+}
+
+export interface AccountabilityPartner {
+  /** Local UUID until real Supabase auth is wired */
+  partnerId: string;
+  partnerEmail: string;
+  partnerName: string;
+  inviteStatus: "pending" | "accepted" | "declined";
+  /** Token embedded in the shareable invite URL */
+  inviteToken: string;
+  visibility: PartnerVisibility;
+  invitedAt: string;
+  acceptedAt: string | null;
 }
 
 // ─── V2: GARDEN STATS ────────────────────────────────────────────────────────

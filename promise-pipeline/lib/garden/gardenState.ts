@@ -10,6 +10,7 @@ import type {
 } from "../types/personal";
 import type { ContributionState } from "../types/contribution";
 import { INITIAL_CONTRIBUTION_STATE } from "../types/contribution";
+import type { ReceivedGift, GiftOptions } from "../types/gift";
 import {
   classifyKRegime,
   expectedKValue,
@@ -33,6 +34,7 @@ interface StoredState {
   onboardingComplete: boolean;
   tourComplete: boolean;
   contribution: ContributionState;
+  receivedGifts: ReceivedGift[];
   createdAt: string;
   lastOpenedAt: string;
 }
@@ -49,6 +51,9 @@ export interface GardenState {
   contribution: ContributionState;
   /** ISO date the garden was first created — used for opt-in eligibility */
   gardenCreatedAt: string | null;
+  // ── Phase 3: Gifting ──────────────────────────────────────────────────────
+  /** Gifts received from accountability partners / promisees */
+  receivedGifts: ReceivedGift[];
 }
 
 // ─── ACTIONS ─────────────────────────────────────────────────────────────────
@@ -83,7 +88,10 @@ export type GardenAction =
   | { type: "CONTRIBUTION_SENT"; batchId: string }
   | { type: "MARK_OPT_IN_PROMPT_SHOWN" }
   | { type: "MARK_OPT_UP_PROMPT_SHOWN" }
-  | { type: "SET_CONTRIBUTION_LEVEL"; level: import("../types/contribution").ContributionLevel };
+  | { type: "SET_CONTRIBUTION_LEVEL"; level: import("../types/contribution").ContributionLevel }
+  // ── Phase 3: Gifting ──────────────────────────────────────────────────────
+  | { type: "GIFT_ARTIFACT"; promiseId: string; toUserId: string; options: GiftOptions }
+  | { type: "RECEIVE_GIFT"; gift: ReceivedGift };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -370,7 +378,12 @@ function gardenReducer(state: GardenState, action: GardenAction): GardenState {
       const now = new Date().toISOString();
       const withDate: GardenPromise = { ...p, status: "verified", completedAt: now, reflection: action.reflection ?? null };
       const artifact = generateArtifact(withDate);
-      const updated: GardenPromise = { ...withDate, artifact };
+      // Artifact is giftable if the promise had an accountability partner
+      const giftableArtifact = {
+        ...artifact,
+        giftable: p.partner !== null && p.partner.inviteStatus === "accepted",
+      };
+      const updated: GardenPromise = { ...withDate, artifact: giftableArtifact };
       const promises = { ...state.promises, [action.promiseId]: updated };
       return { ...state, promises, stats: computeStats(promises) };
     }
@@ -595,6 +608,30 @@ function gardenReducer(state: GardenState, action: GardenAction): GardenState {
         },
       };
 
+    // ── Phase 3: Gifting ───────────────────────────────────────────────────
+
+    case "GIFT_ARTIFACT": {
+      const p = state.promises[action.promiseId];
+      if (!p?.artifact) return state;
+
+      // Mark the artifact as gifted — giftedTo records the recipient ID
+      const updated: GardenPromise = {
+        ...p,
+        artifact: {
+          ...p.artifact,
+          giftedTo: action.toUserId,
+        },
+      };
+      const promises = { ...state.promises, [action.promiseId]: updated };
+      return { ...state, promises, stats: computeStats(promises) };
+    }
+
+    case "RECEIVE_GIFT":
+      return {
+        ...state,
+        receivedGifts: [...state.receivedGifts, action.gift],
+      };
+
     default:
       return state;
   }
@@ -621,6 +658,7 @@ const INITIAL_STATE: GardenState = {
   tourComplete: false,
   contribution: INITIAL_CONTRIBUTION_STATE,
   gardenCreatedAt: null,
+  receivedGifts: [],
 };
 
 // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
@@ -650,6 +688,7 @@ function loadFromStorage(): GardenState {
       // v4 migration: contribution defaults to off for existing users
       contribution: stored.contribution ?? INITIAL_CONTRIBUTION_STATE,
       gardenCreatedAt: stored.createdAt ?? null,
+      receivedGifts: Array.isArray(stored.receivedGifts) ? stored.receivedGifts : [],
     };
   } catch {
     return INITIAL_STATE;
@@ -671,6 +710,7 @@ function saveToStorage(state: GardenState): void {
       onboardingComplete: state.onboardingComplete,
       tourComplete: state.tourComplete,
       contribution: state.contribution,
+      receivedGifts: state.receivedGifts,
       createdAt,
       lastOpenedAt: new Date().toISOString(),
     };

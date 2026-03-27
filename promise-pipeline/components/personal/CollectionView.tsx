@@ -1,18 +1,25 @@
 "use client";
 
 import type { GardenPromise } from "@/lib/types/personal";
+import type { ReceivedGift } from "@/lib/types/gift";
+import type { GardenAction } from "@/lib/garden/gardenState";
 import { CollectionArtifact } from "./CollectionArtifact";
+import { GiftButton } from "./GiftButton";
+import { ReceivedGifts } from "./ReceivedGifts";
 
 interface CollectionViewProps {
   promises: GardenPromise[];
+  dispatch: React.Dispatch<GardenAction>;
+  receivedGifts: ReceivedGift[];
 }
 
-export function CollectionView({ promises }: CollectionViewProps) {
+export function CollectionView({ promises, dispatch, receivedGifts }: CollectionViewProps) {
   const withArtifacts = promises.filter((p) => p.artifact !== null);
   const kept = withArtifacts.filter((p) => !p.fossilized && p.status === "verified");
   const fossils = withArtifacts.filter((p) => p.fossilized);
+  const hasAnything = withArtifacts.length > 0 || receivedGifts.length > 0;
 
-  if (withArtifacts.length === 0) {
+  if (!hasAnything) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
         <p className="text-4xl mb-4" aria-hidden="true">🌱</p>
@@ -36,13 +43,24 @@ export function CollectionView({ promises }: CollectionViewProps) {
           </h2>
           <div className="space-y-3">
             {kept.map((p) => (
-              <CollectionArtifact
-                key={p.id}
-                artifact={p.artifact!}
-                promiseBody={p.body}
-                reflection={p.reflection}
-                fossilized={false}
-              />
+              <div key={p.id} className="space-y-1">
+                <CollectionArtifact
+                  artifact={p.artifact!}
+                  promiseBody={p.body}
+                  reflection={p.reflection}
+                  fossilized={false}
+                />
+                {p.artifact?.giftable && p.artifact.giftedTo === null && (
+                  <div className="px-1">
+                    <GiftButton promise={p} dispatch={dispatch} />
+                  </div>
+                )}
+                {p.artifact?.giftedTo && (
+                  <p className="text-xs text-purple-600 px-1">
+                    Gifted to your accountability partner
+                  </p>
+                )}
+              </div>
             ))}
           </div>
         </section>
@@ -68,6 +86,10 @@ export function CollectionView({ promises }: CollectionViewProps) {
             ))}
           </div>
         </section>
+      )}
+
+      {receivedGifts.length > 0 && (
+        <ReceivedGifts gifts={receivedGifts} />
       )}
     </div>
   );

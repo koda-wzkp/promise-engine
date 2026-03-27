@@ -674,7 +674,11 @@ export default function PersonalPage() {
 
         {/* ── COLLECTION ── */}
         {activeTab === "collection" && (
-          <CollectionView promises={promises} />
+          <CollectionView
+            promises={promises}
+            dispatch={dispatch}
+            receivedGifts={state.receivedGifts}
+          />
         )}
 
         {/* ── STATS ── */}

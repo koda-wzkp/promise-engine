@@ -1,426 +1,422 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { PersonalPromise, PersonalStats } from "@/lib/types/personal";
-import { PromiseStatus } from "@/lib/types/promise";
-import { PromiseCreator } from "@/components/personal/PromiseCreator";
+import { useState, useCallback, useMemo } from "react";
+import { useGardenState } from "@/lib/garden/gardenState";
+import type { GardenPromise } from "@/lib/types/personal";
+import type { PromiseStatus } from "@/lib/types/promise";
+import { computeWeather, weatherToGradient, weatherLabel } from "@/lib/garden/weatherComputation";
+import { isDue } from "@/lib/garden/adaptiveCheckin";
+
+// Existing v1 canvas renderer — GardenPromise satisfies PersonalPromise structurally
 import { GardenView } from "@/components/personal/GardenView";
-import { PromiseTimeline } from "@/components/personal/PromiseTimeline";
-import { ReliabilityScore } from "@/components/personal/ReliabilityScore";
-import { DomainBreakdown } from "@/components/personal/DomainBreakdown";
-import { ClearcutOverlay } from "@/components/personal/ClearcutOverlay";
-import { GardenTimeLapse } from "@/components/personal/GardenTimeLapse";
-import { PromiseCreationSheet } from "@/components/personal/PromiseCreationSheet";
-import { SeedTray } from "@/components/personal/SeedTray";
-import { NotificationPrompt } from "@/components/personal/NotificationPrompt";
-import { AccountPrompt } from "@/components/personal/AccountPrompt";
-import { DependencyTooltip } from "@/components/personal/DependencyTooltip";
-import { useGardenOnboarding } from "@/lib/hooks/useGardenOnboarding";
-import { getSkyGradientByCount } from "@/lib/garden/renderer/skyGradient";
-import { NestedPLogo } from "@/components/brand/NestedPLogo";
+import type { PersonalPromise } from "@/lib/types/personal";
 
-type View = "garden" | "timeline" | "create" | "stats";
+// v2 components
+import { OnboardingFlow } from "@/components/personal/OnboardingFlow";
+import { GardenTour } from "@/components/personal/GardenTour";
+import { CheckInCard } from "@/components/personal/CheckInCard";
+import { RenegotiateModal } from "@/components/personal/RenegotiateModal";
+import { CompletionFlow } from "@/components/personal/CompletionFlow";
+import { CollectionView } from "@/components/personal/CollectionView";
+import { GardenStats } from "@/components/personal/GardenStats";
+import { FrequencySettings } from "@/components/personal/FrequencySettings";
 
-const STORAGE_KEY = "promise-garden-data";
+type Tab = "garden" | "collection" | "stats";
 
-function loadPromises(): PersonalPromise[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
+// ─── STATUS DISPLAY HELPERS ──────────────────────────────────────────────────
 
-function savePromises(promises: PersonalPromise[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(promises));
-}
+const STATUS_LABELS: Record<PromiseStatus, string> = {
+  declared:     "Declared",
+  verified:     "On track",
+  degraded:     "Slipping",
+  violated:     "Dormant",
+  unverifiable: "Unverifiable",
+};
 
-function calculateStats(promises: PersonalPromise[]): PersonalStats {
-  const completed = promises.filter(
-    (p) => p.status === "verified" || p.status === "violated"
-  );
-  const kept = completed.filter((p) => p.status === "verified");
-  const active = promises.filter(
-    (p) => p.status === "declared" || p.status === "degraded"
-  );
+const STATUS_COLORS: Record<PromiseStatus, string> = {
+  declared:     "bg-blue-50 text-blue-700",
+  verified:     "bg-green-50 text-green-700",
+  degraded:     "bg-amber-50 text-amber-700",
+  violated:     "bg-gray-100 text-gray-500",
+  unverifiable: "bg-gray-50 text-gray-400",
+};
 
-  const keptRate = completed.length > 0 ? kept.length / completed.length : 0;
+const K_COLORS: Record<string, string> = {
+  composting: "#d97706",
+  ecological: "#059669",
+  physics:    "#2563eb",
+};
 
-  const keptWithDates = kept.filter((p) => p.createdAt && p.completedAt);
-  const mtkp =
-    keptWithDates.length > 0
-      ? keptWithDates.reduce((sum, p) => {
-          const days =
-            (new Date(p.completedAt!).getTime() - new Date(p.createdAt).getTime()) /
-            (1000 * 60 * 60 * 24);
-          return sum + days;
-        }, 0) / keptWithDates.length
-      : 0;
+// ─── PLANT ITEM ──────────────────────────────────────────────────────────────
 
-  const byDomain: PersonalStats["byDomain"] = {};
-  const mtkpByDomain: Record<string, number> = {};
-  const allDomains = Array.from(new Set(promises.map((p) => p.domain)));
+function PlantItem({
+  promise,
+  onCheckIn,
+  onFrequency,
+}: {
+  promise: GardenPromise;
+  onCheckIn: () => void;
+  onFrequency: () => void;
+}) {
+  const due = isDue(promise);
 
-  for (const domain of allDomains) {
-    const dp = promises.filter((p) => p.domain === domain);
-    const dCompleted = dp.filter(
-      (p) => p.status === "verified" || p.status === "violated"
-    );
-    const dKept = dp.filter((p) => p.status === "verified");
-    const dBroken = dp.filter((p) => p.status === "violated");
-    const dActive = dp.filter(
-      (p) => p.status === "declared" || p.status === "degraded"
-    );
-
-    const dKeptWithDates = dKept.filter((p) => p.createdAt && p.completedAt);
-    const dMtkp =
-      dKeptWithDates.length > 0
-        ? dKeptWithDates.reduce((sum, p) => {
-            const days =
-              (new Date(p.completedAt!).getTime() - new Date(p.createdAt).getTime()) /
-              (1000 * 60 * 60 * 24);
-            return sum + days;
-          }, 0) / dKeptWithDates.length
-        : 0;
-
-    byDomain[domain] = {
-      total: dp.length,
-      kept: dKept.length,
-      broken: dBroken.length,
-      active: dActive.length,
-      keptRate: dCompleted.length > 0 ? dKept.length / dCompleted.length : 0,
-      mtkp: dMtkp,
-    };
-    mtkpByDomain[domain] = dMtkp;
-  }
-
-  const trend: PersonalStats["trend"] = [];
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthStr = month.toLocaleDateString("en-US", {
-      month: "short",
-      year: "2-digit",
-    });
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-    const monthCompleted = completed.filter((p) => {
-      if (!p.completedAt) return false;
-      const d = new Date(p.completedAt);
-      return d <= monthEnd;
-    });
-    const monthKept = monthCompleted.filter((p) => p.status === "verified");
-    trend.push({
-      month: monthStr,
-      keptRate: monthCompleted.length > 0 ? monthKept.length / monthCompleted.length : 0,
-    });
-  }
-
-  return {
-    totalPromises: promises.length,
-    activePromises: active.length,
-    keptRate,
-    mtkp,
-    mtkpByDomain,
-    byDomain,
-    trend,
-  };
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-export default function PersonalPage() {
-  const [promises, setPromises] = useState<PersonalPromise[]>([]);
-  const [view, setView] = useState<View>("garden");
-  const [loaded, setLoaded] = useState(false);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  // True while the clearcut time-lapse is playing.
-  // Flipped to false when the loop completes or the user taps the seed.
-  const [timeLapseActive, setTimeLapseActive] = useState(true);
-
-  const seedRef = useRef<HTMLButtonElement>(null);
-
-  const onboarding = useGardenOnboarding();
-  const { state, showAccountPrompt } = onboarding;
-
-  // Load persisted promises on mount
-  useEffect(() => {
-    setPromises(loadPromises());
-    setLoaded(true);
-  }, []);
-
-  // Persist promises whenever they change
-  useEffect(() => {
-    if (loaded) savePromises(promises);
-  }, [promises, loaded]);
-
-  // If the user was in the middle of first-plant creation when they last left,
-  // auto-open the sheet so they can resume.
-  useEffect(() => {
-    if (loaded && state.phase === "first-plant" && promises.length === 0) {
-      setIsSheetOpen(true);
-    }
-  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const stats = useMemo(() => calculateStats(promises), [promises]);
-
-  // ── Handlers ───────────────────────────────────────────────────────────────
-
-  /** Called from both the ClearcutOverlay seed and the SeedTray seeds */
-  const handleOpenSheet = useCallback(() => {
-    // Stop the time-lapse immediately if it's still running
-    setTimeLapseActive(false);
-    if (state.phase === "clearcut") {
-      onboarding.openSeedForFirstTime();
-    }
-    setIsSheetOpen(true);
-  }, [state.phase, onboarding]);
-
-  const handleSheetClose = useCallback(() => {
-    setIsSheetOpen(false);
-    // Focus returns to the seed button (clearcut) or garden (subsequent)
-    setTimeout(() => seedRef.current?.focus(), 50);
-  }, []);
-
-  /**
-   * Shared handler for all promise creation paths:
-   * ClearcutOverlay → PromiseCreationSheet, SeedTray → PromiseCreationSheet,
-   * and the existing "+ New Promise" tab → PromiseCreator.
-   */
-  const handleCreate = useCallback(
-    (promise: PersonalPromise) => {
-      setPromises((prev) => {
-        const next = [...prev, promise];
-        // Sync onboarding count with the real promise array
-        onboarding.plantPromise(next.length);
-        return next;
-      });
-      setIsSheetOpen(false);
-      setView("garden");
-    },
-    [onboarding]
-  );
-
-  const handleUpdateStatus = useCallback(
-    (id: string, status: PromiseStatus, reflection?: string) => {
-      setPromises((prev) =>
-        prev.map((p) => {
-          if (p.id !== id) return p;
-          const updated = {
-            ...p,
-            status,
-            reflection: reflection || p.reflection,
-            completedAt:
-              status === "verified" || status === "violated"
-                ? new Date().toISOString()
-                : p.completedAt,
-          };
-          return updated;
-        })
-      );
-
-      // First check-in: trigger notification prompt
-      if (
-        (status === "verified" || status === "violated") &&
-        !state.firstCheckInComplete
-      ) {
-        onboarding.completeFirstCheckIn();
-      }
-    },
-    [state.firstCheckInComplete, onboarding]
-  );
-
-  // ── Sky gradient (count-based for the new progression) ────────────────────
-  const skyGradient = getSkyGradientByCount(promises.length);
-
-  // ── Loading gate ──────────────────────────────────────────────────────────
-  if (!loaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-sky-lightest to-white">
-        <p className="text-gray-500">Loading your garden…</p>
-      </div>
-    );
-  }
-
-  // ── Clearcut / First-plant layout ─────────────────────────────────────────
-  // Shown when the user hasn't planted any promise yet.
-  const isClearcut = promises.length === 0;
-
-  if (isClearcut) {
-    return (
-      <main id="main-content" className="min-h-screen flex flex-col">
-        {/* Skip link */}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:bg-white focus:text-gray-900 focus:rounded focus:shadow"
-        >
-          Skip to main content
-        </a>
-
-        {/* Full-height garden container */}
-        <div className="relative flex-1" style={{ minHeight: "100svh" }}>
-          {/*
-           * Canvas layer — time-lapse while active, static clearcut after.
-           * GardenTimeLapse unmounts when timeLapseActive becomes false, which
-           * cancels its RAF loop. The static GardenView it was rendering
-           * handshakes with the ClearcutOverlay that's always on top.
-           */}
-          {timeLapseActive ? (
-            <GardenTimeLapse
-              onComplete={() => setTimeLapseActive(false)}
-              minHeight="100svh"
-            />
-          ) : (
-            <GardenView
-              promises={[]}
-              onUpdateStatus={() => {}}
-              forceRender
-              skyGradientOverride={getSkyGradientByCount(0)}
-              minHeight="100svh"
-            />
+  return (
+    <div className="bg-white rounded-xl border p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 leading-snug">{promise.body}</p>
+          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+            <span className={`px-2 py-0.5 text-xs rounded ${STATUS_COLORS[promise.status]}`}>
+              {STATUS_LABELS[promise.status]}
+            </span>
+            <span
+              className="px-2 py-0.5 text-xs rounded"
+              style={{
+                background: K_COLORS[promise.kRegime] + "18",
+                color: K_COLORS[promise.kRegime],
+              }}
+            >
+              {promise.kRegime}
+            </span>
+            {promise.graftHistory.length > 0 && (
+              <span className="text-xs text-gray-400">
+                {promise.graftHistory.length}× renegotiated
+              </span>
+            )}
+          </div>
+          {promise.lastCheckIn && (
+            <p className="text-xs text-gray-400 mt-1">
+              Last:{" "}
+              {new Date(promise.lastCheckIn).toLocaleDateString()}
+              {due && (
+                <span className="ml-1 text-amber-600">· due now</span>
+              )}
+            </p>
           )}
-
-          {/* Clearcut overlay: text + floating seed + stumps — always on top */}
-          <ClearcutOverlay onSeedClick={handleOpenSheet} seedRef={seedRef} />
         </div>
 
-        {/* Inline creation sheet (appears on seed tap) */}
-        {isSheetOpen && (
-          <PromiseCreationSheet
-            onSuccess={handleCreate}
-            onClose={handleSheetClose}
-            returnFocusRef={seedRef}
-          />
-        )}
-      </main>
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          <button
+            onClick={onCheckIn}
+            className="px-3 py-1.5 text-xs font-semibold bg-green-700 text-white rounded-lg hover:bg-green-800 transition-colors focus-visible:outline-2 focus-visible:outline-green-600"
+            aria-label={`Check in on: ${promise.body}`}
+          >
+            Check in
+          </button>
+          <button
+            onClick={onFrequency}
+            className="text-xs text-gray-400 hover:text-gray-600 focus-visible:outline-2 focus-visible:outline-gray-400"
+            aria-label={`Frequency settings for: ${promise.body}`}
+          >
+            ⚙ every {Math.round(promise.checkInFrequency.adaptive)}d
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN-READER DESCRIPTION ───────────────────────────────────────────────
+
+function GardenSRDescription({ promises }: { promises: GardenPromise[] }) {
+  const byDomain = useMemo(() => {
+    const acc: Record<string, GardenPromise[]> = {};
+    promises.forEach((p) => {
+      (acc[p.domain] = acc[p.domain] ?? []).push(p);
+    });
+    return acc;
+  }, [promises]);
+
+  return (
+    <div className="sr-only" aria-live="polite">
+      {Object.entries(byDomain).map(([domain, ps]) => (
+        <p key={domain}>
+          {domain} garden: {ps.length} promise{ps.length !== 1 ? "s" : ""}.{" "}
+          {ps.map((p) => `${p.body}: ${STATUS_LABELS[p.status]}`).join(". ")}.
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// ─── PAGE ─────────────────────────────────────────────────────────────────────
+
+export default function PersonalPage() {
+  const { state, dispatch } = useGardenState();
+  const [activeTab, setActiveTab] = useState<Tab>("garden");
+  const [checkInId, setCheckInId] = useState<string | null>(null);
+  const [renegotiateId, setRenegotiateId] = useState<string | null>(null);
+  const [completeId, setCompleteId] = useState<string | null>(null);
+  const [frequencyId, setFrequencyId] = useState<string | null>(null);
+  const [showTour, setShowTour] = useState(false);
+
+  const promises = useMemo(() => Object.values(state.promises), [state.promises]);
+
+  const activePromises = useMemo(
+    () => promises.filter((p) => !p.fossilized && p.status !== "violated" && p.artifact === null),
+    [promises]
+  );
+
+  const dormantPromises = useMemo(
+    () => promises.filter((p) => p.status === "violated" && !p.fossilized && p.artifact === null),
+    [promises]
+  );
+
+  const dueCount = useMemo(
+    () => activePromises.filter(isDue).length,
+    [activePromises]
+  );
+
+  const weather = useMemo(() => computeWeather(promises), [promises]);
+  const skyGradient = weatherToGradient(weather);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
+  const handleCheckIn = useCallback(
+    (promiseId: string, newStatus: PromiseStatus, note?: string) => {
+      dispatch({ type: "CHECK_IN", promiseId, newStatus, note });
+    },
+    [dispatch]
+  );
+
+  const handleGardenStatus = useCallback(
+    (id: string, status: PromiseStatus, note?: string) => {
+      dispatch({ type: "CHECK_IN", promiseId: id, newStatus: status, note });
+    },
+    [dispatch]
+  );
+
+  const handleRenegotiate = useCallback(
+    (promiseId: string, newBody: string, reason: string) => {
+      dispatch({ type: "RENEGOTIATE", promiseId, newBody, reason });
+      setRenegotiateId(null);
+    },
+    [dispatch]
+  );
+
+  const handleComplete = useCallback(
+    (promiseId: string, reflection?: string) => {
+      dispatch({ type: "COMPLETE", promiseId, reflection });
+      setCompleteId(null);
+    },
+    [dispatch]
+  );
+
+  const handleFossilize = useCallback(
+    (promiseId: string) => { dispatch({ type: "FOSSILIZE", promiseId }); },
+    [dispatch]
+  );
+
+  const handleRevive = useCallback(
+    (promiseId: string) => { dispatch({ type: "REVIVE", promiseId }); },
+    [dispatch]
+  );
+
+  const handleFrequency = useCallback(
+    (promiseId: string, min: number, max: number) => {
+      dispatch({ type: "UPDATE_FREQUENCY", promiseId, min, max });
+    },
+    [dispatch]
+  );
+
+  // ── Onboarding gate ─────────────────────────────────────────────────────────
+
+  if (!state.onboardingComplete) {
+    return (
+      <OnboardingFlow
+        onComplete={(newPromises) => {
+          newPromises.forEach((p) => dispatch({ type: "CREATE_PROMISE", promise: p }));
+          dispatch({ type: "COMPLETE_ONBOARDING" });
+          setShowTour(true);
+        }}
+      />
     );
   }
 
-  // ── Garden-live layout ────────────────────────────────────────────────────
-  // Standard layout once at least one promise exists.
+  // ── Modals ──────────────────────────────────────────────────────────────────
 
-  const views: { id: View; label: string }[] = [
-    { id: "garden",   label: "Garden" },
-    { id: "timeline", label: "Timeline" },
-    { id: "stats",    label: "Stats" },
-    { id: "create",   label: "+ New Promise" },
+  const checkInPromise = checkInId ? state.promises[checkInId] : null;
+  const renegotiatePromise = renegotiateId ? state.promises[renegotiateId] : null;
+  const completePromise = completeId ? state.promises[completeId] : null;
+  const frequencyPromise = frequencyId ? state.promises[frequencyId] : null;
+
+  // ── Tab config ──────────────────────────────────────────────────────────────
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "garden",     label: "Garden" },
+    { id: "collection", label: "Collection" },
+    { id: "stats",      label: "Stats" },
   ];
 
   return (
-    <main
-      id="main-content"
-      className="min-h-screen bg-gradient-to-b from-green-50 via-sky-lightest to-white"
-    >
+    <main id="main-content" className="min-h-screen" style={{ background: "#faf9f6" }}>
       {/* Skip link */}
       <a
-        href="#main-content"
+        href="#promise-list"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:bg-white focus:text-gray-900 focus:rounded focus:shadow"
       >
-        Skip to main content
+        Skip to promise list
       </a>
 
+      <GardenSRDescription promises={promises} />
+
       {/* Header */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-4">
-        <div className="flex items-center gap-3">
-          <NestedPLogo mode="grow" size={48} />
-          <h1 className="font-serif text-2xl font-bold text-gray-900">
-            Promise Garden
-          </h1>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 pb-3">
+        <div className="flex items-baseline justify-between">
+          <h1 className="font-serif text-2xl font-bold text-gray-900">Promise Garden</h1>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">{weatherLabel(weather)}</span>
+            {dueCount > 0 && (
+              <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full">
+                {dueCount} due
+              </span>
+            )}
+          </div>
         </div>
-        <p className="text-gray-600 text-sm mt-1">
-          Your personal promise tracker. Every promise plants a seed. Keeping them grows the garden.
-        </p>
       </div>
 
-      {/* View tabs */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 mb-6">
-        <div className="flex gap-2">
-          {views.map((v) => (
+      {/* Tabs */}
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 mb-4">
+        <div className="flex gap-2" role="tablist">
+          {tabs.map((t) => (
             <button
-              key={v.id}
-              onClick={() => setView(v.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                view === v.id
+              key={t.id}
+              role="tab"
+              aria-selected={activeTab === t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-green-600 ${
+                activeTab === t.id
                   ? "bg-green-700 text-white"
-                  : v.id === "create"
-                  ? "bg-green-50 text-green-700 hover:bg-green-100"
-                  : "bg-white text-gray-700 hover:bg-gray-50 border"
+                  : "bg-white text-gray-700 border hover:bg-gray-50"
               }`}
             >
-              {v.label}
+              {t.label}
             </button>
           ))}
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-12">
-        {view === "garden" && (
-          <div className="relative">
-            <GardenView
-              promises={promises}
-              onUpdateStatus={handleUpdateStatus}
-              skyGradientOverride={skyGradient}
-            />
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-16">
 
-            {/* Dependency tooltip — after 3rd promise, one-time */}
-            {state.promisesPlanted >= 3 && !state.dependencyTutorialSeen && (
-              <DependencyTooltip onDismiss={onboarding.dismissDependencyTooltip} />
+        {/* ── GARDEN ── */}
+        {activeTab === "garden" && (
+          <div className="space-y-4">
+            {/* Canvas */}
+            <div className="rounded-2xl overflow-hidden border">
+              <GardenView
+                promises={activePromises as unknown as PersonalPromise[]}
+                onUpdateStatus={handleGardenStatus}
+                skyGradientOverride={skyGradient}
+                gardenAriaLabel={`Promise garden. ${activePromises.length} active promise${activePromises.length !== 1 ? "s" : ""}. ${weatherLabel(weather)}.`}
+                minHeight="240px"
+              />
+            </div>
+
+            {/* Active promise list */}
+            <div
+              id="promise-list"
+              role="list"
+              aria-label="Active promises"
+              className="space-y-3"
+            >
+              {activePromises.map((p) => (
+                <div key={p.id} role="listitem">
+                  <PlantItem
+                    promise={p}
+                    onCheckIn={() => setCheckInId(p.id)}
+                    onFrequency={() => setFrequencyId(p.id)}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Dormant */}
+            {dormantPromises.length > 0 && (
+              <details className="bg-white rounded-xl border">
+                <summary className="px-4 py-3 text-sm text-gray-500 cursor-pointer select-none">
+                  Dormant ({dormantPromises.length}) — roots still here
+                </summary>
+                <div className="px-4 pb-4 space-y-2 border-t pt-3">
+                  {dormantPromises.map((p) => (
+                    <PlantItem
+                      key={p.id}
+                      promise={p}
+                      onCheckIn={() => setCheckInId(p.id)}
+                      onFrequency={() => setFrequencyId(p.id)}
+                    />
+                  ))}
+                </div>
+              </details>
             )}
+
+            {/* Add new */}
+            <button
+              onClick={() => {
+                // Re-open onboarding for additional promises by resetting the flag
+                // (only for adding more — existing garden preserved via state.promises)
+                dispatch({ type: "COMPLETE_ONBOARDING" });
+              }}
+              className="w-full py-3 text-sm text-green-700 border border-dashed border-green-300 rounded-xl hover:bg-green-50 transition-colors focus-visible:outline-2 focus-visible:outline-green-600"
+            >
+              + New promise
+            </button>
           </div>
         )}
 
-        {view === "timeline" && (
-          <PromiseTimeline
-            promises={promises}
-            onUpdateStatus={handleUpdateStatus}
-          />
+        {/* ── COLLECTION ── */}
+        {activeTab === "collection" && (
+          <CollectionView promises={promises} />
         )}
 
-        {view === "stats" && (
-          <div className="space-y-6">
-            <ReliabilityScore stats={stats} />
-            <DomainBreakdown stats={stats} />
-          </div>
+        {/* ── STATS ── */}
+        {activeTab === "stats" && (
+          <GardenStats stats={state.stats} />
         )}
-
-        {view === "create" && <PromiseCreator onCreate={handleCreate} />}
       </div>
 
-      {/* Seed tray — optional 2nd/3rd promise nudge */}
-      {view === "garden" &&
-        promises.length < 3 &&
-        !state.seedTrayDismissed && (
-          <SeedTray
-            promisesPlanted={promises.length}
-            onPlantAnother={handleOpenSheet}
-            onDismiss={onboarding.dismissSeedTray}
-          />
-        )}
+      {/* ── OVERLAYS ── */}
 
-      {/* Notification prompt — after first check-in */}
-      {state.firstCheckInComplete && !state.notificationTimeSet && (
-        <NotificationPrompt
-          onSet={onboarding.setNotificationTime}
-          onDismiss={() => onboarding.setNotificationTime(null)}
+      {showTour && !state.tourComplete && (
+        <GardenTour
+          onComplete={() => { dispatch({ type: "COMPLETE_TOUR" }); setShowTour(false); }}
+          onDismiss={() => { dispatch({ type: "COMPLETE_TOUR" }); setShowTour(false); }}
         />
       )}
 
-      {/* Account creation prompt — after N days */}
-      {showAccountPrompt && (
-        <AccountPrompt
-          onSave={onboarding.saveGarden}
-          onDismiss={onboarding.dismissAccountPrompt}
+      {checkInPromise && (
+        <CheckInCard
+          promise={checkInPromise}
+          onCheckIn={(id, status, note) => { handleCheckIn(id, status, note); setCheckInId(null); }}
+          onRenegotiate={(id) => { setCheckInId(null); setRenegotiateId(id); }}
+          onComplete={(id) => { setCheckInId(null); setCompleteId(id); }}
+          onFossilize={(id) => { handleFossilize(id); setCheckInId(null); }}
+          onRevive={(id) => { handleRevive(id); setCheckInId(null); }}
+          onClose={() => setCheckInId(null)}
         />
       )}
 
-      {/* Inline creation sheet (from seed tray or future entry points) */}
-      {isSheetOpen && (
-        <PromiseCreationSheet
-          onSuccess={handleCreate}
-          onClose={handleSheetClose}
-          returnFocusRef={seedRef}
+      {renegotiatePromise && (
+        <RenegotiateModal
+          promise={renegotiatePromise}
+          onConfirm={handleRenegotiate}
+          onClose={() => setRenegotiateId(null)}
+        />
+      )}
+
+      {completePromise && (
+        <CompletionFlow
+          promise={completePromise}
+          onConfirm={handleComplete}
+          onClose={() => setCompleteId(null)}
+        />
+      )}
+
+      {frequencyPromise && (
+        <FrequencySettings
+          promise={frequencyPromise}
+          onSave={handleFrequency}
+          onClose={() => setFrequencyId(null)}
         />
       )}
     </main>

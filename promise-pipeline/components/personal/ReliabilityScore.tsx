@@ -43,13 +43,13 @@ export function ReliabilityScore({ stats }: ReliabilityScoreProps) {
         </div>
         <div className="text-center">
           <p className="text-3xl font-bold text-gray-700">
-            {stats.mtkp > 0 ? `${Math.round(stats.mtkp)}d` : "—"}
+            {(stats.mtkp ?? 0) > 0 ? `${Math.round(stats.mtkp!)}d` : "—"}
           </p>
           <p className="text-xs text-gray-500">MTKP (days)</p>
         </div>
       </div>
 
-      {stats.trend.length > 0 && stats.trend.some((t) => t.keptRate > 0) && (
+      {stats.trend && stats.trend.length > 0 && stats.trend.some((t) => t.keptRate > 0) && (
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={stats.trend}>

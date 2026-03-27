@@ -72,9 +72,9 @@ export function DomainBreakdown({ stats }: DomainBreakdownProps) {
                 score={data.keptRate * 100}
                 label={`${domain} (${data.total} promises)`}
               />
-              {data.mtkp > 0 && (
+              {data.averageK > 0 && (
                 <p className="text-xs text-gray-400 mt-0.5">
-                  MTKP: {Math.round(data.mtkp)} days
+                  Avg k: {data.averageK.toFixed(2)}
                 </p>
               )}
             </div>

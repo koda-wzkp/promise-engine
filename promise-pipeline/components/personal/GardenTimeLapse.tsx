@@ -280,9 +280,10 @@ export function GardenTimeLapse({
       }}
     >
       <GardenView
-        promises={frame.promises}
-        onUpdateStatus={() => {}}   // time-lapse is read-only
-        forceRender                 // render canvas even when promises is []
+        promises={frame.promises as any}
+        onSelectPromise={() => {}}
+        selectedId={null}
+        forceRender
         skyGradientOverride={frame.sky}
         minHeight={minHeight}
         gardenAriaLabel="Demo garden growing from empty clearing to a thriving forest with plants across five life domains. Tap the seed button to start your own garden."

@@ -1,32 +1,33 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { PersonalPromise } from "@/lib/types/personal";
-import { PromiseStatus } from "@/lib/types/promise";
-import { StatusBadge } from "@/components/promise/StatusBadge";
+import { useState, useEffect, useRef, useCallback } from "react";
+import type { GardenPromise } from "@/lib/types/personal";
+import type { PromiseStatus } from "@/lib/types/promise";
 import ProceduralPlant from "./ProceduralPlant";
-import { getSkyGradient } from "@/lib/garden/renderer/skyGradient";
+import {
+  computeWeather,
+  getWeatherVisuals,
+  type WeatherState,
+} from "@/lib/garden/weatherComputation";
 
 interface GardenViewProps {
-  promises: PersonalPromise[];
-  onUpdateStatus: (id: string, status: PromiseStatus, reflection?: string) => void;
+  promises: GardenPromise[];
+  onSelectPromise: (id: string) => void;
+  selectedId: string | null;
   /**
-   * When true, renders the garden canvas (sky + ground) even when there are
-   * no promises — used for the clearcut onboarding state.
+   * When true, renders the garden canvas even when there are no promises.
    */
   forceRender?: boolean;
   /**
-   * Override the computed sky gradient. Passed from the parent during
-   * onboarding so the count-based sky progression drives the sky colour.
+   * Override the sky gradient (used during onboarding).
    */
   skyGradientOverride?: string;
   /**
    * Override the aria-label on the garden scene element.
-   * Defaults to a description derived from the promise count.
    */
   gardenAriaLabel?: string;
   /**
-   * Override the minimum height of the garden scene div (default "320px").
+   * Override the minimum height of the garden scene div.
    */
   minHeight?: string;
 }
@@ -39,19 +40,10 @@ const DOMAIN_LABELS: Record<string, string> = {
   financial: "Financial Timberland",
 };
 
-/** Compute a simple reliability score from promises (0–1). */
-function computeReliability(promises: PersonalPromise[]): number {
-  const completed = promises.filter(
-    (p) => p.status === "verified" || p.status === "violated"
-  );
-  if (completed.length === 0) return 0.5; // Neutral for new gardens
-  const kept = completed.filter((p) => p.status === "verified").length;
-  return kept / completed.length;
-}
-
 export function GardenView({
   promises,
-  onUpdateStatus,
+  onSelectPromise,
+  selectedId,
   forceRender = false,
   skyGradientOverride,
   gardenAriaLabel,
@@ -60,7 +52,6 @@ export function GardenView({
   const [time, setTime] = useState(0);
   const animRef = useRef<number>(0);
   const reducedMotion = useRef(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Detect reduced motion preference
   useEffect(() => {
@@ -90,25 +81,43 @@ export function GardenView({
 
   if (promises.length === 0 && !forceRender) return null;
 
+  // Compute weather from promises
+  const weather = computeWeather(promises);
+  const weatherVisuals = getWeatherVisuals(weather);
+  const skyGradient = skyGradientOverride ?? weatherVisuals.skyGradient;
+
   // Group by domain
-  const byDomain: Record<string, PersonalPromise[]> = {};
+  const byDomain: Record<string, GardenPromise[]> = {};
   for (const p of promises) {
+    if (p.fossilized) continue; // Don't show fossilized in garden
     const domain = p.domain.toLowerCase();
     if (!byDomain[domain]) byDomain[domain] = [];
     byDomain[domain].push(p);
   }
 
-  const reliabilityScore = computeReliability(promises);
-  const skyGradient = skyGradientOverride ?? getSkyGradient(reliabilityScore);
+  // Screen reader summary
+  const srSummary = Object.entries(byDomain)
+    .map(([domain, ps]) => {
+      const descriptions = ps
+        .map((p) => `${p.body}: ${p.status}`)
+        .join(". ");
+      return `${domain} garden: ${ps.length} promise${ps.length === 1 ? "" : "s"}. ${descriptions}.`;
+    })
+    .join(" ");
 
   const defaultAriaLabel =
     promises.length === 0
-      ? "An empty garden clearing with bare earth and a few old stumps. Ready to plant."
-      : `Promise garden with ${promises.length} promise${promises.length === 1 ? "" : "s"}. Overall reliability: ${Math.round(reliabilityScore * 100)}%.`;
+      ? "An empty garden clearing, ready to plant."
+      : `Promise garden with ${promises.length} promise${promises.length === 1 ? "" : "s"}. Weather: ${weather}. ${srSummary}`;
   const resolvedAriaLabel = gardenAriaLabel ?? defaultAriaLabel;
 
   return (
     <div className="space-y-0">
+      {/* Screen reader summary */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {srSummary}
+      </div>
+
       {/* Garden scene */}
       <div
         className="relative rounded-xl overflow-hidden"
@@ -120,16 +129,30 @@ export function GardenView({
           minHeight,
         }}
       >
-        {/* Reliability indicator */}
+        {/* Weather indicator */}
         <div
-          className="absolute top-2 right-3 text-xs font-medium opacity-70 z-10"
-          style={{ color: reliabilityScore > 0.5 ? "#1a5f4a" : "#78350f" }}
-          aria-label={`Overall garden reliability: ${Math.round(reliabilityScore * 100)}%`}
+          className="absolute top-2 right-3 text-xs font-medium opacity-70 z-10 capitalize"
+          style={{
+            color:
+              weather === "sunny" || weather === "partly"
+                ? "#1a5f4a"
+                : "#9ca3af",
+          }}
+          aria-label={`Weather: ${weather}`}
         >
-          {Math.round(reliabilityScore * 100)}%
+          {weather === "sunny" && "☀️"}
+          {weather === "partly" && "⛅"}
+          {weather === "overcast" && "☁️"}
+          {weather === "frozen" && "❄️"}
+          {weather === "dormant" && "🌙"}
         </div>
 
-        {/* Plant area — sits above ground */}
+        {/* Particle layer */}
+        {weatherVisuals.particles !== "none" && !reducedMotion.current && (
+          <WeatherParticles type={weatherVisuals.particles} />
+        )}
+
+        {/* Plant area */}
         <div
           className="relative px-4 pt-8 pb-0"
           style={{ minHeight: "220px" }}
@@ -142,20 +165,26 @@ export function GardenView({
               >
                 {DOMAIN_LABELS[domain] || `${domain} Grove`}
               </h3>
-              <div className="flex items-end flex-wrap gap-2">
+              <div
+                className="flex items-end flex-wrap gap-2"
+                role="list"
+                aria-label={`${domain} promises`}
+              >
                 {domainPromises.map((p) => (
                   <div
                     key={p.id}
                     className="flex flex-col items-center"
                     style={{ minWidth: 80 }}
+                    role="listitem"
                   >
-                    <ProceduralPlant
+                    <ProceduralPlantV2
                       promise={p}
                       time={time}
                       selected={selectedId === p.id}
                       onClick={() =>
-                        setSelectedId(selectedId === p.id ? null : p.id)
+                        onSelectPromise(selectedId === p.id ? "" : p.id)
                       }
+                      frost={weatherVisuals.frost}
                     />
                   </div>
                 ))}
@@ -164,7 +193,7 @@ export function GardenView({
           ))}
         </div>
 
-        {/* Ground section (soil + grass line) */}
+        {/* Ground section */}
         <div
           className="relative"
           style={{
@@ -174,90 +203,120 @@ export function GardenView({
           }}
           aria-hidden="true"
         >
-          {/* Grass ground line */}
           <div
             className="absolute top-0 left-0 right-0"
             style={{ height: 3, background: "#33691E" }}
           />
         </div>
       </div>
-
-      {/* Plant detail cards (below the garden scene) */}
-      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {promises.map((p) => (
-          <GardenPlantCard
-            key={p.id}
-            promise={p}
-            onUpdateStatus={onUpdateStatus}
-            selected={selectedId === p.id}
-            onSelect={() =>
-              setSelectedId(selectedId === p.id ? null : p.id)
-            }
-          />
-        ))}
-      </div>
     </div>
   );
 }
 
-function GardenPlantCard({
+// ─── ProceduralPlantV2: wrapper that maps GardenPromise to existing renderer ───
+
+function ProceduralPlantV2({
   promise,
-  onUpdateStatus,
+  time,
   selected,
-  onSelect,
+  onClick,
+  frost,
 }: {
-  promise: PersonalPromise;
-  onUpdateStatus: (id: string, status: PromiseStatus, reflection?: string) => void;
+  promise: GardenPromise;
+  time: number;
   selected: boolean;
-  onSelect: () => void;
+  onClick: () => void;
+  frost: boolean;
 }) {
-  const isActive =
-    promise.status === "declared" || promise.status === "degraded";
+  // Map GardenPromise to the PersonalPromise interface expected by ProceduralPlant
+  const legacyPromise: import("@/lib/types/personal").PersonalPromise = {
+    id: promise.id,
+    isPersonal: true,
+    promiser: promise.promiser,
+    promisee: promise.promisee,
+    body: promise.body,
+    domain: promise.domain,
+    status: promise.status,
+    note: promise.note,
+    verification: promise.verification,
+    depends_on: promise.depends_on,
+    polarity: promise.polarity,
+    origin: "voluntary",
+    createdAt: promise.createdAt,
+    progress: promise.progress,
+  };
 
   return (
-    <div
-      onClick={onSelect}
-      className={`rounded-xl border p-3 text-center transition-all hover:shadow-sm cursor-pointer ${
-        selected
-          ? "ring-2 ring-green-600 ring-offset-1 border-green-300 bg-green-50/50"
-          : promise.status === "verified"
-          ? "border-green-200 bg-green-50/50"
-          : promise.status === "violated"
-          ? "border-red-200 bg-red-50/30 opacity-70"
-          : "border-gray-200 bg-white"
-      }`}
-    >
-      <p className="text-xs text-gray-700 line-clamp-2 mb-2">{promise.body}</p>
-      <StatusBadge status={promise.status} size="xs" />
-
-      {isActive && (
-        <div className="mt-3 flex gap-1 justify-center">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdateStatus(promise.id, "verified");
-            }}
-            className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100"
-          >
-            Kept
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdateStatus(promise.id, "violated");
-            }}
-            className="px-2 py-1 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100"
-          >
-            Broken
-          </button>
+    <div style={frost ? { filter: "brightness(0.8) saturate(0.4)" } : undefined}>
+      <ProceduralPlant
+        promise={legacyPromise}
+        time={time}
+        selected={selected}
+        onClick={onClick}
+      />
+      {/* Status label for check-in awareness */}
+      <p
+        className="text-center text-xs mt-1 line-clamp-1"
+        style={{
+          color:
+            promise.status === "violated"
+              ? "#9CA3AF"
+              : promise.status === "degraded"
+              ? "#D97706"
+              : promise.status === "verified"
+              ? "#059669"
+              : "#6B7280",
+          maxWidth: 80,
+        }}
+      >
+        {promise.body}
+      </p>
+      {/* Graft indicator */}
+      {promise.graftHistory.length > 0 && (
+        <div
+          className="text-center text-xs text-gray-400"
+          aria-label={`Renegotiated ${promise.graftHistory.length} time${promise.graftHistory.length === 1 ? "" : "s"}`}
+        >
+          {"~".repeat(Math.min(promise.graftHistory.length, 3))}
         </div>
       )}
-
-      {promise.target && (
-        <p className="text-xs text-gray-400 mt-1">
-          By {new Date(promise.target).toLocaleDateString()}
-        </p>
-      )}
     </div>
+  );
+}
+
+// ─── Weather particles ───
+
+function WeatherParticles({ type }: { type: "pollen" | "mist" }) {
+  return (
+    <>
+      <style>{`
+        @keyframes pg-particle-drift {
+          0%   { transform: translateY(0) translateX(0); opacity: 0; }
+          20%  { opacity: ${type === "pollen" ? "0.6" : "0.3"}; }
+          80%  { opacity: ${type === "pollen" ? "0.4" : "0.15"}; }
+          100% { transform: translateY(${type === "pollen" ? "40px" : "-20px"}) translateX(${type === "pollen" ? "20px" : "30px"}); opacity: 0; }
+        }
+      `}</style>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        {Array.from({ length: type === "pollen" ? 8 : 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: type === "pollen" ? 2 : 4,
+              height: type === "pollen" ? 2 : 4,
+              background:
+                type === "pollen"
+                  ? "rgba(255, 248, 225, 0.7)"
+                  : "rgba(255, 255, 255, 0.15)",
+              left: `${10 + i * 12}%`,
+              top: `${20 + (i % 3) * 25}%`,
+              animation: `pg-particle-drift ${3 + i * 0.5}s ease-in-out infinite`,
+              animationDelay: `${i * 0.7}s`,
+            }}
+          />
+        ))}
+      </div>
+    </>
   );
 }

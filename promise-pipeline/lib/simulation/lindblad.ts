@@ -87,8 +87,8 @@ export function classifyLindbladRegime(
 ): string {
   if (k !== undefined) {
     if (k > 1.5) return "pressure";
-    if (k > 0.7) return "computing";
-    if (k < 0.4) return "composting";
+    if (k > 1.3) return "computing";
+    if (k < 0.5) return "composting";
     return "transitional";
   }
 

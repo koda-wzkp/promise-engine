@@ -11,7 +11,7 @@ import { BayesianBelief, NetworkBelief, DynamicalRegime, UrgencyType } from "../
 //                   even MONA's Declared SB (k=0.36). Use k=0.25.
 //   "self-report" → Promiser evaluates own fulfillment. Equivalent to
 //                   MONA Declared (promiser claims compliance, no
-//                   independent check). k=0.37.
+//                   independent check). k=0.67.
 //   "filing"      → Structured promiser-submitted data (PUC filings,
 //                   SEC reports). Like MONA's SPC Declared — structured
 //                   but not independently verified. k=0.43.
@@ -24,15 +24,15 @@ import { BayesianBelief, NetworkBelief, DynamicalRegime, UrgencyType } from "../
 //   "sensor"      → Automated independent measurement. The promiser is
 //                   cut out of the verification loop entirely. Closest
 //                   to MONA's Not-met regime (k=0.90) where outcomes
-//                   are physics-like and stochastic. k=0.85.
+//                   are physics-like and stochastic. k=0.90.
 
 const VERIFICATION_K_MAP: Record<VerificationMethod, number> = {
   none: 0.25,
-  "self-report": 0.37,
+  "self-report": 0.67,
   filing: 0.43,
   audit: 0.66,
   benchmark: 0.72,
-  sensor: 0.85,
+  sensor: 0.90,
 };
 
 // ─── DOMAIN k MODIFIERS ─────────────────────────────────────
@@ -245,8 +245,8 @@ export function beliefVariance(belief: BayesianBelief): number {
  * Classify which dynamical regime a promise is in.
  */
 export function classifyRegime(belief: BayesianBelief): DynamicalRegime {
-  if (belief.k >= 0.70) return "computing";
-  if (belief.k < 0.40) return "composting";
+  if (belief.k >= 1.30) return "computing";
+  if (belief.k < 0.50) return "composting";
   return "transitional";
 }
 
@@ -272,8 +272,8 @@ export interface UrgencyResult {
  *   These are often well-verified (high k) — urgency is to confirm
  *   they're holding, not to rescue them from composting.
  *
- * PREVENT_COMPOSTING: k < 0.45, few deps. Recoverability-weighted
- *   with verification window peak at k=0.37.
+ * PREVENT_COMPOSTING: k < 0.50, few deps. Recoverability-weighted
+ *   with verification window peak at k=0.39.
  *
  * STANDARD: balanced scoring.
  */
@@ -287,7 +287,7 @@ export function verificationUrgency(
   let type: UrgencyType;
   if (dependentCount >= 2) {
     type = "MONITOR_BOTTLENECK";
-  } else if (belief.k < 0.45) {
+  } else if (belief.k < 0.50) {
     type = "PREVENT_COMPOSTING";
   } else {
     type = "STANDARD";
@@ -306,10 +306,10 @@ export function verificationUrgency(
           + dwellFactor * 0.15;
 
   } else if (type === "PREVENT_COMPOSTING") {
-    // Recoverability is primary. Peak at k=0.37 (verification window).
+    // Recoverability is primary. Peak at k=0.39 (verification window).
     const recoverability =
-      belief.k >= 0.20 && belief.k <= 0.45
-        ? 1.0 - Math.abs(belief.k - 0.37) / 0.17
+      belief.k >= 0.20 && belief.k <= 0.50
+        ? 1.0 - Math.abs(belief.k - 0.39) / 0.19
         : 0.0;
     const uncertaintyFactor = Math.min(variance * 10, 1.0);
     const dwellFactor = Math.min(belief.tau / 5, 1.0);
@@ -422,8 +422,8 @@ export function computeNetworkBelief(
   const networkCertainty = Math.max(0, Math.min(1, 1.0 - meanVariance * 10));
 
   // Regime distribution
-  const computing = beliefs.filter(b => b.k >= 0.70).length / n;
-  const composting = beliefs.filter(b => b.k < 0.40).length / n;
+  const computing = beliefs.filter(b => b.k >= 1.30).length / n;
+  const composting = beliefs.filter(b => b.k < 0.50).length / n;
   const transitional = 1.0 - computing - composting;
 
   // Verification urgency — top 5

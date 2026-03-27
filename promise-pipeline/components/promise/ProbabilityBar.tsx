@@ -17,8 +17,8 @@ function getFillColor(pKept: number): string {
 }
 
 function getRegimeLabel(k: number): DynamicalRegime {
-  if (k >= 0.70) return "computing";
-  if (k < 0.40) return "composting";
+  if (k >= 1.30) return "computing";
+  if (k < 0.50) return "composting";
   return "transitional";
 }
 

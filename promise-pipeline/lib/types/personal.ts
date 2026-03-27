@@ -80,9 +80,9 @@ export function classifyKRegime(
 
 export function expectedKValue(regime: KRegime): number {
   switch (regime) {
-    case "physics":    return 1.1;
-    case "ecological": return 0.67;
-    case "composting": return 0.37;
+    case "physics":    return 0.90;  // post-verification computing regime (MONA Not met k=0.90, N=1,510)
+    case "ecological": return 0.67;  // active-verification cluster mean (MONA overall k=0.667, N=69,847)
+    case "composting": return 0.39;  // low-verification cluster mean (ECHO k=0.393, N=63; OSHA k=0.395, N=13)
   }
 }
 

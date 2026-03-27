@@ -179,8 +179,8 @@ export function simulateBayesianCascade(
         originalPKept: original.pKept,
         newPKept: p[i],
         shift,
-        regime: original.k >= 0.70 ? "computing"
-              : original.k < 0.40 ? "composting"
+        regime: original.k >= 1.30 ? "computing"
+              : original.k < 0.50 ? "composting"
               : "transitional",
       });
     }

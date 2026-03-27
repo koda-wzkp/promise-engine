@@ -455,7 +455,7 @@ function gardenReducer(state: GardenState, action: GardenAction): GardenState {
         lastCheckIn: now,
         checkInHistory: [...p.checkInHistory, event],
         kRegime: "physics",
-        expectedK: 1.1,
+        expectedK: 0.90,
       };
       const promises = { ...state.promises, [action.promiseId]: updated };
       return { ...state, promises, stats: computeStats(promises) };
@@ -471,7 +471,7 @@ function gardenReducer(state: GardenState, action: GardenAction): GardenState {
         ...p,
         sensor: action.sensor,
         kRegime: "physics",
-        expectedK: 1.1,
+        expectedK: 0.90,
         verification: { ...p.verification, method: "sensor" },
       };
       const promises = { ...state.promises, [action.promiseId]: updated };

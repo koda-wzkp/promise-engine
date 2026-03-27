@@ -15,7 +15,7 @@ export function computeAdaptiveFrequency(promise: GardenPromise): number {
   if (k < 0.5) {
     // Composting regime — push toward more frequent (user's min)
     targetDays = userMin;
-  } else if (k > 1.5) {
+  } else if (k > 1.3) {
     // Physics regime — back off, already working well
     targetDays = userMax;
   } else {

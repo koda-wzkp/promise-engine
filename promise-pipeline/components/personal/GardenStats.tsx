@@ -66,8 +66,8 @@ export function GardenStats({ stats }: GardenStatsProps) {
           })}
         </div>
         <p className="mt-3 text-xs text-gray-400 leading-relaxed">
-          Physics regime promises fulfill at 12.2% after 5 years.
-          Composting regime: 0.1%. Adding verification changes everything.
+          Verified promises (physics regime) resolve at near-constant rates.
+          Unverified promises (composting) stagnate — the longer they go unchecked, the less likely they are to resolve.
         </p>
       </div>
 

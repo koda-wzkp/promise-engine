@@ -5,12 +5,16 @@ import { useState } from "react";
 import { CloudBackground } from "@/components/layout/CloudBackground";
 import { BOOKING_URL } from "@/lib/constants/booking";
 import { NestedPLogo } from "@/components/brand/NestedPLogo";
+import { PromiseUniversal } from "@/components/home/PromiseUniversal";
 
 export default function LandingPage() {
   return (
     <div>
       {/* Hero */}
       <HeroSection />
+
+      {/* Universality of the promise concept */}
+      <PromiseUniversal />
 
       {/* X-ray vs MRI */}
       <section className="py-16 bg-white">

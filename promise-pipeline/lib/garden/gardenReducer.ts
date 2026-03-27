@@ -11,6 +11,7 @@ import { recomputeAllParentStatuses } from "./parentStatus";
 import { propagateGardenCascade, generateCascadeNotifications } from "./gardenCascade";
 import { DEFAULT_CONTRIBUTION_STATE } from "../types/phase3";
 import type { Artifact } from "../types/phase3";
+import type { Org, OrgPromise, ExternalDependency, ApiKey, WebhookConfig } from "../types/phase4";
 
 const STORAGE_KEY = "promise-garden-data";
 
@@ -54,6 +55,11 @@ export function loadGardenState(): GardenState {
         receivedGifts: parsed.receivedGifts ?? [],
         predictions: parsed.predictions ?? [],
         benchmarks: parsed.benchmarks ?? [],
+        // Phase 4 fields
+        org: parsed.org,
+        apiKeys: parsed.apiKeys ?? [],
+        webhooks: parsed.webhooks ?? [],
+        orgDashboard: parsed.orgDashboard,
       };
     }
 
@@ -601,6 +607,175 @@ export function gardenReducer(state: GardenState, action: GardenAction): GardenS
         ...state,
         receivedGifts: [...(state.receivedGifts ?? []), action.gift],
       };
+    }
+
+    // ── Phase 4: Org ──────────────────────────────────────────────────────
+
+    case "CREATE_ORG":
+    case "SET_ORG": {
+      return { ...state, org: action.org };
+    }
+
+    case "JOIN_ORG": {
+      // Org data will be fetched and set via SET_ORG
+      return state;
+    }
+
+    case "LEAVE_ORG": {
+      return {
+        ...state,
+        org: undefined,
+        apiKeys: [],
+        webhooks: [],
+        orgDashboard: undefined,
+      };
+    }
+
+    case "CREATE_ORG_PROMISE": {
+      if (!state.org) return state;
+      return {
+        ...state,
+        org: {
+          ...state.org,
+          orgPromises: [...state.org.orgPromises, action.promise],
+        },
+      };
+    }
+
+    case "UPDATE_ORG_PROMISE_STATUS": {
+      if (!state.org) return state;
+      return {
+        ...state,
+        org: {
+          ...state.org,
+          orgPromises: state.org.orgPromises.map((p) =>
+            p.id === action.promiseId ? { ...p, status: action.newStatus } : p
+          ),
+        },
+      };
+    }
+
+    // ── Phase 4: External Dependencies ──────────────────────────────────
+
+    case "ADD_EXTERNAL_DEPENDENCY": {
+      if (!state.org) return state;
+      return {
+        ...state,
+        org: {
+          ...state.org,
+          orgPromises: state.org.orgPromises.map((p) =>
+            p.id === action.promiseId
+              ? { ...p, externalDependencies: [...p.externalDependencies, action.dep] }
+              : p
+          ),
+        },
+      };
+    }
+
+    case "REMOVE_EXTERNAL_DEPENDENCY": {
+      if (!state.org) return state;
+      return {
+        ...state,
+        org: {
+          ...state.org,
+          orgPromises: state.org.orgPromises.map((p) =>
+            p.id === action.promiseId
+              ? {
+                  ...p,
+                  externalDependencies: p.externalDependencies.filter(
+                    (d) => d.label !== action.depLabel
+                  ),
+                }
+              : p
+          ),
+        },
+      };
+    }
+
+    case "CIVIC_STATUS_UPDATE": {
+      if (!state.org) return state;
+      return {
+        ...state,
+        org: {
+          ...state.org,
+          orgPromises: state.org.orgPromises.map((p) => ({
+            ...p,
+            externalDependencies: p.externalDependencies.map((d) =>
+              d.civicPromiseId === action.civicPromiseId &&
+              d.civicDashboard === action.civicDashboard
+                ? { ...d, status: action.newStatus, lastSyncedAt: new Date().toISOString() }
+                : d
+            ),
+          })),
+        },
+      };
+    }
+
+    // ── Phase 4: Cross-Team Dependencies ────────────────────────────────
+
+    case "CROSS_TEAM_DEPENDENCY": {
+      if (!state.org) return state;
+      return {
+        ...state,
+        org: {
+          ...state.org,
+          orgPromises: state.org.orgPromises.map((p) => {
+            if (p.id !== action.fromPromiseId) return p;
+            if (p.depends_on.includes(action.toPromiseId)) return p;
+            return { ...p, depends_on: [...p.depends_on, action.toPromiseId] };
+          }),
+        },
+      };
+    }
+
+    case "ORG_CASCADE": {
+      // Store cascade result for display — status changes are informational
+      return state;
+    }
+
+    // ── Phase 4: API Management ─────────────────────────────────────────
+
+    case "ADD_API_KEY": {
+      return {
+        ...state,
+        apiKeys: [...(state.apiKeys ?? []), action.key],
+      };
+    }
+
+    case "REVOKE_API_KEY": {
+      return {
+        ...state,
+        apiKeys: (state.apiKeys ?? []).filter((k) => k.id !== action.keyId),
+      };
+    }
+
+    case "ADD_WEBHOOK": {
+      return {
+        ...state,
+        webhooks: [...(state.webhooks ?? []), action.webhook],
+      };
+    }
+
+    case "REMOVE_WEBHOOK": {
+      return {
+        ...state,
+        webhooks: (state.webhooks ?? []).filter((w) => w.id !== action.webhookId),
+      };
+    }
+
+    case "UPDATE_WEBHOOK": {
+      return {
+        ...state,
+        webhooks: (state.webhooks ?? []).map((w) =>
+          w.id === action.webhookId ? { ...w, ...action.updates } : w
+        ),
+      };
+    }
+
+    // ── Phase 4: Dashboard ──────────────────────────────────────────────
+
+    case "SYNC_ORG_DASHBOARD": {
+      return { ...state, orgDashboard: action.dashboard };
     }
 
     default:

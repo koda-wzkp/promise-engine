@@ -134,6 +134,16 @@ export interface GardenState {
   predictions?: import("./phase3").Prediction[];
   /** Benchmarks (only for contributors) */
   benchmarks?: import("./phase3").Benchmark[];
+
+  // Phase 4 extensions
+  /** Org the user belongs to (if any) */
+  org?: import("./phase4").Org;
+  /** API keys for the org */
+  apiKeys?: import("./phase4").ApiKey[];
+  /** Webhook configurations */
+  webhooks?: import("./phase4").WebhookConfig[];
+  /** Cached org dashboard data */
+  orgDashboard?: import("./phase4").OrgDashboardData;
 }
 
 export interface SharedPlant {
@@ -207,7 +217,34 @@ export type GardenAction =
   // Phase 3: Gifting
   | { type: "MINT_ARTIFACT"; promiseId: string }
   | { type: "GIFT_ARTIFACT"; artifactId: string; toUserId: string; options: import("./phase3").GiftOptions }
-  | { type: "RECEIVE_GIFT"; gift: import("./phase3").ReceivedGift };
+  | { type: "RECEIVE_GIFT"; gift: import("./phase3").ReceivedGift }
+
+  // Phase 4: Org
+  | { type: "CREATE_ORG"; org: import("./phase4").Org }
+  | { type: "JOIN_ORG"; orgId: string }
+  | { type: "LEAVE_ORG" }
+  | { type: "SET_ORG"; org: import("./phase4").Org }
+  | { type: "CREATE_ORG_PROMISE"; promise: import("./phase4").OrgPromise }
+  | { type: "UPDATE_ORG_PROMISE_STATUS"; promiseId: string; newStatus: PromiseStatus }
+
+  // Phase 4: External dependencies
+  | { type: "ADD_EXTERNAL_DEPENDENCY"; promiseId: string; dep: import("./phase4").ExternalDependency }
+  | { type: "REMOVE_EXTERNAL_DEPENDENCY"; promiseId: string; depLabel: string }
+  | { type: "CIVIC_STATUS_UPDATE"; civicPromiseId: string; civicDashboard: string; newStatus: PromiseStatus }
+
+  // Phase 4: Cross-team
+  | { type: "CROSS_TEAM_DEPENDENCY"; fromPromiseId: string; toPromiseId: string }
+  | { type: "ORG_CASCADE"; result: import("./simulation").CascadeResult }
+
+  // Phase 4: API management
+  | { type: "ADD_API_KEY"; key: import("./phase4").ApiKey }
+  | { type: "REVOKE_API_KEY"; keyId: string }
+  | { type: "ADD_WEBHOOK"; webhook: import("./phase4").WebhookConfig }
+  | { type: "REMOVE_WEBHOOK"; webhookId: string }
+  | { type: "UPDATE_WEBHOOK"; webhookId: string; updates: Partial<import("./phase4").WebhookConfig> }
+
+  // Phase 4: Dashboard
+  | { type: "SYNC_ORG_DASHBOARD"; dashboard: import("./phase4").OrgDashboardData };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 

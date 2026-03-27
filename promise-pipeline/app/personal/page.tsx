@@ -498,7 +498,7 @@ export default function PersonalPage() {
   ];
 
   return (
-    <main id="main-content" className="min-h-screen" style={{ background: "#faf9f6" }}>
+    <div id="main-content" className="min-h-screen" style={{ background: "#faf9f6" }}>
       {/* Skip link */}
       <a
         href="#promise-list"
@@ -769,6 +769,6 @@ export default function PersonalPage() {
             }
           />
         )}
-    </main>
+    </div>
   );
 }

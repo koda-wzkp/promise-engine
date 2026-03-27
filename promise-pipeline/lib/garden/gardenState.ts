@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useState } from "react";
+import { useReducer, useEffect } from "react";
 import type {
   GardenPromise,
   GardenStatsV2,
@@ -598,25 +598,22 @@ function saveToStorage(state: GardenState): void {
 // ─── HOOK ─────────────────────────────────────────────────────────────────────
 
 export function useGardenState() {
-  // Always start with INITIAL_STATE on both server and client so the first
-  // render matches (avoiding React hydration mismatches). Stored state is
-  // loaded after mount via useEffect.
+  // Always start with INITIAL_STATE so server and client first-renders match
+  // (avoids hydration mismatch from the lazy initializer reading localStorage).
   const [state, dispatch] = useReducer(gardenReducer, INITIAL_STATE);
-  const [hydrated, setHydrated] = useState(false);
 
-  // Load persisted state once on mount (client-only)
+  // Load persisted state once on client mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (hydrated) return;
-    const stored = loadFromStorage();
-    dispatch({ type: "LOAD_STATE", state: stored });
-    setHydrated(true);
-  }, [hydrated]);
+    dispatch({ type: "LOAD_STATE", state: loadFromStorage() });
+  }, []); // intentional empty-dep — run exactly once after mount
 
-  // Persist after every action (skip the first render before hydration loads)
+  // Persist after every state change.
+  // Guard against saving INITIAL_STATE itself (the pre-hydration placeholder).
   useEffect(() => {
-    if (!hydrated) return;
+    if (state === INITIAL_STATE) return;
     saveToStorage(state);
-  }, [state, hydrated]);
+  }, [state]);
 
   return { state, dispatch } as const;
 }

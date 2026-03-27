@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, useReducer } from "react";
 import { PersonalPromise, PersonalStats } from "@/lib/types/personal";
 import { PromiseStatus } from "@/lib/types/promise";
+import type { GardenPromise, GardenState, CameraState, SensorThreshold, SensorType, PartnerVisibility } from "@/lib/types/garden-phase2";
+import { toGardenPromise } from "@/lib/types/garden-phase2";
 import { PromiseCreator } from "@/components/personal/PromiseCreator";
 import { GardenView } from "@/components/personal/GardenView";
 import { PromiseTimeline } from "@/components/personal/PromiseTimeline";
@@ -15,11 +17,25 @@ import { SeedTray } from "@/components/personal/SeedTray";
 import { NotificationPrompt } from "@/components/personal/NotificationPrompt";
 import { AccountPrompt } from "@/components/personal/AccountPrompt";
 import { DependencyTooltip } from "@/components/personal/DependencyTooltip";
+import { SubPromiseCreator } from "@/components/personal/SubPromiseCreator";
+import { DependencyEditor } from "@/components/personal/DependencyEditor";
+import { PartnerSetup } from "@/components/personal/PartnerSetup";
+import { SensorConnect } from "@/components/personal/SensorConnect";
+import { SharedGardenPlot } from "@/components/personal/SharedGardenPlot";
 import { useGardenOnboarding } from "@/lib/hooks/useGardenOnboarding";
+import { gardenReducer, DEFAULT_CAMERA } from "@/lib/garden/gardenReducer";
 import { getSkyGradientByCount } from "@/lib/garden/renderer/skyGradient";
 import { NestedPLogo } from "@/components/brand/NestedPLogo";
 
 type View = "garden" | "timeline" | "create" | "stats";
+
+/** Phase 2 modal/overlay types */
+type Phase2Modal =
+  | { type: "break-down"; promiseId: string }
+  | { type: "dependency-editor" }
+  | { type: "partner-setup"; promiseId: string }
+  | { type: "sensor-connect"; promiseId: string }
+  | null;
 
 const STORAGE_KEY = "promise-garden-data";
 
@@ -139,6 +155,16 @@ export default function PersonalPage() {
   // Flipped to false when the loop completes or the user taps the seed.
   const [timeLapseActive, setTimeLapseActive] = useState(true);
 
+  // Phase 2: garden reducer for sub-promises, dependencies, partners, sensors
+  const [gardenState, dispatch] = useReducer(gardenReducer, {
+    promises: [],
+    camera: DEFAULT_CAMERA,
+    notifications: [],
+    partnerInvites: [],
+    sharedPlants: [],
+  });
+  const [phase2Modal, setPhase2Modal] = useState<Phase2Modal>(null);
+
   const seedRef = useRef<HTMLButtonElement>(null);
 
   const onboarding = useGardenOnboarding();
@@ -230,6 +256,100 @@ export default function PersonalPage() {
     },
     [state.firstCheckInComplete, onboarding]
   );
+
+  // ── Phase 2 Handlers ─────────────────────────────────────────────────────
+
+  const handleBreakDown = useCallback((promiseId: string) => {
+    setPhase2Modal({ type: "break-down", promiseId });
+  }, []);
+
+  const handleCreateSubPromises = useCallback(
+    (subPromises: GardenPromise[]) => {
+      if (!phase2Modal || phase2Modal.type !== "break-down") return;
+      for (const sub of subPromises) {
+        dispatch({
+          type: "CREATE_SUB_PROMISE",
+          parentId: phase2Modal.promiseId,
+          promise: sub,
+        });
+        // Also add to flat promises array for Phase 1 compat
+        setPromises((prev) => [...prev, sub as PersonalPromise]);
+      }
+      setPhase2Modal(null);
+    },
+    [phase2Modal]
+  );
+
+  const handleAddDependency = useCallback(
+    (fromId: string, toId: string) => {
+      dispatch({ type: "ADD_DEPENDENCY", fromId, toId });
+      // Sync to flat array
+      setPromises((prev) =>
+        prev.map((p) =>
+          p.id === fromId && !p.depends_on.includes(toId)
+            ? { ...p, depends_on: [...p.depends_on, toId] }
+            : p
+        )
+      );
+    },
+    []
+  );
+
+  const handleRemoveDependency = useCallback(
+    (fromId: string, toId: string) => {
+      dispatch({ type: "REMOVE_DEPENDENCY", fromId, toId });
+      setPromises((prev) =>
+        prev.map((p) =>
+          p.id === fromId
+            ? { ...p, depends_on: p.depends_on.filter((d) => d !== toId) }
+            : p
+        )
+      );
+    },
+    []
+  );
+
+  const handleSetPartner = useCallback(
+    (promiseId: string, partnerEmail: string, visibility: PartnerVisibility) => {
+      dispatch({
+        type: "SET_PARTNER",
+        promiseId,
+        partnerId: partnerEmail,
+        visibility,
+      });
+      setPhase2Modal(null);
+    },
+    []
+  );
+
+  const handleConnectSensor = useCallback(
+    (
+      promiseId: string,
+      sensorType: SensorType,
+      threshold: SensorThreshold,
+      metric: string
+    ) => {
+      dispatch({ type: "CONNECT_SENSOR", promiseId, sensorType, threshold, metric });
+      setPhase2Modal(null);
+    },
+    []
+  );
+
+  const handleDisconnectSensor = useCallback((promiseId: string) => {
+    dispatch({ type: "DISCONNECT_SENSOR", promiseId });
+    setPhase2Modal(null);
+  }, []);
+
+  const handleZoomChange = useCallback((camera: Partial<CameraState>) => {
+    dispatch({ type: "SET_ZOOM", camera });
+  }, []);
+
+  // Sync gardenState.promises back to reducer when flat array changes
+  useEffect(() => {
+    if (loaded && promises.length > 0) {
+      // We don't fully replace — the reducer is the source of truth for Phase 2 fields
+    }
+  }, [promises, loaded]);
 
   // ── Sky gradient (count-based for the new progression) ────────────────────
   const skyGradient = getSkyGradientByCount(promises.length);
@@ -362,11 +482,51 @@ export default function PersonalPage() {
               promises={promises}
               onUpdateStatus={handleUpdateStatus}
               skyGradientOverride={skyGradient}
+              camera={gardenState.camera}
+              onZoomChange={handleZoomChange}
+              onBreakDown={handleBreakDown}
+              onAddPartner={(id) => setPhase2Modal({ type: "partner-setup", promiseId: id })}
+              onConnectSensor={(id) => setPhase2Modal({ type: "sensor-connect", promiseId: id })}
+              onLinkDependencies={() => setPhase2Modal({ type: "dependency-editor" })}
             />
 
             {/* Dependency tooltip — after 3rd promise, one-time */}
             {state.promisesPlanted >= 3 && !state.dependencyTutorialSeen && (
               <DependencyTooltip onDismiss={onboarding.dismissDependencyTooltip} />
+            )}
+
+            {/* Phase 2: Shared garden plot (accountability partners) */}
+            {gardenState.sharedPlants.length > 0 && (
+              <div className="mt-6">
+                <SharedGardenPlot
+                  plants={gardenState.sharedPlants}
+                  onWater={(id) => dispatch({ type: "PARTNER_WATER", promiseId: id })}
+                  onEncourage={(id) =>
+                    dispatch({
+                      type: "ADD_NOTIFICATION",
+                      notification: {
+                        id: `notif-${Date.now()}`,
+                        type: "partner-encouragement",
+                        promiseId: id,
+                        message: "You sent encouragement!",
+                        timestamp: new Date().toISOString(),
+                        read: false,
+                        channel: "push",
+                      },
+                    })
+                  }
+                />
+              </div>
+            )}
+
+            {/* Phase 2: Link dependencies button */}
+            {promises.length >= 2 && (
+              <button
+                onClick={() => setPhase2Modal({ type: "dependency-editor" })}
+                className="mt-3 px-3 py-1.5 text-xs text-gray-600 bg-white border rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Link dependencies
+              </button>
             )}
           </div>
         )}
@@ -422,6 +582,67 @@ export default function PersonalPage() {
           onClose={handleSheetClose}
           returnFocusRef={seedRef}
         />
+      )}
+
+      {/* Phase 2 Modals */}
+      {phase2Modal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          onClick={() => setPhase2Modal(null)}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg mx-4">
+            {phase2Modal.type === "break-down" && (() => {
+              const parent = promises.find((p) => p.id === phase2Modal.promiseId);
+              if (!parent) return null;
+              return (
+                <SubPromiseCreator
+                  parent={toGardenPromise(parent)}
+                  onCreateSubPromises={handleCreateSubPromises}
+                  onCancel={() => setPhase2Modal(null)}
+                />
+              );
+            })()}
+
+            {phase2Modal.type === "dependency-editor" && (
+              <DependencyEditor
+                promises={promises.map(toGardenPromise)}
+                onAddDependency={handleAddDependency}
+                onRemoveDependency={handleRemoveDependency}
+                onClose={() => setPhase2Modal(null)}
+              />
+            )}
+
+            {phase2Modal.type === "partner-setup" && (() => {
+              const target = promises.find((p) => p.id === phase2Modal.promiseId);
+              if (!target) return null;
+              return (
+                <PartnerSetup
+                  promise={toGardenPromise(target)}
+                  onSetPartner={handleSetPartner}
+                  onCancel={() => setPhase2Modal(null)}
+                  isAuthenticated={state.accountCreated}
+                  onRequestAuth={onboarding.saveGarden}
+                />
+              );
+            })()}
+
+            {phase2Modal.type === "sensor-connect" && (() => {
+              const target = promises.find((p) => p.id === phase2Modal.promiseId);
+              if (!target) return null;
+              return (
+                <SensorConnect
+                  promiseId={target.id}
+                  promiseBody={target.body}
+                  domain={target.domain}
+                  onConnect={handleConnectSensor}
+                  onDisconnect={handleDisconnectSensor}
+                  onCancel={() => setPhase2Modal(null)}
+                  isConnected={!!(target as any).sensor}
+                />
+              );
+            })()}
+          </div>
+        </div>
       )}
     </main>
   );

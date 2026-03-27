@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { PersonalPromise } from "@/lib/types/personal";
 import { PromiseStatus } from "@/lib/types/promise";
+import type { GardenPromise, CameraState } from "@/lib/types/garden-phase2";
 import { StatusBadge } from "@/components/promise/StatusBadge";
 import ProceduralPlant from "./ProceduralPlant";
 import { getSkyGradient } from "@/lib/garden/renderer/skyGradient";
+import { ZoomController, type ZoomContext } from "@/components/garden/ZoomController";
+import { RootSystem } from "@/components/garden/RootSystem";
+import { DependencyEdge } from "@/components/garden/DependencyEdge";
 
 interface GardenViewProps {
   promises: PersonalPromise[];
@@ -29,6 +33,18 @@ interface GardenViewProps {
    * Override the minimum height of the garden scene div (default "320px").
    */
   minHeight?: string;
+  /** Phase 2: camera state for zoom control */
+  camera?: CameraState;
+  /** Phase 2: zoom change handler */
+  onZoomChange?: (camera: Partial<CameraState>) => void;
+  /** Phase 2: handler for "Break this down" action */
+  onBreakDown?: (promiseId: string) => void;
+  /** Phase 2: handler for "Add partner" action */
+  onAddPartner?: (promiseId: string) => void;
+  /** Phase 2: handler for "Connect sensor" action */
+  onConnectSensor?: (promiseId: string) => void;
+  /** Phase 2: handler for "Link dependencies" action */
+  onLinkDependencies?: () => void;
 }
 
 const DOMAIN_LABELS: Record<string, string> = {
@@ -56,6 +72,12 @@ export function GardenView({
   skyGradientOverride,
   gardenAriaLabel,
   minHeight = "320px",
+  camera,
+  onZoomChange,
+  onBreakDown,
+  onAddPartner,
+  onConnectSensor,
+  onLinkDependencies,
 }: GardenViewProps) {
   const [time, setTime] = useState(0);
   const animRef = useRef<number>(0);
@@ -88,11 +110,46 @@ export function GardenView({
     };
   }, []);
 
+  // Phase 2: identify GardenPromises for nesting/dependency features
+  const gardenPromises = useMemo(() => {
+    return promises.map((p) => ({
+      ...p,
+      children: (p as any).children ?? [],
+      parent: (p as any).parent ?? null,
+    })) as GardenPromise[];
+  }, [promises]);
+
+  // Top-level promises only (exclude sub-promises from main garden view)
+  const topLevelPromises = useMemo(
+    () => gardenPromises.filter((p) => p.parent === null),
+    [gardenPromises]
+  );
+
+  // Promise lookup map
+  const byId = useMemo(
+    () => new Map(gardenPromises.map((p) => [p.id, p])),
+    [gardenPromises]
+  );
+
+  // Dependency edges between top-level promises
+  const dependencyEdges = useMemo(() => {
+    const edges: Array<{ from: GardenPromise; to: GardenPromise }> = [];
+    for (const p of topLevelPromises) {
+      for (const depId of p.depends_on) {
+        const dep = byId.get(depId);
+        if (dep && dep.parent === null) {
+          edges.push({ from: p, to: dep });
+        }
+      }
+    }
+    return edges;
+  }, [topLevelPromises, byId]);
+
   if (promises.length === 0 && !forceRender) return null;
 
-  // Group by domain
-  const byDomain: Record<string, PersonalPromise[]> = {};
-  for (const p of promises) {
+  // Group top-level by domain
+  const byDomain: Record<string, GardenPromise[]> = {};
+  for (const p of topLevelPromises) {
     const domain = p.domain.toLowerCase();
     if (!byDomain[domain]) byDomain[domain] = [];
     byDomain[domain].push(p);
@@ -164,11 +221,11 @@ export function GardenView({
           ))}
         </div>
 
-        {/* Ground section (soil + grass line) */}
+        {/* Ground section (soil + grass line + dependency edges) */}
         <div
           className="relative"
           style={{
-            height: "70px",
+            height: dependencyEdges.length > 0 ? "90px" : "70px",
             background:
               "linear-gradient(180deg, #5D4037 0%, #4E342E 40%, #3E2723 100%)",
           }}
@@ -179,12 +236,50 @@ export function GardenView({
             className="absolute top-0 left-0 right-0"
             style={{ height: 3, background: "#33691E" }}
           />
+
+          {/* Phase 2: Dependency edges rendered underground */}
+          {dependencyEdges.length > 0 && (
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              style={{ opacity: 0.5 }}
+            >
+              {dependencyEdges.map((edge: { from: GardenPromise; to: GardenPromise }) => (
+                <DependencyEdge
+                  key={`${edge.from.id}-${edge.to.id}`}
+                  from={edge.from}
+                  to={edge.to}
+                  fromPos={{ x: 80, y: 10 }}
+                  toPos={{ x: 200, y: 10 }}
+                  detailOpacity={0.6}
+                />
+              ))}
+            </svg>
+          )}
         </div>
+
+        {/* Phase 2: Root system for selected plant */}
+        {selectedId && byId.get(selectedId)?.children && byId.get(selectedId)!.children.length > 0 && (
+          <div
+            className="relative"
+            style={{
+              background: "linear-gradient(180deg, #3E2723 0%, #2E1B0E 100%)",
+            }}
+          >
+            <RootSystem
+              parent={byId.get(selectedId)!}
+              subPromises={byId.get(selectedId)!.children
+                .map((cid) => byId.get(cid))
+                .filter((c): c is GardenPromise => c !== undefined)}
+              opacity={1}
+              onRootClick={(id) => setSelectedId(id)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Plant detail cards (below the garden scene) */}
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {promises.map((p) => (
+        {topLevelPromises.map((p) => (
           <GardenPlantCard
             key={p.id}
             promise={p}
@@ -193,6 +288,12 @@ export function GardenView({
             onSelect={() =>
               setSelectedId(selectedId === p.id ? null : p.id)
             }
+            hasChildren={p.children.length > 0}
+            hasSensor={!!(p as any).sensor}
+            hasPartner={!!(p as any).partnerId}
+            onBreakDown={onBreakDown}
+            onAddPartner={onAddPartner}
+            onConnectSensor={onConnectSensor}
           />
         ))}
       </div>
@@ -205,11 +306,23 @@ function GardenPlantCard({
   onUpdateStatus,
   selected,
   onSelect,
+  hasChildren,
+  hasSensor,
+  hasPartner,
+  onBreakDown,
+  onAddPartner,
+  onConnectSensor,
 }: {
   promise: PersonalPromise;
   onUpdateStatus: (id: string, status: PromiseStatus, reflection?: string) => void;
   selected: boolean;
   onSelect: () => void;
+  hasChildren?: boolean;
+  hasSensor?: boolean;
+  hasPartner?: boolean;
+  onBreakDown?: (id: string) => void;
+  onAddPartner?: (id: string) => void;
+  onConnectSensor?: (id: string) => void;
 }) {
   const isActive =
     promise.status === "declared" || promise.status === "degraded";
@@ -227,6 +340,25 @@ function GardenPlantCard({
           : "border-gray-200 bg-white"
       }`}
     >
+      {/* Phase 2 indicators */}
+      <div className="flex justify-center gap-1 mb-1">
+        {hasChildren && (
+          <span className="text-xs text-gray-400" title="Has sub-promises" aria-label="Has sub-promises">
+            🌿
+          </span>
+        )}
+        {hasSensor && (
+          <span className="text-xs text-gray-400" title="Sensor connected" aria-label="Sensor connected">
+            📡
+          </span>
+        )}
+        {hasPartner && (
+          <span className="text-xs text-gray-400" title="Has accountability partner" aria-label="Has partner">
+            🤝
+          </span>
+        )}
+      </div>
+
       <p className="text-xs text-gray-700 line-clamp-2 mb-2">{promise.body}</p>
       <StatusBadge status={promise.status} size="xs" />
 
@@ -250,6 +382,45 @@ function GardenPlantCard({
           >
             Broken
           </button>
+        </div>
+      )}
+
+      {/* Phase 2 action buttons — shown when selected */}
+      {selected && isActive && (
+        <div className="mt-2 flex flex-wrap gap-1 justify-center border-t pt-2">
+          {onBreakDown && !hasChildren && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onBreakDown(promise.id);
+              }}
+              className="px-2 py-1 text-xs bg-purple-50 text-purple-700 rounded hover:bg-purple-100"
+            >
+              Break down
+            </button>
+          )}
+          {onAddPartner && !hasPartner && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddPartner(promise.id);
+              }}
+              className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
+            >
+              Add partner
+            </button>
+          )}
+          {onConnectSensor && !hasSensor && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onConnectSensor(promise.id);
+              }}
+              className="px-2 py-1 text-xs bg-amber-50 text-amber-700 rounded hover:bg-amber-100"
+            >
+              Connect sensor
+            </button>
+          )}
         </div>
       )}
 

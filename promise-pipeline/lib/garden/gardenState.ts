@@ -1,4 +1,4 @@
-import { useReducer, useEffect } from "react";
+import { useReducer, useEffect, useState } from "react";
 import type {
   GardenPromise,
   GardenStatsV2,
@@ -598,15 +598,25 @@ function saveToStorage(state: GardenState): void {
 // ─── HOOK ─────────────────────────────────────────────────────────────────────
 
 export function useGardenState() {
-  const [state, dispatch] = useReducer(gardenReducer, INITIAL_STATE, () => {
-    // SSR-safe: return initial state on server, load from storage on client
-    return loadFromStorage();
-  });
+  // Always start with INITIAL_STATE on both server and client so the first
+  // render matches (avoiding React hydration mismatches). Stored state is
+  // loaded after mount via useEffect.
+  const [state, dispatch] = useReducer(gardenReducer, INITIAL_STATE);
+  const [hydrated, setHydrated] = useState(false);
 
-  // Persist after every action
+  // Load persisted state once on mount (client-only)
   useEffect(() => {
+    if (hydrated) return;
+    const stored = loadFromStorage();
+    dispatch({ type: "LOAD_STATE", state: stored });
+    setHydrated(true);
+  }, [hydrated]);
+
+  // Persist after every action (skip the first render before hydration loads)
+  useEffect(() => {
+    if (!hydrated) return;
     saveToStorage(state);
-  }, [state]);
+  }, [state, hydrated]);
 
   return { state, dispatch } as const;
 }

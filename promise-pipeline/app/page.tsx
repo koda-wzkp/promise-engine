@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BOOKING_URL } from "@/lib/constants/booking";
-import { NestedPLogo } from "@/components/brand/NestedPLogo";
+import { NestedPLogo, MODES } from "@/components/brand/NestedPLogo";
 import { PromiseUniversal } from "@/components/home/PromiseUniversal";
 import { UniversalScroller } from "@/components/hero/UniversalScroller";
 
@@ -289,7 +289,25 @@ function UseCases() {
 }
 
 function HeroSection() {
-  const [heroHovered, setHeroHovered] = useState(false);
+  const [modeIndex, setModeIndex] = useState(0);
+  const [labelVisible, setLabelVisible] = useState(true);
+
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    const interval = setInterval(() => {
+      setLabelVisible(false);
+      timeout = setTimeout(() => {
+        setModeIndex((i) => (i + 1) % MODES.length);
+        setLabelVisible(true);
+      }, 400);
+    }, 6000);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  const mode = MODES[modeIndex];
 
   return (
     <section className="relative overflow-hidden" style={{ height: "100vh" }}>
@@ -300,17 +318,49 @@ function HeroSection() {
       <div
         className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center"
         style={{ zIndex: 10 }}
-        onMouseEnter={() => setHeroHovered(true)}
-        onMouseLeave={() => setHeroHovered(false)}
       >
-        <div className="mx-auto mb-8" style={{ overflow: "visible" }}>
+        <div className="mx-auto mb-3" style={{ overflow: "visible" }}>
           <NestedPLogo
-            mode={heroHovered ? "peel" : "breathe"}
-            size={88}
-            isHovered={heroHovered}
+            mode={mode.id}
+            size={400}
             className="mx-auto"
           />
         </div>
+
+        {/* Mode name + concept crossfade */}
+        <div
+          style={{
+            opacity: labelVisible ? 1 : 0,
+            transition: "opacity 0.4s ease",
+            marginBottom: 24,
+            minHeight: 40,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "IBM Plex Serif, serif",
+              fontSize: "0.95rem",
+              fontWeight: 500,
+              color: "rgba(255,255,255,0.70)",
+              margin: "0 0 3px",
+            }}
+          >
+            {mode.name}
+          </p>
+          <p
+            style={{
+              fontFamily: "IBM Plex Mono, monospace",
+              fontSize: "0.62rem",
+              color: "rgba(162,180,255,0.50)",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              margin: 0,
+            }}
+          >
+            {mode.concept}
+          </p>
+        </div>
+
         <span
           style={{
             fontFamily: "IBM Plex Mono, monospace",

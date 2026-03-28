@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { CloudBackground } from "@/components/layout/CloudBackground";
 import { BOOKING_URL } from "@/lib/constants/booking";
 import { NestedPLogo } from "@/components/brand/NestedPLogo";
 import { PromiseUniversal } from "@/components/home/PromiseUniversal";
+import { UniversalScroller } from "@/components/hero/UniversalScroller";
 
 export default function LandingPage() {
   return (
@@ -292,53 +292,71 @@ function HeroSection() {
   const [heroHovered, setHeroHovered] = useState(false);
 
   return (
-    <section className="relative overflow-hidden py-20 md:py-32">
-      <CloudBackground />
+    <section className="relative overflow-hidden" style={{ height: "100vh" }}>
+      {/* Animated background */}
+      <UniversalScroller ambient />
+
+      {/* Hero content overlay */}
       <div
-        className="relative max-w-5xl mx-auto px-4 sm:px-6 text-center"
+        className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center"
+        style={{ zIndex: 10 }}
         onMouseEnter={() => setHeroHovered(true)}
         onMouseLeave={() => setHeroHovered(false)}
       >
-        <div className="mx-auto mb-12 mt-4" style={{ overflow: "visible" }}>
+        <div className="mx-auto mb-8" style={{ overflow: "visible" }}>
           <NestedPLogo
             mode={heroHovered ? "peel" : "breathe"}
-            size={96}
+            size={88}
             isHovered={heroHovered}
             className="mx-auto"
           />
         </div>
-        <span style={{
-          fontFamily: 'IBM Plex Mono, monospace',
-          fontSize: 12,
-          color: '#6b7280',
-          letterSpacing: '0.05em',
-          textTransform: 'uppercase',
-        }}>
+        <span
+          style={{
+            fontFamily: "IBM Plex Mono, monospace",
+            fontSize: 11,
+            color: "rgba(162,180,255,0.65)",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
+        >
           A trust primitive for commitment networks
         </span>
-        <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 mt-3 text-balance">
+        <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 mt-3 text-balance">
           Make common sense computable.
         </h1>
-        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+        <p
+          className="text-lg md:text-xl max-w-2xl mx-auto mb-8"
+          style={{ color: "rgba(255,255,255,0.68)" }}
+        >
           Dashboards show you what&apos;s broken. Promise Pipeline shows you what
           breaks next and why.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/demo/hb2021"
-            className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+            className="px-6 py-3 bg-white text-gray-900 rounded-lg font-medium hover:bg-gray-100 transition-colors"
           >
             See the HB 2021 Demo
           </Link>
           <a
             href="#demos"
-            className="px-6 py-3 bg-transparent text-gray-700 border border-gray-300 rounded-lg font-medium hover:border-gray-500 hover:text-gray-900 transition-colors"
+            className="px-6 py-3 border text-white rounded-lg font-medium transition-colors"
+            style={{ borderColor: "rgba(255,255,255,0.28)" }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.55)";
+              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.28)";
+              (e.currentTarget as HTMLElement).style.background = "";
+            }}
           >
             View All Demos
           </a>
         </div>
 
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
             { value: "267,000+", label: "Observations analyzed" },
             { value: "111", label: "Promises tracked" },
@@ -346,8 +364,10 @@ function HeroSection() {
             { value: "4", label: "Live dashboards" },
           ].map((stat) => (
             <div key={stat.label}>
-              <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-              <p className="text-sm text-gray-500">{stat.label}</p>
+              <p className="text-3xl font-bold text-white">{stat.value}</p>
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.50)" }}>
+                {stat.label}
+              </p>
             </div>
           ))}
         </div>

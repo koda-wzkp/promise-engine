@@ -21,9 +21,11 @@ interface ZoomControllerProps {
   children: (zoomLevel: ZoomLevel) => React.ReactNode;
   onZoomChange?: (level: ZoomLevel) => void;
   defaultLevel?: ZoomLevel;
+  /** Extra classes applied to the outer container div */
+  className?: string;
 }
 
-export function ZoomController({ children, onZoomChange, defaultLevel = 1 }: ZoomControllerProps) {
+export function ZoomController({ children, onZoomChange, defaultLevel = 1, className }: ZoomControllerProps) {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(defaultLevel);
   // pan is mirrored in ref so drag handlers always read current value without stale closures
   const [pan, setPanState] = useState({ x: 0, y: 0 });
@@ -163,6 +165,21 @@ export function ZoomController({ children, onZoomChange, defaultLevel = 1 }: Zoo
     };
   }, []);
 
+  // ── Scroll-wheel zoom (desktop primary) ──────────────────────────────────────
+  // Non-passive so preventDefault can stop the page scrolling.
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      doZoom(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1 : -1);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [doZoom]);
+
   // ── Touch events ─────────────────────────────────────────────────────────────
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -238,7 +255,7 @@ export function ZoomController({ children, onZoomChange, defaultLevel = 1 }: Zoo
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden"
+      className={`relative overflow-hidden${className ? ` ${className}` : ""}`}
       style={{ cursor: canPan ? (isDragging ? "grabbing" : "grab") : "default" }}
     >
       {/* Zoom controls — top-right, above content */}

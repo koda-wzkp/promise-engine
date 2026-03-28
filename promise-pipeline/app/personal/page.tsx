@@ -26,6 +26,8 @@ import { ZoomController, type ZoomLevel } from "@/components/garden/ZoomControll
 import { RootSystem } from "@/components/garden/RootSystem";
 import { DependencyEdge } from "@/components/garden/DependencyEdge";
 import { CascadeAnimation } from "@/components/garden/CascadeAnimation";
+import { PlantBottomSheet } from "@/components/garden/PlantBottomSheet";
+import { PromiseDrawer } from "@/components/garden/PromiseDrawer";
 import { SubPromiseCreator } from "@/components/personal/SubPromiseCreator";
 import { DependencyEditor } from "@/components/personal/DependencyEditor";
 import { PartnerSetup } from "@/components/personal/PartnerSetup";
@@ -335,6 +337,10 @@ export default function PersonalPage() {
   const [orgSettingsTab, setOrgSettingsTab] = useState<"civic" | "api" | "webhooks" | "billing">("civic");
   const [showCreateOrg, setShowCreateOrg] = useState(false);
 
+  // Garden UI state
+  const [selectedPlantId, setSelectedPlantId] = useState<string | null>(null);
+  const [showDrawer, setShowDrawer] = useState(false);
+
   // Cascade alerts: { affectedId, sourceId }
   const [cascadeAlerts, setCascadeAlerts] = useState<{ affectedId: string; sourceId: string }[]>([]);
 
@@ -549,441 +555,348 @@ export default function PersonalPage() {
     { id: "stats",      label: "Stats" },
   ];
 
+  // Icon paths for the bottom tab bar
+  const TAB_ICONS: Record<Tab, React.ReactNode> = {
+    garden: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 22V12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M12 12C12 12 8 9 8 6a4 4 0 0 1 8 0c0 3-4 6-4 6Z" fill="currentColor" opacity="0.8"/>
+        <path d="M12 15C12 15 9 13.5 7.5 11a3.5 3.5 0 0 1 6.062-3.5C15 10 12 15 12 15Z" fill="currentColor" opacity="0.4"/>
+        <path d="M5 22h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    ),
+    team: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/>
+        <circle cx="17" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.8"/>
+        <path d="M3 19c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M17 14c1.657 0 3 1.343 3 3v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    ),
+    org: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="3" y="9" width="18" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.8"/>
+        <path d="M8 22V15h8v7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M3 9l9-7 9 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    collection: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+      </svg>
+    ),
+    stats: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="3"  y="14" width="4" height="7" rx="1" fill="currentColor" opacity="0.7"/>
+        <rect x="10" y="9"  width="4" height="12" rx="1" fill="currentColor" opacity="0.85"/>
+        <rect x="17" y="4"  width="4" height="17" rx="1" fill="currentColor"/>
+      </svg>
+    ),
+  };
+
+  // Height of the fixed bottom nav bar (px)
+  const NAV_H = 56;
+
   return (
-    <div id="main-content" className="min-h-screen" style={{ background: "#faf9f6" }}>
-      {/* Skip link */}
+    // h-screen + overflow-hidden gives us a locked viewport — no scroll on garden tab
+    <div id="main-content" className="h-screen overflow-hidden flex flex-col" style={{ background: "#faf9f6" }}>
+      {/* Skip link — always available for keyboard users */}
       <a
         href="#promise-list"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:bg-white focus:text-gray-900 focus:rounded focus:shadow"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:bg-white focus:text-gray-900 focus:rounded focus:shadow"
       >
         Skip to promise list
       </a>
 
       <GardenSRDescription promises={promises} />
 
-      {/* Header */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 pb-3">
-        <div className="flex items-baseline justify-between">
-          <h1 className="font-serif text-2xl font-bold text-gray-900">Promise Garden</h1>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">{weatherLabel(weather)}</span>
-            {dueCount > 0 && (
-              <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full">
+      {/* ── GARDEN TAB — fullscreen canvas ── */}
+      {activeTab === "garden" && (
+        <div className="relative flex-1 overflow-hidden">
+
+          {/* Garden name + weather — faint overlay in top-left */}
+          <div className="absolute top-3 left-4 z-20 pointer-events-none select-none">
+            <h1 className="font-serif text-sm font-semibold leading-none drop-shadow" style={{ color: "rgba(255,255,255,0.80)" }}>
+              Promise Garden
+            </h1>
+            <p className="text-xs mt-0.5 drop-shadow" style={{ color: "rgba(255,255,255,0.55)" }}>
+              {weatherLabel(weather)}
+            </p>
+          </div>
+
+          {/* Due-count badge */}
+          {dueCount > 0 && (
+            <div className="absolute top-3 right-14 z-20 pointer-events-none">
+              <span className="px-2 py-0.5 text-xs bg-amber-500/90 text-white rounded-full shadow">
                 {dueCount} due
               </span>
+            </div>
+          )}
+
+          {/* Full-viewport zoom+pan canvas */}
+          <ZoomController
+            onZoomChange={setZoomLevel}
+            defaultLevel={1}
+            className="absolute inset-0"
+          >
+            {(level) => (
+              <GardenView
+                promises={activePromises as unknown as PersonalPromise[]}
+                onUpdateStatus={handleGardenStatus}
+                onPlantSelect={(id) => {
+                  setSelectedPlantId(id);
+                  setShowDrawer(false);
+                }}
+                skyGradientOverride={skyGradient}
+                gardenAriaLabel={`Promise garden. ${activePromises.length} active promise${activePromises.length !== 1 ? "s" : ""}. ${weatherLabel(weather)}. Zoom: ${level === 0 ? "landscape" : level === 1 ? "garden" : level === 2 ? "plant detail" : "roots"}.`}
+                minHeight={`calc(100vh - ${NAV_H}px)`}
+                showPlantCards={false}
+              />
+            )}
+          </ZoomController>
+
+          {/* Shared garden plot — shown as an overlay strip if present */}
+          {sharedPromises.length > 0 && (
+            <div className="absolute top-12 left-0 right-0 z-10 pointer-events-none flex justify-center">
+              <div className="pointer-events-auto">
+                <SharedGardenPlot
+                  sharedPromises={sharedPromises}
+                  onWater={(id) => handlePartnerWater(id)}
+                  onCheckIn={(id) => setCheckInId(id)}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Pull-up drawer handle — bottom centre */}
+          <button
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 py-2 px-5 rounded-full focus-visible:outline-2 focus-visible:outline-white"
+            style={{ background: "rgba(0,0,0,0.28)", backdropFilter: "blur(6px)" }}
+            onClick={() => setShowDrawer(true)}
+            aria-label={`Show ${activePromises.length} promise${activePromises.length !== 1 ? "s" : ""}`}
+          >
+            <div className="w-8 h-0.5 bg-white/50 rounded-full" aria-hidden="true" />
+            <span className="text-xs text-white/75">
+              {activePromises.length === 0
+                ? "No promises yet"
+                : `${activePromises.length} promise${activePromises.length !== 1 ? "s" : ""}`}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* ── NON-GARDEN TABS — scrollable content ── */}
+      {activeTab !== "garden" && (
+        <div className="flex-1 overflow-y-auto" style={{ background: "#faf9f6" }}>
+          {/* Header */}
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 pb-3">
+            <div className="flex items-baseline justify-between">
+              <h1 className="font-serif text-2xl font-bold text-gray-900">Promise Garden</h1>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">{weatherLabel(weather)}</span>
+                {dueCount > 0 && (
+                  <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full">
+                    {dueCount} due
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-4">
+
+            {/* ── TEAM ── */}
+            {activeTab === "team" && (
+              <div className="space-y-4">
+                {teamState.team ? (
+                  <>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setTeamView("garden")}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${teamView === "garden" ? "bg-green-700 text-white" : "bg-white text-gray-700 border hover:bg-gray-50"}`}
+                      >
+                        Garden
+                      </button>
+                      <button
+                        onClick={() => setTeamView("dashboard")}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${teamView === "dashboard" ? "bg-green-700 text-white" : "bg-white text-gray-700 border hover:bg-gray-50"}`}
+                      >
+                        Dashboard
+                      </button>
+                      <div className="flex-1" />
+                      <button
+                        onClick={() => setShowTeamPromiseCreator(true)}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border text-green-700 hover:bg-green-50 transition-colors"
+                      >
+                        + Promise
+                      </button>
+                    </div>
+                    {teamView === "garden" && <TeamGarden team={teamState.team} currentUserId={CURRENT_USER.id} />}
+                    {teamView === "dashboard" && <GardenTeamDashboard team={teamState.team} onUpdateStatus={updateTeamPromiseStatus} />}
+                    {showTeamPromiseCreator && (
+                      <TeamPromiseCreator
+                        members={teamState.team.members}
+                        currentUserId={CURRENT_USER.id}
+                        onAdd={addTeamPromise}
+                        dispatch={dispatch}
+                        onClose={() => setShowTeamPromiseCreator(false)}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      <p className="text-4xl mb-3" aria-hidden="true">🌿</p>
+                      <p className="font-serif text-lg font-bold text-gray-800 mb-1">No team garden yet</p>
+                      <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">Share promises with your team. Commitments visible together, personal plans private.</p>
+                      <div className="flex gap-3 justify-center">
+                        <button onClick={() => setShowCreateTeam(true)} className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800">Create a team</button>
+                        <button onClick={() => setShowJoinTeam(true)} className="px-4 py-2 bg-white border text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Join a team</button>
+                      </div>
+                    </div>
+                    {showCreateTeam && <div className="bg-white rounded-2xl border p-6"><CreateTeamFlow currentUser={CURRENT_USER} onCreateTeam={createTeam} onCancel={() => setShowCreateTeam(false)} /></div>}
+                    {showJoinTeam && <div className="bg-white rounded-2xl border p-6"><JoinTeamFlow onJoin={async (_token) => null} onCancel={() => setShowJoinTeam(false)} /></div>}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── ORG ── */}
+            {activeTab === "org" && (
+              <div className="space-y-4">
+                {orgState.loading ? (
+                  <div className="text-center py-12 text-sm text-gray-400">Loading…</div>
+                ) : orgState.org ? (
+                  <>
+                    <div className="flex gap-2 flex-wrap">
+                      {(["garden", "dashboard", "settings"] as const).map((v) => (
+                        <button key={v} onClick={() => setOrgView(v)} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${orgView === v ? "bg-green-700 text-white" : "bg-white text-gray-700 border hover:bg-gray-50"}`}>
+                          {v.charAt(0).toUpperCase() + v.slice(1)}
+                        </button>
+                      ))}
+                      <div className="flex-1" />
+                      <button onClick={() => runCivicSync()} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border text-blue-700 hover:bg-blue-50 transition-colors">Sync civic</button>
+                    </div>
+                    {orgView === "garden" && <OrgGarden org={orgState.org} teams={teamState.team ? [teamState.team] : []} onZoomToTeam={() => setActiveTab("team")} />}
+                    {orgView === "dashboard" && <OrgDashboard org={orgState.org} teamPromises={teamState.team?.promises ?? []} teamNames={teamState.team ? { [teamState.team.id]: teamState.team.name } : {}} />}
+                    {orgView === "settings" && (
+                      <div className="space-y-4">
+                        <div className="flex gap-1.5 flex-wrap">
+                          {(["civic", "api", "webhooks", "billing"] as const).map((t) => (
+                            <button key={t} onClick={() => setOrgSettingsTab(t)} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${orgSettingsTab === t ? "bg-gray-900 text-white" : "bg-white text-gray-600 border hover:bg-gray-50"}`}>
+                              {t === "civic" && "Civic links"}{t === "api" && "API keys"}{t === "webhooks" && "Webhooks"}{t === "billing" && "Billing"}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="bg-white rounded-2xl border p-5">
+                          {orgSettingsTab === "civic" && <CivicLinkSetup orgPromises={orgState.org.orgPromises} onAddDependency={(promiseId, dep) => addExternalDependency(promiseId, { ...dep, id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2), lastSyncedAt: null })} />}
+                          {orgSettingsTab === "api" && <OrgApiKeys orgId={orgState.org.id} existingKeys={[]} />}
+                          {orgSettingsTab === "webhooks" && <WebhookConfig orgId={orgState.org.id} webhooks={[]} />}
+                          {orgSettingsTab === "billing" && <OrgBilling org={orgState.org} memberCount={orgState.org.teams.length || 1} />}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      <p className="text-4xl mb-3" aria-hidden="true">🏔</p>
+                      <p className="font-serif text-lg font-bold text-gray-800 mb-1">No org yet</p>
+                      <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">Connect teams under one org. Link to civic commitments.</p>
+                      <button onClick={() => setShowCreateOrg(true)} className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800">Create an org</button>
+                    </div>
+                    {showCreateOrg && (
+                      <div className="bg-white rounded-2xl border p-6">
+                        <CreateOrgFlow
+                          currentUser={CURRENT_USER}
+                          currentTeamId={teamState.team?.id}
+                          onCreateOrg={async (input) => { const org = await createOrg(input); if (org) setShowCreateOrg(false); return org; }}
+                          onCancel={() => setShowCreateOrg(false)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── COLLECTION ── */}
+            {activeTab === "collection" && (
+              <CollectionView promises={promises} dispatch={dispatch} receivedGifts={state.receivedGifts} />
+            )}
+
+            {/* ── STATS ── */}
+            {activeTab === "stats" && (
+              <div className="space-y-6">
+                <GardenStats stats={state.stats} />
+                <BenchmarkCard stats={state.stats} contribution={state.contribution} />
+              </div>
             )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Tabs */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 mb-4">
-        <div className="flex gap-2" role="tablist">
-          {tabs.map((t) => (
+      {/* ── FIXED BOTTOM ICON NAV ── */}
+      <nav
+        className="flex-none flex z-30 border-t border-gray-200"
+        style={{ height: NAV_H, background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)" }}
+        role="tablist"
+        aria-label="Main navigation"
+      >
+        {tabs.map((t) => {
+          const active = activeTab === t.id;
+          return (
             <button
               key={t.id}
               role="tab"
-              aria-selected={activeTab === t.id}
+              aria-selected={active}
               onClick={() => setActiveTab(t.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-green-600 ${
-                activeTab === t.id
-                  ? "bg-green-700 text-white"
-                  : "bg-white text-gray-700 border hover:bg-gray-50"
-              }`}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-green-600 focus-visible:outline-offset-[-2px]"
+              style={{ color: active ? "#15803d" : "#9ca3af" }}
             >
-              {t.label}
+              {TAB_ICONS[t.id]}
+              <span className="text-[10px] font-medium leading-none">{t.label}</span>
             </button>
-          ))}
-        </div>
-      </div>
+          );
+        })}
+      </nav>
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-16">
+      {/* ── GARDEN OVERLAYS (z-40+) ── */}
 
-        {/* ── GARDEN ── */}
-        {activeTab === "garden" && (
-          <div className="space-y-4">
-            {/* Canvas — wrapped in ZoomController */}
-            <div className="rounded-2xl overflow-hidden border">
-              <ZoomController onZoomChange={setZoomLevel} defaultLevel={1}>
-                {(level) => (
-                  <GardenView
-                    promises={activePromises as unknown as PersonalPromise[]}
-                    onUpdateStatus={handleGardenStatus}
-                    skyGradientOverride={skyGradient}
-                    gardenAriaLabel={`Promise garden. ${activePromises.length} active promise${activePromises.length !== 1 ? "s" : ""}. ${weatherLabel(weather)}. Zoom: ${level === 0 ? "landscape" : level === 1 ? "garden" : level === 2 ? "plant detail" : "roots"}.`}
-                    minHeight="240px"
-                  />
-                )}
-              </ZoomController>
-            </div>
-
-            {/* Shared garden plot */}
-            {sharedPromises.length > 0 && (
-              <SharedGardenPlot
-                sharedPromises={sharedPromises}
-                onWater={(id) => { handlePartnerWater(id); }}
-                onCheckIn={(id) => setCheckInId(id)}
-              />
-            )}
-
-            {/* Active promise list */}
-            <div
-              id="promise-list"
-              role="list"
-              aria-label="Active promises"
-              className="space-y-3"
-            >
-              {activePromises.map((p) => (
-                <div key={p.id} role="listitem">
-                  <PlantItem
-                    promise={p}
-                    allPromises={state.promises}
-                    zoomLevel={zoomLevel}
-                    isStressed={cascadeStress.has(p.id)}
-                    onCheckIn={() => setCheckInId(p.id)}
-                    onFrequency={() => {
-                      if (p.sensor) {
-                        setSensorThresholdId(p.id);
-                      } else {
-                        setFrequencyId(p.id);
-                      }
-                    }}
-                    onSubPromise={() => setSubPromiseId(p.id)}
-                    onDependency={() => setDependencyId(p.id)}
-                    onPartner={() => setPartnerSetupId(p.id)}
-                    onSensor={() => setSensorConnectId(p.id)}
-                    onChildCheckIn={(childId) => setCheckInId(childId)}
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Dormant */}
-            {dormantPromises.length > 0 && (
-              <details className="bg-white rounded-xl border">
-                <summary className="px-4 py-3 text-sm text-gray-500 cursor-pointer select-none">
-                  Dormant ({dormantPromises.length}) — roots still here
-                </summary>
-                <div className="px-4 pb-4 space-y-2 border-t pt-3">
-                  {dormantPromises.map((p) => (
-                    <PlantItem
-                      key={p.id}
-                      promise={p}
-                      allPromises={state.promises}
-                      zoomLevel={zoomLevel}
-                      isStressed={cascadeStress.has(p.id)}
-                      onCheckIn={() => setCheckInId(p.id)}
-                      onFrequency={() => setFrequencyId(p.id)}
-                      onSubPromise={() => setSubPromiseId(p.id)}
-                      onDependency={() => setDependencyId(p.id)}
-                      onPartner={() => setPartnerSetupId(p.id)}
-                      onSensor={() => setSensorConnectId(p.id)}
-                      onChildCheckIn={(childId) => setCheckInId(childId)}
-                    />
-                  ))}
-                </div>
-              </details>
-            )}
-
-            {/* Contribution plant — visible when opted in or previously contributed */}
-            <ContributionPlant
-              contribution={state.contribution}
-              dispatch={dispatch}
-            />
-
-            {/* Add new */}
-            <button
-              onClick={() => {
-                dispatch({ type: "COMPLETE_ONBOARDING" });
-              }}
-              className="w-full py-3 text-sm text-green-700 border border-dashed border-green-300 rounded-xl hover:bg-green-50 transition-colors focus-visible:outline-2 focus-visible:outline-green-600"
-            >
-              + New promise
-            </button>
-          </div>
-        )}
-
-        {/* ── TEAM ── */}
-        {activeTab === "team" && (
-          <div className="space-y-4">
-            {teamState.team ? (
-              <>
-                {/* Garden / Dashboard switcher */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setTeamView("garden")}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                      teamView === "garden"
-                        ? "bg-green-700 text-white"
-                        : "bg-white text-gray-700 border hover:bg-gray-50"
-                    }`}
-                  >
-                    Garden
-                  </button>
-                  <button
-                    onClick={() => setTeamView("dashboard")}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                      teamView === "dashboard"
-                        ? "bg-green-700 text-white"
-                        : "bg-white text-gray-700 border hover:bg-gray-50"
-                    }`}
-                  >
-                    Dashboard
-                  </button>
-                  <div className="flex-1" />
-                  <button
-                    onClick={() => setShowTeamPromiseCreator(true)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border text-green-700 hover:bg-green-50 transition-colors"
-                  >
-                    + Promise
-                  </button>
-                </div>
-
-                {teamView === "garden" && (
-                  <TeamGarden
-                    team={teamState.team}
-                    currentUserId={CURRENT_USER.id}
-                  />
-                )}
-
-                {teamView === "dashboard" && (
-                  <GardenTeamDashboard
-                    team={teamState.team}
-                    onUpdateStatus={updateTeamPromiseStatus}
-                  />
-                )}
-
-                {showTeamPromiseCreator && (
-                  <TeamPromiseCreator
-                    members={teamState.team.members}
-                    currentUserId={CURRENT_USER.id}
-                    onAdd={addTeamPromise}
-                    dispatch={dispatch}
-                    onClose={() => setShowTeamPromiseCreator(false)}
-                  />
-                )}
-              </>
-            ) : (
-              /* No team yet */
-              <div className="space-y-4">
-                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                  <p className="text-4xl mb-3" aria-hidden="true">🌿</p>
-                  <p className="font-serif text-lg font-bold text-gray-800 mb-1">
-                    No team garden yet
-                  </p>
-                  <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
-                    Share promises with your team. Commitments visible together,
-                    personal plans private.
-                  </p>
-                  <div className="flex gap-3 justify-center">
-                    <button
-                      onClick={() => setShowCreateTeam(true)}
-                      className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800"
-                    >
-                      Create a team
-                    </button>
-                    <button
-                      onClick={() => setShowJoinTeam(true)}
-                      className="px-4 py-2 bg-white border text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-                    >
-                      Join a team
-                    </button>
-                  </div>
-                </div>
-
-                {showCreateTeam && (
-                  <div className="bg-white rounded-2xl border p-6">
-                    <CreateTeamFlow
-                      currentUser={CURRENT_USER}
-                      onCreateTeam={createTeam}
-                      onCancel={() => setShowCreateTeam(false)}
-                    />
-                  </div>
-                )}
-
-                {showJoinTeam && (
-                  <div className="bg-white rounded-2xl border p-6">
-                    <JoinTeamFlow
-                      onJoin={async (_token) => null /* TODO: resolve invite token via Supabase */}
-                      onCancel={() => setShowJoinTeam(false)}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── ORG ── */}
-        {activeTab === "org" && (
-          <div className="space-y-4">
-            {orgState.loading ? (
-              <div className="text-center py-12 text-sm text-gray-400">Loading…</div>
-            ) : orgState.org ? (
-              <>
-                {/* View switcher */}
-                <div className="flex gap-2 flex-wrap">
-                  {(["garden", "dashboard", "settings"] as const).map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => setOrgView(v)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                        orgView === v
-                          ? "bg-green-700 text-white"
-                          : "bg-white text-gray-700 border hover:bg-gray-50"
-                      }`}
-                    >
-                      {v.charAt(0).toUpperCase() + v.slice(1)}
-                    </button>
-                  ))}
-                  <div className="flex-1" />
-                  <button
-                    onClick={() => runCivicSync()}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border text-blue-700 hover:bg-blue-50 transition-colors"
-                  >
-                    Sync civic
-                  </button>
-                </div>
-
-                {orgView === "garden" && (
-                  <OrgGarden
-                    org={orgState.org}
-                    teams={teamState.team ? [teamState.team] : []}
-                    onZoomToTeam={() => setActiveTab("team")}
-                  />
-                )}
-
-                {orgView === "dashboard" && (
-                  <OrgDashboard
-                    org={orgState.org}
-                    teamPromises={teamState.team?.promises ?? []}
-                    teamNames={teamState.team ? { [teamState.team.id]: teamState.team.name } : {}}
-                  />
-                )}
-
-                {orgView === "settings" && (
-                  <div className="space-y-4">
-                    {/* Settings nav */}
-                    <div className="flex gap-1.5 flex-wrap">
-                      {(["civic", "api", "webhooks", "billing"] as const).map((t) => (
-                        <button
-                          key={t}
-                          onClick={() => setOrgSettingsTab(t)}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                            orgSettingsTab === t
-                              ? "bg-gray-900 text-white"
-                              : "bg-white text-gray-600 border hover:bg-gray-50"
-                          }`}
-                        >
-                          {t === "civic" && "Civic links"}
-                          {t === "api" && "API keys"}
-                          {t === "webhooks" && "Webhooks"}
-                          {t === "billing" && "Billing"}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="bg-white rounded-2xl border p-5">
-                      {orgSettingsTab === "civic" && (
-                        <CivicLinkSetup
-                          orgPromises={orgState.org.orgPromises}
-                          onAddDependency={(promiseId, dep) =>
-                            addExternalDependency(promiseId, {
-                              ...dep,
-                              id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
-                              lastSyncedAt: null,
-                            })
-                          }
-                        />
-                      )}
-                      {orgSettingsTab === "api" && (
-                        <OrgApiKeys
-                          orgId={orgState.org.id}
-                          existingKeys={[]}
-                        />
-                      )}
-                      {orgSettingsTab === "webhooks" && (
-                        <WebhookConfig
-                          orgId={orgState.org.id}
-                          webhooks={[]}
-                        />
-                      )}
-                      {orgSettingsTab === "billing" && (
-                        <OrgBilling
-                          org={orgState.org}
-                          memberCount={orgState.org.teams.length || 1}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              /* No org yet */
-              <div className="space-y-4">
-                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                  <p className="text-4xl mb-3" aria-hidden="true">🏔</p>
-                  <p className="font-serif text-lg font-bold text-gray-800 mb-1">
-                    No org yet
-                  </p>
-                  <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
-                    Connect teams under one org. Link to civic commitments.
-                    Trace from personal promise to state legislation.
-                  </p>
-                  <button
-                    onClick={() => setShowCreateOrg(true)}
-                    className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800"
-                  >
-                    Create an org
-                  </button>
-                </div>
-
-                {showCreateOrg && (
-                  <div className="bg-white rounded-2xl border p-6">
-                    <CreateOrgFlow
-                      currentUser={CURRENT_USER}
-                      currentTeamId={teamState.team?.id}
-                      onCreateOrg={async (input) => {
-                        const org = await createOrg(input);
-                        if (org) setShowCreateOrg(false);
-                        return org;
-                      }}
-                      onCancel={() => setShowCreateOrg(false)}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── COLLECTION ── */}
-        {activeTab === "collection" && (
-          <CollectionView
-            promises={promises}
-            dispatch={dispatch}
-            receivedGifts={state.receivedGifts}
-          />
-        )}
-
-        {/* ── STATS ── */}
-        {activeTab === "stats" && (
-          <div className="space-y-6">
-            <GardenStats stats={state.stats} />
-            <BenchmarkCard stats={state.stats} contribution={state.contribution} />
-          </div>
-        )}
-      </div>
-
-      {/* ── OVERLAYS ── */}
-
-      {/* Phase 3: contribution opt-in prompt */}
-      {showContributionOptIn && (
-        <ContributionOptIn
+      {/* Promise drawer — pull-up list over the garden */}
+      {showDrawer && (
+        <PromiseDrawer
+          activePromises={activePromises}
+          dormantPromises={dormantPromises}
+          cascadeStress={cascadeStress}
+          contribution={state.contribution}
           dispatch={dispatch}
-          onDismiss={() => setShowContributionOptIn(false)}
+          onSelectPromise={(id) => {
+            setSelectedPlantId(id);
+            setShowDrawer(false);
+          }}
+          onNewPromise={() => dispatch({ type: "COMPLETE_ONBOARDING" })}
+          onClose={() => setShowDrawer(false)}
         />
+      )}
+
+      {/* Plant bottom sheet — tap a plant in the garden */}
+      {selectedPlantId && state.promises[selectedPlantId] && (
+        <PlantBottomSheet
+          promise={state.promises[selectedPlantId]}
+          isStressed={cascadeStress.has(selectedPlantId)}
+          onCheckIn={() => setCheckInId(selectedPlantId)}
+          onSubPromise={() => setSubPromiseId(selectedPlantId)}
+          onDependency={() => setDependencyId(selectedPlantId)}
+          onPartner={() => setPartnerSetupId(selectedPlantId)}
+          onSensor={() => setSensorConnectId(selectedPlantId)}
+          onClose={() => setSelectedPlantId(null)}
+        />
+      )}
+
+      {/* Phase 3: contribution opt-in */}
+      {showContributionOptIn && (
+        <ContributionOptIn dispatch={dispatch} onDismiss={() => setShowContributionOptIn(false)} />
       )}
 
       {showTour && !state.tourComplete && (
@@ -1005,45 +918,19 @@ export default function PersonalPage() {
           onClose={() => setCheckInId(null)}
         />
       )}
-
-      {renegotiatePromise && (
-        <RenegotiateModal
-          promise={renegotiatePromise}
-          onConfirm={handleRenegotiate}
-          onClose={() => setRenegotiateId(null)}
-        />
-      )}
-
-      {completePromise && (
-        <CompletionFlow
-          promise={completePromise}
-          onConfirm={handleComplete}
-          onClose={() => setCompleteId(null)}
-        />
-      )}
-
-      {frequencyPromise && (
-        <FrequencySettings
-          promise={frequencyPromise}
-          onSave={handleFrequency}
-          onClose={() => setFrequencyId(null)}
-        />
-      )}
+      {renegotiatePromise && <RenegotiateModal promise={renegotiatePromise} onConfirm={handleRenegotiate} onClose={() => setRenegotiateId(null)} />}
+      {completePromise && <CompletionFlow promise={completePromise} onConfirm={handleComplete} onClose={() => setCompleteId(null)} />}
+      {frequencyPromise && <FrequencySettings promise={frequencyPromise} onSave={handleFrequency} onClose={() => setFrequencyId(null)} />}
 
       {/* Phase 2 modals */}
       {subPromiseTarget && (
         <SubPromiseCreator
           promise={subPromiseTarget}
-          subPromises={
-            subPromiseTarget.children
-              .map((id) => state.promises[id])
-              .filter(Boolean) as GardenPromise[]
-          }
+          subPromises={subPromiseTarget.children.map((id) => state.promises[id]).filter(Boolean) as GardenPromise[]}
           onAdd={handleAddSubPromise}
           onClose={() => setSubPromiseId(null)}
         />
       )}
-
       {dependencyTarget && (
         <DependencyEditor
           promise={dependencyTarget}
@@ -1053,7 +940,6 @@ export default function PersonalPage() {
           onClose={() => setDependencyId(null)}
         />
       )}
-
       {partnerSetupTarget && (
         <PartnerSetup
           promise={partnerSetupTarget}
@@ -1062,7 +948,6 @@ export default function PersonalPage() {
           onClose={() => setPartnerSetupId(null)}
         />
       )}
-
       {sensorConnectTarget && (
         <SensorConnect
           promise={sensorConnectTarget}
@@ -1071,7 +956,6 @@ export default function PersonalPage() {
           onClose={() => setSensorConnectId(null)}
         />
       )}
-
       {sensorThresholdTarget && sensorThresholdTarget.sensor && (
         <SensorThreshold
           promise={sensorThresholdTarget}
@@ -1080,7 +964,7 @@ export default function PersonalPage() {
         />
       )}
 
-      {/* Cascade stress notification — one at a time */}
+      {/* Cascade stress toast */}
       {firstCascadeAlert &&
         state.promises[firstCascadeAlert.affectedId] &&
         state.promises[firstCascadeAlert.sourceId] && (
@@ -1089,9 +973,7 @@ export default function PersonalPage() {
             sourcePromise={state.promises[firstCascadeAlert.sourceId]}
             onDismiss={() =>
               setCascadeAlerts((prev) =>
-                prev.filter(
-                  (a) => a.affectedId !== firstCascadeAlert.affectedId
-                )
+                prev.filter((a) => a.affectedId !== firstCascadeAlert.affectedId)
               )
             }
           />

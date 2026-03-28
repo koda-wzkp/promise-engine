@@ -29,6 +29,16 @@ interface GardenViewProps {
    * Override the minimum height of the garden scene div (default "320px").
    */
   minHeight?: string;
+  /**
+   * When provided, clicking a plant calls this instead of the local detail cards.
+   * Used by the fullscreen garden to open the PlantBottomSheet.
+   */
+  onPlantSelect?: (id: string) => void;
+  /**
+   * Set false to hide the plant detail card grid below the scene.
+   * Default true (keeps the existing behaviour).
+   */
+  showPlantCards?: boolean;
 }
 
 const DOMAIN_LABELS: Record<string, string> = {
@@ -56,6 +66,8 @@ export function GardenView({
   skyGradientOverride,
   gardenAriaLabel,
   minHeight = "320px",
+  onPlantSelect,
+  showPlantCards = true,
 }: GardenViewProps) {
   const [time, setTime] = useState(0);
   const animRef = useRef<number>(0);
@@ -108,94 +120,108 @@ export function GardenView({
   const resolvedAriaLabel = gardenAriaLabel ?? defaultAriaLabel;
 
   return (
-    <div className="space-y-0">
-      {/* Garden scene */}
+    <div>
+      {/* ── Garden scene ── */}
       <div
-        className="relative rounded-xl overflow-hidden"
+        className="relative overflow-hidden"
         role="img"
         aria-label={resolvedAriaLabel}
         style={{
           background: skyGradient,
           transition: "background 2s ease",
           minHeight,
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        {/* Reliability indicator */}
+        {/* Reliability indicator — subtle overlay */}
         <div
-          className="absolute top-2 right-3 text-xs font-medium opacity-70 z-10"
-          style={{ color: reliabilityScore > 0.5 ? "#1a5f4a" : "#78350f" }}
-          aria-label={`Overall garden reliability: ${Math.round(reliabilityScore * 100)}%`}
+          className="absolute top-2 right-3 text-xs font-medium z-10 select-none pointer-events-none"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+          aria-label={`Garden reliability: ${Math.round(reliabilityScore * 100)}%`}
         >
           {Math.round(reliabilityScore * 100)}%
         </div>
 
-        {/* Plant area — sits above ground */}
-        <div
-          className="relative px-4 pt-8 pb-0"
-          style={{ minHeight: "220px" }}
-        >
-          {Object.entries(byDomain).map(([domain, domainPromises]) => (
-            <div key={domain} className="mb-4">
-              <h3
-                className="text-xs font-semibold uppercase tracking-wider mb-2"
-                style={{ color: "rgba(255,255,255,0.75)" }}
-              >
-                {DOMAIN_LABELS[domain] || `${domain} Grove`}
-              </h3>
-              <div className="flex items-end flex-wrap gap-2">
-                {domainPromises.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex flex-col items-center"
-                    style={{ minWidth: 80 }}
-                  >
-                    <ProceduralPlant
-                      promise={p}
-                      time={time}
-                      selected={selectedId === p.id}
-                      onClick={() =>
-                        setSelectedId(selectedId === p.id ? null : p.id)
-                      }
-                    />
-                  </div>
-                ))}
+        {/* Sky + plant area — flex-1 so ground anchors to bottom */}
+        <div className="flex-1 relative px-6 pt-6 pb-0 flex items-end">
+          <div className="w-full flex flex-wrap items-end gap-x-8 gap-y-0">
+            {Object.entries(byDomain).map(([domain, domainPromises]) => (
+              <div key={domain} className="flex flex-col items-start mb-0">
+                {/* Faded domain label floats in sky above the plants */}
+                <span
+                  className="text-xs tracking-wide mb-2 select-none"
+                  style={{ color: "rgba(255,255,255,0.35)", fontVariant: "small-caps" }}
+                >
+                  {DOMAIN_LABELS[domain] || `${domain}`}
+                </span>
+                <div className="flex items-end gap-4">
+                  {domainPromises.map((p) => (
+                    <div
+                      key={p.id}
+                      style={{
+                        // Scale plants up relative to their natural size.
+                        // transform doesn't affect layout so we add matching margin.
+                        transform: "scale(1.5)",
+                        transformOrigin: "bottom center",
+                        marginLeft: "10px",
+                        marginRight: "10px",
+                      }}
+                    >
+                      <ProceduralPlant
+                        promise={p}
+                        time={time}
+                        selected={selectedId === p.id}
+                        onClick={() => {
+                          const next = selectedId === p.id ? null : p.id;
+                          setSelectedId(next);
+                          if (next && onPlantSelect) onPlantSelect(next);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Ground — bottom 38%, plants visually emerge from here */}
+        <div
+          aria-hidden="true"
+          style={{
+            flexShrink: 0,
+            height: "38%",
+            minHeight: 80,
+            position: "relative",
+            background: "linear-gradient(180deg, #5D4037 0%, #4E342E 35%, #3E2723 100%)",
+          }}
+        >
+          {/* Grass line with slight depth gradient */}
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "#558B2F" }} />
+          <div style={{ position: "absolute", top: 4, left: 0, right: 0, height: 10, background: "linear-gradient(180deg, rgba(85,139,47,0.35) 0%, transparent 100%)" }} />
+          {/* Subtle soil texture hints */}
+          <div style={{ position: "absolute", top: 18, left: "8%",  width: 32, height: 3, background: "rgba(0,0,0,0.12)", borderRadius: 2 }} />
+          <div style={{ position: "absolute", top: 26, left: "28%", width: 24, height: 3, background: "rgba(0,0,0,0.10)", borderRadius: 2 }} />
+          <div style={{ position: "absolute", top: 22, left: "55%", width: 40, height: 3, background: "rgba(0,0,0,0.09)", borderRadius: 2 }} />
+          <div style={{ position: "absolute", top: 32, left: "72%", width: 20, height: 3, background: "rgba(0,0,0,0.11)", borderRadius: 2 }} />
+        </div>
+      </div>
+
+      {/* Plant detail cards — hidden when onPlantSelect is provided (bottom sheet handles interaction) */}
+      {showPlantCards && (
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {promises.map((p) => (
+            <GardenPlantCard
+              key={p.id}
+              promise={p}
+              onUpdateStatus={onUpdateStatus}
+              selected={selectedId === p.id}
+              onSelect={() => setSelectedId(selectedId === p.id ? null : p.id)}
+            />
           ))}
         </div>
-
-        {/* Ground section (soil + grass line) */}
-        <div
-          className="relative"
-          style={{
-            height: "70px",
-            background:
-              "linear-gradient(180deg, #5D4037 0%, #4E342E 40%, #3E2723 100%)",
-          }}
-          aria-hidden="true"
-        >
-          {/* Grass ground line */}
-          <div
-            className="absolute top-0 left-0 right-0"
-            style={{ height: 3, background: "#33691E" }}
-          />
-        </div>
-      </div>
-
-      {/* Plant detail cards (below the garden scene) */}
-      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {promises.map((p) => (
-          <GardenPlantCard
-            key={p.id}
-            promise={p}
-            onUpdateStatus={onUpdateStatus}
-            selected={selectedId === p.id}
-            onSelect={() =>
-              setSelectedId(selectedId === p.id ? null : p.id)
-            }
-          />
-        ))}
-      </div>
+      )}
     </div>
   );
 }

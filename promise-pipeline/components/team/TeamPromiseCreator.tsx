@@ -14,7 +14,7 @@ import type { GardenTeamMember, GardenTeamPromise } from "@/lib/types/gardenTeam
 import type { GardenAction } from "@/lib/garden/gardenState";
 import type { AddTeamPromiseInput } from "@/lib/garden/teamSync";
 
-const DOMAINS = ["health", "work", "relationships", "creative", "financial"];
+const DOMAINS = ["work"];
 const PRIORITIES = ["critical", "high", "normal", "low"] as const;
 
 interface TeamPromiseCreatorProps {

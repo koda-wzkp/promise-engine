@@ -94,6 +94,7 @@ export function Navbar() {
               )}
             </div>
 
+            <NavLink href="/personal">Garden</NavLink>
             <NavLink href="/services">Services</NavLink>
             <NavLink href="/blog">Blog</NavLink>
             <NavLink href="/learn">Learn</NavLink>
@@ -155,6 +156,7 @@ export function Navbar() {
               </div>
             )}
 
+            <MobileNavLink href="/personal" onClick={() => setMobileOpen(false)}>Garden</MobileNavLink>
             <MobileNavLink href="/services" onClick={() => setMobileOpen(false)}>Services</MobileNavLink>
             <MobileNavLink href="/blog" onClick={() => setMobileOpen(false)}>Blog</MobileNavLink>
             <MobileNavLink href="/learn" onClick={() => setMobileOpen(false)}>Learn</MobileNavLink>

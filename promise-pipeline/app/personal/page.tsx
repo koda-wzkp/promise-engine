@@ -45,7 +45,17 @@ import { CreateTeamFlow } from "@/components/team/CreateTeamFlow";
 import { JoinTeamFlow } from "@/components/team/JoinTeamFlow";
 import { useTeamState } from "@/lib/garden/teamSync";
 
-type Tab = "garden" | "team" | "collection" | "stats";
+// Phase 4 components
+import { OrgGarden } from "@/components/org/OrgGarden";
+import { OrgDashboard } from "@/components/org/OrgDashboard";
+import { CreateOrgFlow } from "@/components/org/settings/CreateOrgFlow";
+import { CivicLinkSetup } from "@/components/org/settings/CivicLinkSetup";
+import { OrgApiKeys } from "@/components/org/settings/OrgApiKeys";
+import { WebhookConfig } from "@/components/org/settings/WebhookConfig";
+import { OrgBilling } from "@/components/org/settings/OrgBilling";
+import { useOrgState } from "@/lib/garden/orgSync";
+
+type Tab = "garden" | "team" | "org" | "collection" | "stats";
 
 // ─── STATUS DISPLAY HELPERS ──────────────────────────────────────────────────
 
@@ -319,6 +329,12 @@ export default function PersonalPage() {
   const CURRENT_USER = { id: "local-user", name: "You", email: "" };
   const { teamState, createTeam, addTeamPromise, updateTeamPromiseStatus } = useTeamState(CURRENT_USER.id);
 
+  // Phase 4 org state
+  const { orgState, createOrg, addOrgPromise, addExternalDependency, runCivicSync } = useOrgState(CURRENT_USER.id);
+  const [orgView, setOrgView] = useState<"garden" | "dashboard" | "settings">("garden");
+  const [orgSettingsTab, setOrgSettingsTab] = useState<"civic" | "api" | "webhooks" | "billing">("civic");
+  const [showCreateOrg, setShowCreateOrg] = useState(false);
+
   // Cascade alerts: { affectedId, sourceId }
   const [cascadeAlerts, setCascadeAlerts] = useState<{ affectedId: string; sourceId: string }[]>([]);
 
@@ -528,6 +544,7 @@ export default function PersonalPage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "garden",     label: "Garden" },
     { id: "team",       label: "Team" },
+    { id: "org",        label: "Org" },
     { id: "collection", label: "Collection" },
     { id: "stats",      label: "Stats" },
   ];
@@ -790,6 +807,149 @@ export default function PersonalPage() {
                     <JoinTeamFlow
                       onJoin={async (_token) => null /* TODO: resolve invite token via Supabase */}
                       onCancel={() => setShowJoinTeam(false)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ORG ── */}
+        {activeTab === "org" && (
+          <div className="space-y-4">
+            {orgState.loading ? (
+              <div className="text-center py-12 text-sm text-gray-400">Loading…</div>
+            ) : orgState.org ? (
+              <>
+                {/* View switcher */}
+                <div className="flex gap-2 flex-wrap">
+                  {(["garden", "dashboard", "settings"] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setOrgView(v)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                        orgView === v
+                          ? "bg-green-700 text-white"
+                          : "bg-white text-gray-700 border hover:bg-gray-50"
+                      }`}
+                    >
+                      {v.charAt(0).toUpperCase() + v.slice(1)}
+                    </button>
+                  ))}
+                  <div className="flex-1" />
+                  <button
+                    onClick={() => runCivicSync()}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border text-blue-700 hover:bg-blue-50 transition-colors"
+                  >
+                    Sync civic
+                  </button>
+                </div>
+
+                {orgView === "garden" && (
+                  <OrgGarden
+                    org={orgState.org}
+                    teams={teamState.team ? [teamState.team] : []}
+                    onZoomToTeam={() => setActiveTab("team")}
+                  />
+                )}
+
+                {orgView === "dashboard" && (
+                  <OrgDashboard
+                    org={orgState.org}
+                    teamPromises={teamState.team?.promises ?? []}
+                    teamNames={teamState.team ? { [teamState.team.id]: teamState.team.name } : {}}
+                  />
+                )}
+
+                {orgView === "settings" && (
+                  <div className="space-y-4">
+                    {/* Settings nav */}
+                    <div className="flex gap-1.5 flex-wrap">
+                      {(["civic", "api", "webhooks", "billing"] as const).map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setOrgSettingsTab(t)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                            orgSettingsTab === t
+                              ? "bg-gray-900 text-white"
+                              : "bg-white text-gray-600 border hover:bg-gray-50"
+                          }`}
+                        >
+                          {t === "civic" && "Civic links"}
+                          {t === "api" && "API keys"}
+                          {t === "webhooks" && "Webhooks"}
+                          {t === "billing" && "Billing"}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="bg-white rounded-2xl border p-5">
+                      {orgSettingsTab === "civic" && (
+                        <CivicLinkSetup
+                          orgPromises={orgState.org.orgPromises}
+                          onAddDependency={(promiseId, dep) =>
+                            addExternalDependency(promiseId, {
+                              ...dep,
+                              id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
+                              lastSyncedAt: null,
+                            })
+                          }
+                        />
+                      )}
+                      {orgSettingsTab === "api" && (
+                        <OrgApiKeys
+                          orgId={orgState.org.id}
+                          existingKeys={[]}
+                        />
+                      )}
+                      {orgSettingsTab === "webhooks" && (
+                        <WebhookConfig
+                          orgId={orgState.org.id}
+                          webhooks={[]}
+                        />
+                      )}
+                      {orgSettingsTab === "billing" && (
+                        <OrgBilling
+                          org={orgState.org}
+                          memberCount={orgState.org.teams.length || 1}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* No org yet */
+              <div className="space-y-4">
+                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                  <p className="text-4xl mb-3" aria-hidden="true">🏔</p>
+                  <p className="font-serif text-lg font-bold text-gray-800 mb-1">
+                    No org yet
+                  </p>
+                  <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
+                    Connect teams under one org. Link to civic commitments.
+                    Trace from personal promise to state legislation.
+                  </p>
+                  <button
+                    onClick={() => setShowCreateOrg(true)}
+                    className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800"
+                  >
+                    Create an org
+                  </button>
+                </div>
+
+                {showCreateOrg && (
+                  <div className="bg-white rounded-2xl border p-6">
+                    <CreateOrgFlow
+                      currentUser={CURRENT_USER}
+                      currentTeamId={teamState.team?.id}
+                      onCreateOrg={async (input) => {
+                        const org = await createOrg(input);
+                        if (org) setShowCreateOrg(false);
+                        return org;
+                      }}
+                      onCancel={() => setShowCreateOrg(false)}
                     />
                   </div>
                 )}

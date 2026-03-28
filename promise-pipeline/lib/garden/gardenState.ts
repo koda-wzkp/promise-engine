@@ -24,8 +24,9 @@ import { generateArtifact } from "./artifactGeneration";
 const STORAGE_KEY = "promise-garden-v2";
 // v3 adds: children, parent, sensor, partner fields
 // v4 adds: contribution state (Phase 3)
-// Backward-compat: v2/v3 data is migrated on load
-const STORAGE_VERSION = 4;
+// v5 adds: org zoom integration (Phase 4) — personal state unchanged, org managed by useOrgState
+// Backward-compat: v2-v4 data is migrated on load
+const STORAGE_VERSION = 5;
 
 interface StoredState {
   version: number;
@@ -735,8 +736,8 @@ function loadFromStorage(): GardenState {
     if (!raw) return INITIAL_STATE;
     const stored = JSON.parse(raw) as StoredState;
 
-    // Accept v2 (Phase 1), v3 (Phase 2), v4 (Phase 3) — migrate older data forward
-    if (stored.version < 2 || stored.version > 4) return INITIAL_STATE;
+    // Accept v2 (Phase 1), v3 (Phase 2), v4 (Phase 3), v5 (Phase 4) — migrate older data forward
+    if (stored.version < 2 || stored.version > 5) return INITIAL_STATE;
 
     const rawPromises: Record<string, any> = stored.promises ?? {};
     const migratedPromises: Record<string, GardenPromise> = {};

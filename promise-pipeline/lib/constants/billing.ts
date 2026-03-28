@@ -11,3 +11,4 @@
 export const BILLING_ENABLED = false;
 
 export const TEAM_PRICE_PER_USER_MONTH = 9; // USD
+export const ORG_PRICE_PER_USER_MONTH = 29; // USD

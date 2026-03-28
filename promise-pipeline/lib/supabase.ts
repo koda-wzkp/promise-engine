@@ -21,11 +21,13 @@ type QueryResult<T> = Promise<{ data: T | null; error: { message: string } | nul
 
 interface StubQuery {
   insert: (rows: unknown) => QueryResult<null>;
+  update: (rows: unknown) => StubSelectQuery;
   select: (cols?: string) => StubSelectQuery;
 }
 
 interface StubSelectQuery extends QueryResult<unknown[]> {
   eq: (col: string, val: unknown) => StubSelectQuery;
+  in: (col: string, vals: unknown[]) => StubSelectQuery;
   order: (col: string, opts?: { ascending?: boolean }) => StubSelectQuery;
 }
 
@@ -33,6 +35,7 @@ function makeSelectQuery(): StubSelectQuery {
   const base = Promise.resolve({ data: [] as unknown[], error: null });
   const q: StubSelectQuery = Object.assign(base, {
     eq: (_col: string, _val: unknown) => makeSelectQuery(),
+    in: (_col: string, _vals: unknown[]) => makeSelectQuery(),
     order: (_col: string, _opts?: { ascending?: boolean }) => makeSelectQuery(),
   });
   return q;
@@ -41,6 +44,7 @@ function makeSelectQuery(): StubSelectQuery {
 function makeStubTable(): StubQuery {
   return {
     insert: async (_rows: unknown) => ({ data: null, error: null }),
+    update: (_rows: unknown) => makeSelectQuery(),
     select: (_cols?: string) => makeSelectQuery(),
   };
 }

@@ -19,8 +19,6 @@ interface RootSystemProps {
 }
 
 export function RootSystem({ parent: _parent, children, visible, onSelectChild }: RootSystemProps) {
-  if (children.length === 0) return null;
-
   const W = 240;
   const H = 90;
   const cx = W / 2;
@@ -41,7 +39,7 @@ export function RootSystem({ parent: _parent, children, visible, onSelectChild }
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
         role="img"
-        aria-label={`Root system: ${rootCount} sub-promise${rootCount !== 1 ? "s" : ""}`}
+        aria-label={rootCount === 0 ? "Root system: no sub-promises yet" : `Root system: ${rootCount} sub-promise${rootCount !== 1 ? "s" : ""}`}
       >
         {/* Trunk */}
         <line
@@ -51,6 +49,32 @@ export function RootSystem({ parent: _parent, children, visible, onSelectChild }
           strokeWidth="2"
           strokeLinecap="round"
         />
+
+        {rootCount === 0 && (
+          <>
+            {/* Empty state: faded stub root */}
+            <line
+              x1={cx} y1={16}
+              x2={cx} y2={H - 20}
+              stroke="#d1d5db"
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+              strokeLinecap="round"
+              opacity="0.7"
+            />
+            <circle cx={cx} cy={H - 20} r="4" fill="#d1d5db" opacity="0.5" />
+            <text
+              x={cx}
+              y={H - 4}
+              textAnchor="middle"
+              fontSize="7"
+              fill="#9ca3af"
+              fontFamily="sans-serif"
+            >
+              No sub-promises yet
+            </text>
+          </>
+        )}
 
         {children.map((child, i) => {
           const x = (W / (rootCount + 1)) * (i + 1);

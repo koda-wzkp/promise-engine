@@ -261,8 +261,8 @@ function PlantItem({
         </button>
       </div>
 
-      {/* Root system — visible at zoom level 3 */}
-      {children.length > 0 && (
+      {/* Root system — visible at zoom level 3 (always render when zoomed, even with no sub-promises) */}
+      {showRoots && (
         <RootSystem
           parent={promise}
           children={children}

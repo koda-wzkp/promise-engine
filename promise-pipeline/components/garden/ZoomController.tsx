@@ -25,72 +25,229 @@ interface ZoomControllerProps {
 
 export function ZoomController({ children, onZoomChange, defaultLevel = 1 }: ZoomControllerProps) {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(defaultLevel);
-  const initialDistRef = useRef<number | null>(null);
+  // pan is mirrored in ref so drag handlers always read current value without stale closures
+  const [pan, setPanState] = useState({ x: 0, y: 0 });
+  const panRef = useRef({ x: 0, y: 0 });
+  const zoomLevelRef = useRef<ZoomLevel>(defaultLevel);
+
+  const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Detect prefers-reduced-motion
   const [reducedMotion, setReducedMotion] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReducedMotion(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    const h = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
   }, []);
 
-  const changeZoom = useCallback((delta: number) => {
-    setZoomLevel((prev) => {
-      const next = Math.max(0, Math.min(3, prev + delta)) as ZoomLevel;
-      onZoomChange?.(next);
-      return next;
-    });
-  }, [onZoomChange]);
+  // Last tap position in container coords — used as focal point for next zoom
+  const lastFocusRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Pinch gesture detection
-  const getDistance = (touches: React.TouchList) => {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
+  // Drag state stored entirely in refs to avoid stale closures in window listeners
+  const dragRef = useRef({ active: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
+
+  // Pinch state
+  const pinchRef = useRef<{ dist: number; cx: number; cy: number } | null>(null);
+  // Single-touch pan start
+  const touchPanRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number } | null>(null);
+
+  function setPan(p: { x: number; y: number }) {
+    panRef.current = p;
+    setPanState(p);
+  }
+
+  // ── Core zoom function ───────────────────────────────────────────────────────
+  // Zooms by `delta` levels, keeping the content point under (focalX, focalY) fixed.
+  // focalX/focalY are in container-local pixel coords (before the CSS transform).
+
+  const doZoom = useCallback(
+    (focalX: number, focalY: number, delta: number) => {
+      const prevLevel = zoomLevelRef.current;
+      const newLevel = Math.max(0, Math.min(3, prevLevel + delta)) as ZoomLevel;
+      if (newLevel === prevLevel) return;
+
+      const prevScale = SCALE[prevLevel];
+      const newScale = SCALE[newLevel];
+
+      let newPan: { x: number; y: number };
+
+      if (newLevel === 0) {
+        // Landscape: center the scaled content horizontally, anchor top
+        const cw = containerRef.current?.getBoundingClientRect().width ?? 0;
+        newPan = { x: cw * (1 - SCALE[0]) / 2, y: 0 };
+      } else if (newLevel === 1) {
+        // Garden: identity — content fills container width
+        newPan = { x: 0, y: 0 };
+      } else {
+        // Zoom toward focal point:
+        // Content point under focal = (focalX - prevPan.x) / prevScale
+        // After zoom: newPan so that same content point maps to focalX
+        const contentX = (focalX - panRef.current.x) / prevScale;
+        const contentY = (focalY - panRef.current.y) / prevScale;
+        newPan = {
+          x: focalX - contentX * newScale,
+          y: focalY - contentY * newScale,
+        };
+      }
+
+      setPan(newPan);
+      zoomLevelRef.current = newLevel;
+      setZoomLevel(newLevel);
+      onZoomChange?.(newLevel);
+    },
+    [onZoomChange]
+  );
+
+  // ── Button zoom ──────────────────────────────────────────────────────────────
+  // Uses the last tap position as focal point; falls back to container center-top.
+
+  const changeZoom = useCallback(
+    (delta: number) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const focus = lastFocusRef.current;
+      const x = focus?.x ?? (rect ? rect.width / 2 : 200);
+      const y = focus?.y ?? (rect ? rect.height / 4 : 80);
+      doZoom(x, y, delta);
+    },
+    [doZoom]
+  );
+
+  // ── Mouse events ─────────────────────────────────────────────────────────────
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    // Record tap position for next zoom operation
+    lastFocusRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+
+    // Begin pan drag only when zoomed in enough
+    if (zoomLevelRef.current <= 1) return;
+
+    dragRef.current = {
+      active: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPanX: panRef.current.x,
+      startPanY: panRef.current.y,
+    };
+    setIsDragging(true);
+  }, []);
+
+  // Window-level listeners so drag continues if the cursor leaves the container
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current.active) return;
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = e.clientY - dragRef.current.startY;
+      setPan({
+        x: dragRef.current.startPanX + dx,
+        y: dragRef.current.startPanY + dy,
+      });
+    };
+    const onMouseUp = () => {
+      if (!dragRef.current.active) return;
+      dragRef.current.active = false;
+      setIsDragging(false);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
+  // ── Touch events ─────────────────────────────────────────────────────────────
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
-      initialDistRef.current = getDistance(e.touches);
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      const cx = t.clientX - rect.left;
+      const cy = t.clientY - rect.top;
+      lastFocusRef.current = { x: cx, y: cy };
+      pinchRef.current = null;
+      touchPanRef.current = {
+        x: t.clientX,
+        y: t.clientY,
+        startPanX: panRef.current.x,
+        startPanY: panRef.current.y,
+      };
+    } else if (e.touches.length === 2) {
+      // Switch to pinch — cancel any single-touch pan
+      touchPanRef.current = null;
+      setIsDragging(false);
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+      pinchRef.current = { dist, cx, cy };
+      lastFocusRef.current = { x: cx, y: cy };
     }
   }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length !== 2 || initialDistRef.current === null) return;
-    const dist = getDistance(e.touches);
-    const ratio = dist / initialDistRef.current;
-    if (ratio > 1.35) {
-      changeZoom(1);
-      initialDistRef.current = dist;
-    } else if (ratio < 0.65) {
-      changeZoom(-1);
-      initialDistRef.current = dist;
-    }
-  }, [changeZoom]);
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 1 && touchPanRef.current) {
+        // Single-finger pan — only when zoomed in
+        if (zoomLevelRef.current <= 1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - touchPanRef.current.x;
+        const dy = t.clientY - touchPanRef.current.y;
+        setPan({
+          x: touchPanRef.current.startPanX + dx,
+          y: touchPanRef.current.startPanY + dy,
+        });
+        setIsDragging(true);
+      } else if (e.touches.length === 2 && pinchRef.current) {
+        // Two-finger pinch zoom
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const ratio = dist / pinchRef.current.dist;
+        if (ratio > 1.35) {
+          doZoom(pinchRef.current.cx, pinchRef.current.cy, 1);
+          pinchRef.current = { ...pinchRef.current, dist };
+        } else if (ratio < 0.65) {
+          doZoom(pinchRef.current.cx, pinchRef.current.cy, -1);
+          pinchRef.current = { ...pinchRef.current, dist };
+        }
+      }
+    },
+    [doZoom]
+  );
 
   const handleTouchEnd = useCallback(() => {
-    initialDistRef.current = null;
+    touchPanRef.current = null;
+    pinchRef.current = null;
+    setIsDragging(false);
   }, []);
 
   const scale = SCALE[zoomLevel];
+  const canPan = zoomLevel > 1;
 
   return (
     <div
       ref={containerRef}
-      className="relative"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      className="relative overflow-hidden"
+      style={{ cursor: canPan ? (isDragging ? "grabbing" : "grab") : "default" }}
     >
-      {/* Zoom controls — top-right corner */}
+      {/* Zoom controls — top-right, above content */}
       <div
         className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-lg px-2 py-1 border border-gray-200 shadow-sm"
         role="group"
         aria-label="Zoom controls"
+        // Prevent mousedown on controls from starting a pan drag
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <span className="text-xs text-gray-500 mr-1 select-none">
           {ZOOM_LABELS[zoomLevel]}
@@ -102,7 +259,7 @@ export function ZoomController({ children, onZoomChange, defaultLevel = 1 }: Zoo
           aria-label="Zoom out"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </button>
         <button
@@ -112,26 +269,45 @@ export function ZoomController({ children, onZoomChange, defaultLevel = 1 }: Zoo
           aria-label="Zoom in"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path
+              d="M6 2v8M2 6h8"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
       </div>
 
-      {/* Pinch hint — only shown at zoom level 1, disappears after first pinch */}
-      {zoomLevel === 1 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+      {/* Contextual hint */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+        {canPan ? (
           <span className="text-xs text-gray-400 bg-white/70 px-2 py-0.5 rounded-full">
-            Pinch to zoom
+            Drag to pan · pinch to zoom
           </span>
-        </div>
-      )}
+        ) : zoomLevel === 1 ? (
+          <span className="text-xs text-gray-400 bg-white/70 px-2 py-0.5 rounded-full">
+            Tap a plant · then zoom in
+          </span>
+        ) : null}
+      </div>
 
-      {/* Scaled content */}
+      {/* Scaled + translated content */}
       <div
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
-          transform: `scale(${scale})`,
-          transformOrigin: "center top",
-          transition: reducedMotion ? "none" : "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+          transformOrigin: "0 0",
+          transition:
+            !reducedMotion && !isDragging
+              ? "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)"
+              : "none",
+          userSelect: "none",
+          // Prevent browser scroll handling when we're panning (zoom > 1)
+          touchAction: canPan ? "none" : "pan-y",
         }}
       >
         {children(zoomLevel)}

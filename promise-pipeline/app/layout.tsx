@@ -4,16 +4,31 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "Promise Pipeline — A Trust Primitive for Commitment Networks",
+  title: "Promise Pipeline — Make Common Sense Computable",
   description:
-    "Map, verify, and simulate commitment networks. From climate legislation to team accountability.",
+    "A trust primitive for commitment networks. 267,000+ observations analyzed across 6 institutions.",
   openGraph: {
-    title: "Promise Pipeline — A Trust Primitive for Commitment Networks",
+    title: "Promise Pipeline — Make Common Sense Computable",
     description:
-      "Dashboards show what's broken. Promise Pipeline shows what breaks next and why.",
+      "A trust primitive for commitment networks. 267,000+ observations analyzed across 6 institutions.",
     url: "https://promise-engine.vercel.app",
     siteName: "Promise Pipeline",
     type: "website",
+    images: [
+      {
+        url: "https://promise-engine.vercel.app/og-image.png",
+        width: 1512,
+        height: 720,
+        alt: "Promise Pipeline — Make Common Sense Computable",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Promise Pipeline — Make Common Sense Computable",
+    description:
+      "A trust primitive for commitment networks. 267,000+ observations analyzed across 6 institutions.",
+    images: ["https://promise-engine.vercel.app/og-image.png"],
   },
 };
 

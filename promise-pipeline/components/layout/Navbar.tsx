@@ -47,6 +47,9 @@ export function Navbar() {
               <span className="font-serif font-semibold text-lg text-gray-900">
                 Promise Pipeline
               </span>
+              <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 leading-none">
+                beta
+              </span>
             </Link>
           </div>
 

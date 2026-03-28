@@ -76,8 +76,8 @@ export default function AboutPage() {
               Burgess&apos;s framework into domains it was never tested in. The
               verification paradox — that networks which verify more intensely
               surface more problems — was discovered by applying Promise Theory to
-              85,000+ institutional commitments across the IMF, World Bank, EPA,
-              and Global Fund. The composting/computing framework classifies
+              129,000+ institutional commitments across the IMF, World Bank,
+              Freedom House, World Governance Indicators, Global Fund, and EPA. The composting/computing framework classifies
               promise dynamics by their Weibull shape parameter: promises with
               robust verification follow self-correcting trajectories (computing),
               while promises with weak or absent verification stagnate and decay
@@ -90,10 +90,45 @@ export default function AboutPage() {
               The Project
             </h2>
             <p className="text-sm text-gray-700 leading-relaxed mb-3">
-              Promise Pipeline is created by Conor Nolan-Finkel. Scholarship
-              student at The Multiverse School. Solo founder of Pleco. The
-              codebase is released under the AGPL-3.0 license from its founding
-              commit.
+              Promise Pipeline is created by Conor Nolan-Finkel — scholarship
+              student at The Multiverse School, solo founder of Pleco.
+            </p>
+            <p className="text-sm text-gray-700 leading-relaxed mb-3">
+              This research developed alongside a sci-fi audio drama,{" "}
+              <a
+                href="https://radionewcahokia.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-900 underline underline-offset-2 hover:text-green-700"
+              >
+                Radio New Cahokia
+              </a>
+              . Ten years of trying to imagine a more cooperative world — trying
+              to answer the question with science, story, and music. Neither
+              project would exist without the other, and the best way to get to
+              know Conor is through the work on this site and the sci-fi&apos;s:{" "}
+              <a
+                href="https://wzkp.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-900 underline underline-offset-2 hover:text-green-700"
+              >
+                wzkp.org
+              </a>{" "}
+              and{" "}
+              <a
+                href="https://radionewcahokia.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-900 underline underline-offset-2 hover:text-green-700"
+              >
+                radionewcahokia.com
+              </a>
+              .
+            </p>
+            <p className="text-sm text-gray-700 leading-relaxed mb-3">
+              The codebase is released under the AGPL-3.0 license from its
+              founding commit.
             </p>
 
             <h3 className="font-serif text-base font-semibold text-gray-900 mt-4 mb-2">
@@ -116,6 +151,13 @@ export default function AboutPage() {
                 agents, 9 domains. The healthiest network in the corpus. The
                 example of what well-architected commitments look like.
               </li>
+              <li>
+                <strong>Gresham Climate Action Plan</strong> — 42 promises, 6
+                domains, 24 agents. A city-level climate plan modeled as a
+                promise network. 50% of promises have no verification mechanism.
+                The downstream proof that state legislation (HB 2021) creates
+                local commitments.
+              </li>
             </ul>
 
             <h3 className="font-serif text-base font-semibold text-gray-900 mt-4 mb-2">
@@ -133,9 +175,10 @@ export default function AboutPage() {
               Empirical validation
             </h3>
             <p className="text-sm text-gray-700 leading-relaxed mb-4">
-              85,000+ observations across four institutional datasets — IMF MONA
-              (69,847), World Bank IEG (12,451), EPA ECHO (687), Global Fund
-              (2,734). 36 of 37 sign predictions correct (p = 2.76 × 10⁻¹⁰).
+              129,000+ observations across six institutional datasets — IMF MONA
+              (69,847), World Bank IEG (52,570), World Governance Indicators
+              (3,333), Freedom House (1,514), Global Fund (1,775), and EPA ECHO
+              (155). 36 of 37 sign predictions correct (p = 2.76 × 10⁻¹⁰).
             </p>
 
             <h3 className="font-serif text-base font-semibold text-gray-900 mt-4 mb-2">
@@ -143,7 +186,10 @@ export default function AboutPage() {
             </h3>
             <ul className="text-sm text-gray-700 space-y-1 list-disc pl-5">
               <li>
-                <strong>Promise Garden</strong> — Personal promise tracker
+                <strong>Promise Garden</strong> — Personal promise tracker with
+                procedurally generated plants, adaptive check-ins, k-regime
+                classification, weather system, Collection artifacts, and NCTP
+                nesting. Free, local-only, no account required.
               </li>
               <li>
                 <strong>Teams</strong> — Team promise networks with capacity
@@ -205,7 +251,7 @@ export default function AboutPage() {
                 SVG-based network graph visualization with three views
                 (Watershed, Canopy, Strata)
               </li>
-              <li>Cascade simulation engine with empirical parameters from Weibull survival analysis (85,000+ observations)</li>
+              <li>Cascade simulation engine with empirical parameters from Weibull survival analysis and Lindblad master equation fits (129,000+ observations across 6 datasets)</li>
               <li>
                 Hex-encoded promise fingerprinting (128-bit headers, SHA-256
                 composition)
@@ -227,15 +273,36 @@ export default function AboutPage() {
               </span>
             </h3>
             <p className="text-sm text-gray-700 leading-relaxed mb-4">
-              Cross-domain study of verification dynamics across 85,000+
+              Cross-domain study of verification dynamics across 129,000+
               institutional commitments. Key findings: programs that verify more
               intensely surface more problems (ρ = −0.242). The Weibull shape
               parameter k classifies commitment dynamics into computing
-              (self-correcting, k ≈ 1), composting (stagnating, k &lt; 0.5), and
-              pressure (externally forced, k &gt; 1) regimes. Measurement
-              structure — not verifier independence — determines which regime a
-              promise follows. 36 of 37 sign predictions correct across four
-              datasets.
+              (k ≈ 0.9, near-constant hazard — outcomes are honest and
+              predictable), composting (k ≈ 0.4, decreasing hazard — barriers
+              grow over time and promises stagnate), and pressure (k &gt; 1.3,
+              increasing hazard — deadline dynamics force resolution) regimes.
+              Measurement structure — not verifier independence — determines
+              which regime a promise follows. 36 of 37 sign predictions correct
+              across six datasets.
+            </p>
+
+            <h3 className="font-serif text-base font-semibold text-gray-900 mb-2">
+              Cross-Domain Lindblad Dynamics{" "}
+              <span className="font-normal text-gray-500">
+                (Working paper, March 2026)
+              </span>
+            </h3>
+            <p className="text-sm text-gray-700 leading-relaxed mb-4">
+              Extends the Verification Paradox findings across six
+              institutional datasets (129,000+ observations). The Lindblad
+              master equation — the standard model for open quantum systems —
+              fits institutional commitment dynamics with R² up to 0.994
+              (Freedom House). Key findings: the quantum Zeno effect is
+              confirmed (frequent observation suppresses state transitions,
+              ρ = −0.191), verification acts as a quantum instrument with
+              outcome-dependent post-measurement dynamics, and cross-domain
+              analysis reveals two structural regimes — dissipation-dominated
+              (MONA, WGI, FH) and coherence-dominated (IEG, GF).
             </p>
 
             <h3 className="font-serif text-base font-semibold text-gray-900 mb-2">

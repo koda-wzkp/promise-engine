@@ -319,7 +319,7 @@ function HeroSection() {
         className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center"
         style={{ zIndex: 10 }}
       >
-        <div className="mx-auto mb-3" style={{ overflow: "visible" }}>
+        <div className="mx-auto mb-1 md:mb-3 hero-logo-mobile" style={{ overflow: "visible" }}>
           <NestedPLogo
             mode={mode.id}
             size={400}
@@ -329,11 +329,11 @@ function HeroSection() {
 
         {/* Mode name + concept crossfade */}
         <div
+          className="mb-2 md:mb-6"
           style={{
             opacity: labelVisible ? 1 : 0,
             transition: "opacity 0.4s ease",
-            marginBottom: 24,
-            minHeight: 40,
+            minHeight: 32,
           }}
         >
           <p
@@ -362,6 +362,7 @@ function HeroSection() {
         </div>
 
         <span
+          className="hidden md:inline"
           style={{
             fontFamily: "IBM Plex Mono, monospace",
             fontSize: 11,
@@ -372,11 +373,11 @@ function HeroSection() {
         >
           A trust primitive for commitment networks
         </span>
-        <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 mt-3 text-balance">
+        <h1 className="font-serif text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-2 md:mb-4 mt-1 md:mt-3 text-balance">
           Make common sense computable.
         </h1>
         <p
-          className="text-lg md:text-xl max-w-2xl mx-auto mb-8"
+          className="text-base md:text-xl max-w-2xl mx-auto mb-4 md:mb-8"
           style={{ color: "rgba(255,255,255,0.68)" }}
         >
           Dashboards show you what&apos;s broken. Promise Pipeline shows you what
@@ -406,7 +407,7 @@ function HeroSection() {
           </a>
         </div>
 
-        <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div className="mt-4 md:mt-10 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 text-center">
           {[
             { value: "267,000+", label: "Observations analyzed" },
             { value: "111", label: "Promises tracked" },

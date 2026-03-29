@@ -206,6 +206,30 @@ const CSS = `
     transparent 100%
   );
 }
+.pp-column-mobile {
+  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 20%,
+    black 80%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 20%,
+    black 80%,
+    transparent 100%
+  );
+}
 .pp-mode-label {
   transition: opacity 0.4s ease;
 }
@@ -222,33 +246,6 @@ const CSS = `
   .pp-column-mobile {
     display: block;
   }
-}
-@media (min-width: 641px) {
-  .pp-column-mobile {
-    display: none;
-  }
-}
-.pp-column-mobile {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 18%,
-    black 82%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 18%,
-    black 82%,
-    transparent 100%
-  );
 }
 `;
 

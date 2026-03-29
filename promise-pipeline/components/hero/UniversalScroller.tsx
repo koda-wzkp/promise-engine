@@ -219,6 +219,36 @@ const CSS = `
   .pp-column {
     display: none;
   }
+  .pp-column-mobile {
+    display: block;
+  }
+}
+@media (min-width: 641px) {
+  .pp-column-mobile {
+    display: none;
+  }
+}
+.pp-column-mobile {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 18%,
+    black 82%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 18%,
+    black 82%,
+    transparent 100%
+  );
 }
 `;
 
@@ -259,6 +289,15 @@ export function UniversalScroller({ ambient = false }: UniversalScrollerProps) {
   // Duplicate for seamless infinite loop
   const leftItems = [...HUMAN_LANGS, ...HUMAN_LANGS];
   const rightItems = [...CODE_LANGS, ...CODE_LANGS];
+
+  // Mobile: interleave languages and code, then duplicate for seamless loop
+  const mobileItems: Array<{ type: "lang"; lang: string; word: string } | { type: "code"; lang: string; code: string }> = [];
+  const maxLen = Math.max(HUMAN_LANGS.length, CODE_LANGS.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < HUMAN_LANGS.length) mobileItems.push({ type: "lang", ...HUMAN_LANGS[i] });
+    if (i < CODE_LANGS.length) mobileItems.push({ type: "code", ...CODE_LANGS[i] });
+  }
+  const mobileLoop = [...mobileItems, ...mobileItems];
 
   return (
     <div
@@ -344,6 +383,75 @@ export function UniversalScroller({ ambient = false }: UniversalScrollerProps) {
               </pre>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Mobile single column — alternating languages & code, scroll up */}
+      <div
+        className="pp-column-mobile"
+        style={{ opacity: ambient ? 0.10 : 0.35 }}
+      >
+        <div className="pp-scroll-up" style={{ textAlign: "center" }}>
+          {mobileLoop.map((item, i) =>
+            item.type === "lang" ? (
+              <div key={`m-${i}`} style={{ padding: "10px 24px" }}>
+                <p
+                  style={{
+                    fontFamily: "IBM Plex Serif, serif",
+                    fontWeight: 300,
+                    fontSize: "1.6rem",
+                    color: "rgba(255,255,255,0.92)",
+                    lineHeight: 1.2,
+                    margin: 0,
+                  }}
+                >
+                  {item.word}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "IBM Plex Mono, monospace",
+                    fontSize: "0.55rem",
+                    color: "rgba(255,255,255,0.28)",
+                    margin: "2px 0 0",
+                    letterSpacing: "0.10em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {item.lang}
+                </p>
+              </div>
+            ) : (
+              <div key={`m-${i}`} style={{ padding: "10px 24px" }}>
+                <p
+                  style={{
+                    fontFamily: "IBM Plex Mono, monospace",
+                    fontSize: "0.55rem",
+                    color: "rgba(162,180,255,0.45)",
+                    margin: "0 0 4px",
+                    letterSpacing: "0.10em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {item.lang}
+                </p>
+                <pre
+                  style={{
+                    fontFamily: "IBM Plex Mono, monospace",
+                    fontSize: "0.62rem",
+                    color: "rgba(200,215,255,0.72)",
+                    margin: 0,
+                    whiteSpace: "pre",
+                    lineHeight: 1.5,
+                    overflowX: "hidden",
+                    textAlign: "left",
+                    display: "inline-block",
+                  }}
+                >
+                  {item.code}
+                </pre>
+              </div>
+            )
+          )}
         </div>
       </div>
 

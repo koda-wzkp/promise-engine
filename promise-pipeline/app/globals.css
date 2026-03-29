@@ -119,8 +119,8 @@ code, pre, .font-mono {
 /* Mobile hero adjustments — constrain P graphic, tighten spacing */
 @media (max-width: 768px) {
   .hero-logo-mobile svg {
-    width: 250px !important;
-    height: 250px !important;
+    width: 200px !important;
+    height: 200px !important;
   }
 }
 

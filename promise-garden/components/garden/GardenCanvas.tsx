@@ -157,7 +157,7 @@ export default function GardenCanvas({
     e.preventDefault();
     setCamera((c) => ({
       ...c,
-      zoom: Math.max(0.3, Math.min(3, c.zoom - e.deltaY * 0.001)),
+      zoom: Math.max(0.5, Math.min(3, c.zoom - e.deltaY * 0.0003)),
     }));
   }, []);
 
@@ -172,7 +172,7 @@ export default function GardenCanvas({
         const delta = dist - lastPinchDist.current;
         setCamera((c) => ({
           ...c,
-          zoom: Math.max(0.3, Math.min(3, c.zoom + delta * 0.005)),
+          zoom: Math.max(0.5, Math.min(3, c.zoom + delta * 0.002)),
         }));
       }
       lastPinchDist.current = dist;

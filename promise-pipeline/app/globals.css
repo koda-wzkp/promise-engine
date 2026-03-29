@@ -116,11 +116,11 @@ code, pre, .font-mono {
   transition: all 0.8s ease;
 }
 
-/* Mobile hero adjustments — constrain P graphic, tighten spacing */
-@media (max-width: 768px) {
+/* Mobile hero — constrain P graphic on narrow or short viewports */
+@media (max-width: 768px), (max-height: 500px) {
   .hero-logo-mobile svg {
-    width: 250px !important;
-    height: 250px !important;
+    width: 200px !important;
+    height: 200px !important;
   }
 }
 

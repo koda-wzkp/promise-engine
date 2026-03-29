@@ -46,9 +46,9 @@ function getRootStyle(upstreamStatus: string): RootStyle {
   switch (upstreamStatus) {
     case "verified":
     case "kept":
-      return { color: "#8B7355", lineWidth: 2, lineDash: [], pulse: false };
+      return { color: "#4a6fa5", lineWidth: 2, lineDash: [], pulse: false };
     case "declared":
-      return { color: "#8B7355", lineWidth: 1, lineDash: [], pulse: false };
+      return { color: "#4a6fa5", lineWidth: 1, lineDash: [], pulse: false };
     case "degraded":
       return { color: "#D4A574", lineWidth: 2, lineDash: [], pulse: true };
     case "violated":
@@ -132,7 +132,7 @@ export function drawRootSystem(
       const pulse = 0.5 + 0.5 * Math.sin(time * 0.002 * (2 * Math.PI / 3));
       ctx.globalAlpha = 0.5 + pulse * 0.5;
     } else {
-      ctx.globalAlpha = 0.75;
+      ctx.globalAlpha = 0.5;
     }
 
     ctx.strokeStyle = style.color;

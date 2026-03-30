@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { PersonalPromise, GardenPromise } from "@/lib/types/personal";
 import { PromiseStatus } from "@/lib/types/promise";
 import { StatusBadge } from "@/components/promise/StatusBadge";
@@ -87,6 +87,10 @@ export function GardenView({
   const animRef = useRef<number>(0);
   const reducedMotion = useRef(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const plantRefsMap = useRef<Record<string, HTMLDivElement | null>>({});
+  // Trigger re-render when plant positions settle so edges draw correctly
+  const [edgeTick, setEdgeTick] = useState(0);
 
   // Detect reduced motion preference
   useEffect(() => {
@@ -114,6 +118,53 @@ export function GardenView({
     };
   }, []);
 
+  const showRoots = (zoomLevel ?? 0) >= 3;
+
+  // Register a plant DOM element for edge drawing
+  const setPlantRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    plantRefsMap.current[id] = el;
+  }, []);
+
+  // After layout settles, tick once so edges can measure positions
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setEdgeTick((n) => n + 1));
+    return () => cancelAnimationFrame(t);
+  }, [promises.length, zoomLevel]);
+
+  // Compute dependency edges: { fromId, toId, fromX, fromY, toX, toY, stressed }
+  const dependencyEdges = useMemo(() => {
+    if (!gardenPromiseMap || !showRoots) return [];
+    const scene = sceneRef.current;
+    if (!scene) return [];
+    const sceneRect = scene.getBoundingClientRect();
+
+    const edges: { fromId: string; toId: string; fromX: number; fromY: number; toX: number; toY: number; stressed: boolean }[] = [];
+    for (const p of promises) {
+      const gp = gardenPromiseMap[p.id];
+      if (!gp || gp.depends_on.length === 0) continue;
+      const fromEl = plantRefsMap.current[p.id];
+      if (!fromEl) continue;
+      const fromRect = fromEl.getBoundingClientRect();
+      const fromX = fromRect.left + fromRect.width / 2 - sceneRect.left;
+      const fromY = fromRect.bottom - sceneRect.top;
+
+      for (const depId of gp.depends_on) {
+        const dep = gardenPromiseMap[depId];
+        if (!dep) continue;
+        const toEl = plantRefsMap.current[depId];
+        if (!toEl) continue;
+        const toRect = toEl.getBoundingClientRect();
+        const toX = toRect.left + toRect.width / 2 - sceneRect.left;
+        const toY = toRect.bottom - sceneRect.top;
+        const stressed = dep.status === "degraded" || dep.status === "violated";
+        edges.push({ fromId: p.id, toId: depId, fromX, fromY, toX, toY, stressed });
+      }
+    }
+    return edges;
+  // edgeTick forces recalc after layout
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [promises, gardenPromiseMap, showRoots, edgeTick]);
+
   if (promises.length === 0 && !forceRender) return null;
 
   // Group by domain
@@ -132,12 +183,12 @@ export function GardenView({
       ? "An empty garden clearing with bare earth and a few old stumps. Ready to plant."
       : `Promise garden with ${promises.length} promise${promises.length === 1 ? "" : "s"}. Overall reliability: ${Math.round(reliabilityScore * 100)}%.`;
   const resolvedAriaLabel = gardenAriaLabel ?? defaultAriaLabel;
-  const showRoots = (zoomLevel ?? 0) >= 3;
 
   return (
     <div>
       {/* ── Garden scene ── */}
       <div
+        ref={sceneRef}
         className={`relative ${showRoots ? "" : "overflow-hidden"}`}
         role="img"
         aria-label={resolvedAriaLabel}
@@ -180,6 +231,7 @@ export function GardenView({
                     return (
                       <div
                         key={p.id}
+                        ref={(el) => setPlantRef(p.id, el)}
                         style={{
                           position: "relative",
                           zIndex: 1,
@@ -202,14 +254,14 @@ export function GardenView({
                           }}
                         />
                         {/* Root system — rendered below plant, visible at zoom level 3 */}
-                        {gp && (
+                        {gp && children && children.length > 0 && (
                           <div
                             aria-live={showRoots ? "polite" : "off"}
                             aria-label={showRoots ? `Root system for ${p.body}` : undefined}
                           >
                             <RootSystem
                               parent={gp}
-                              children={children ?? []}
+                              children={children}
                               visible={showRoots}
                             />
                           </div>
@@ -242,6 +294,47 @@ export function GardenView({
           <div style={{ position: "absolute", top: 26, left: "28%", width: 24, height: 3, background: "rgba(0,0,0,0.10)", borderRadius: 2 }} />
           <div style={{ position: "absolute", top: 22, left: "55%", width: 40, height: 3, background: "rgba(0,0,0,0.09)", borderRadius: 2 }} />
           <div style={{ position: "absolute", top: 32, left: "72%", width: 20, height: 3, background: "rgba(0,0,0,0.11)", borderRadius: 2 }} />
+
+          {/* Underground dependency edges — visible when zoomed to roots level */}
+          {showRoots && dependencyEdges.length > 0 && sceneRef.current && (
+            <svg
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                pointerEvents: "none",
+                overflow: "visible",
+              }}
+              role="img"
+              aria-label={`${dependencyEdges.length} dependency connection${dependencyEdges.length !== 1 ? "s" : ""} between plants`}
+            >
+              {dependencyEdges.map((edge) => {
+                // Compute positions relative to the ground div (edges
+                // reference the scene container — the ground sits at the
+                // bottom of the scene, so subtract the ground's top offset)
+                const groundTop = sceneRef.current!.clientHeight * 0.62; // plant area is ~62%
+                const y1 = edge.fromY - groundTop;
+                const y2 = edge.toY - groundTop;
+                const midY = Math.max(y1, y2) + 30; // curve dips below both plants
+                const color = edge.stressed ? "#d97706" : "#059669";
+
+                return (
+                  <path
+                    key={`${edge.fromId}-${edge.toId}`}
+                    d={`M ${edge.fromX} ${y1} C ${edge.fromX} ${midY}, ${edge.toX} ${midY}, ${edge.toX} ${y2}`}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray={edge.stressed ? "6 4" : "none"}
+                    opacity="0.6"
+                  />
+                );
+              })}
+            </svg>
+          )}
         </div>
       </div>
 

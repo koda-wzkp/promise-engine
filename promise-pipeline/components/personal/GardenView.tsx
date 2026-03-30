@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { PersonalPromise } from "@/lib/types/personal";
+import { PersonalPromise, GardenPromise } from "@/lib/types/personal";
 import { PromiseStatus } from "@/lib/types/promise";
 import { StatusBadge } from "@/components/promise/StatusBadge";
 import ProceduralPlant from "./ProceduralPlant";
 import { getSkyGradient } from "@/lib/garden/renderer/skyGradient";
+import { RootSystem } from "@/components/garden/RootSystem";
+import type { ZoomLevel } from "@/components/garden/ZoomController";
 
 interface GardenViewProps {
   promises: PersonalPromise[];
@@ -39,6 +41,16 @@ interface GardenViewProps {
    * Default true (keeps the existing behaviour).
    */
   showPlantCards?: boolean;
+  /**
+   * Current zoom level from ZoomController. When >= 3 the root system
+   * renders below each plant.
+   */
+  zoomLevel?: ZoomLevel;
+  /**
+   * Full promise map keyed by ID — used to resolve children for root
+   * rendering. Only needed when zoomLevel is provided.
+   */
+  gardenPromiseMap?: Record<string, GardenPromise>;
 }
 
 const DOMAIN_LABELS: Record<string, string> = {
@@ -68,6 +80,8 @@ export function GardenView({
   minHeight = "320px",
   onPlantSelect,
   showPlantCards = true,
+  zoomLevel,
+  gardenPromiseMap,
 }: GardenViewProps) {
   const [time, setTime] = useState(0);
   const animRef = useRef<number>(0);
@@ -118,12 +132,13 @@ export function GardenView({
       ? "An empty garden clearing with bare earth and a few old stumps. Ready to plant."
       : `Promise garden with ${promises.length} promise${promises.length === 1 ? "" : "s"}. Overall reliability: ${Math.round(reliabilityScore * 100)}%.`;
   const resolvedAriaLabel = gardenAriaLabel ?? defaultAriaLabel;
+  const showRoots = (zoomLevel ?? 0) >= 3;
 
   return (
     <div>
       {/* ── Garden scene ── */}
       <div
-        className="relative overflow-hidden"
+        className={`relative ${showRoots ? "" : "overflow-hidden"}`}
         role="img"
         aria-label={resolvedAriaLabel}
         style={{
@@ -156,30 +171,52 @@ export function GardenView({
                   {DOMAIN_LABELS[domain] || `${domain}`}
                 </span>
                 <div className="flex items-end gap-4">
-                  {domainPromises.map((p) => (
-                    <div
-                      key={p.id}
-                      style={{
-                        // Scale plants up relative to their natural size.
-                        // transform doesn't affect layout so we add matching margin.
-                        transform: "scale(1.5)",
-                        transformOrigin: "bottom center",
-                        marginLeft: "10px",
-                        marginRight: "10px",
-                      }}
-                    >
-                      <ProceduralPlant
-                        promise={p}
-                        time={time}
-                        selected={selectedId === p.id}
-                        onClick={() => {
-                          const next = selectedId === p.id ? null : p.id;
-                          setSelectedId(next);
-                          if (next && onPlantSelect) onPlantSelect(next);
+                  {domainPromises.map((p) => {
+                    const gp = gardenPromiseMap?.[p.id];
+                    const children = gp?.children
+                      ?.map((id) => gardenPromiseMap?.[id])
+                      .filter(Boolean) as GardenPromise[] | undefined;
+
+                    return (
+                      <div
+                        key={p.id}
+                        style={{
+                          position: "relative",
+                          zIndex: 1,
+                          // Scale plants up relative to their natural size.
+                          // transform doesn't affect layout so we add matching margin.
+                          transform: "scale(1.5)",
+                          transformOrigin: "bottom center",
+                          marginLeft: "10px",
+                          marginRight: "10px",
                         }}
-                      />
-                    </div>
-                  ))}
+                      >
+                        <ProceduralPlant
+                          promise={p}
+                          time={time}
+                          selected={selectedId === p.id}
+                          onClick={() => {
+                            const next = selectedId === p.id ? null : p.id;
+                            setSelectedId(next);
+                            if (next && onPlantSelect) onPlantSelect(next);
+                          }}
+                        />
+                        {/* Root system — rendered below plant, visible at zoom level 3 */}
+                        {gp && (
+                          <div
+                            aria-live={showRoots ? "polite" : "off"}
+                            aria-label={showRoots ? `Root system for ${p.body}` : undefined}
+                          >
+                            <RootSystem
+                              parent={gp}
+                              children={children ?? []}
+                              visible={showRoots}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}

@@ -612,7 +612,13 @@ export default function PersonalPage() {
 
       {/* ── GARDEN TAB — fullscreen canvas ── */}
       {activeTab === "garden" && (
-        <div className="relative flex-1 overflow-hidden">
+        <div
+          className="relative flex-1 overflow-hidden"
+          style={{
+            transform: selectedPlantId ? "translateY(-25vh)" : undefined,
+            transition: "transform 0.3s ease",
+          }}
+        >
 
           {/* Garden name + weather — faint overlay in top-left */}
           <div className="absolute top-3 left-4 z-20 pointer-events-none select-none">
@@ -643,6 +649,8 @@ export default function PersonalPage() {
               <GardenView
                 promises={activePromises as unknown as PersonalPromise[]}
                 onUpdateStatus={handleGardenStatus}
+                zoomLevel={level}
+                gardenPromiseMap={state.promises}
                 onPlantSelect={(id) => {
                   setSelectedPlantId(id);
                   setShowDrawer(false);

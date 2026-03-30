@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { GardenPromise } from "@/lib/types/personal";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -24,6 +25,15 @@ export function RootSystem({ parent: _parent, children, visible, onSelectChild }
   const cx = W / 2;
   const rootCount = children.length;
 
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const h = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+
   return (
     <div
       aria-hidden={!visible}
@@ -31,7 +41,7 @@ export function RootSystem({ parent: _parent, children, visible, onSelectChild }
         overflow: "hidden",
         maxHeight: visible ? `${H + 4}px` : "0px",
         opacity: visible ? 1 : 0,
-        transition: "max-height 0.4s ease, opacity 0.3s ease",
+        transition: reducedMotion ? "none" : "max-height 0.4s ease, opacity 0.3s ease",
       }}
     >
       <svg

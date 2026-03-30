@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import type { GardenPromise } from "@/lib/types/personal";
 import { isDue } from "@/lib/garden/adaptiveCheckin";
 
@@ -49,22 +49,108 @@ export function PlantBottomSheet({
 }: PlantBottomSheetProps) {
   const [visible, setVisible] = useState(false);
   const due = isDue(promise);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Drag state
+  const dragRef = useRef<{ startY: number; startTranslate: number } | null>(null);
+  const [dragTranslateY, setDragTranslateY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const h = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 10);
     return () => clearTimeout(t);
   }, []);
 
-  function close() {
+  const close = useCallback(() => {
     setVisible(false);
-    setTimeout(onClose, 280);
-  }
+    setTimeout(onClose, reducedMotion ? 0 : 280);
+  }, [onClose, reducedMotion]);
 
   // Fire action after sheet close animation
-  function act(fn: () => void) {
+  const act = useCallback((fn: () => void) => {
     close();
-    setTimeout(fn, 280);
-  }
+    setTimeout(fn, reducedMotion ? 0 : 280);
+  }, [close, reducedMotion]);
+
+  // Close on Escape
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [close]);
+
+  // ── Drag handling ──
+  const handleDragStart = useCallback((clientY: number) => {
+    dragRef.current = { startY: clientY, startTranslate: dragTranslateY };
+    setIsDragging(true);
+  }, [dragTranslateY]);
+
+  const handleDragMove = useCallback((clientY: number) => {
+    if (!dragRef.current) return;
+    const dy = clientY - dragRef.current.startY;
+    // Only allow dragging downward (positive dy) or slightly upward
+    const newTranslate = Math.max(-20, dragRef.current.startTranslate + dy);
+    setDragTranslateY(newTranslate);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    if (!dragRef.current) return;
+    const sheet = sheetRef.current;
+    const sheetHeight = sheet?.offsetHeight ?? 300;
+    // If dragged more than 30% of sheet height, dismiss
+    if (dragTranslateY > sheetHeight * 0.3) {
+      close();
+    } else {
+      setDragTranslateY(0);
+    }
+    dragRef.current = null;
+    setIsDragging(false);
+  }, [dragTranslateY, close]);
+
+  // Touch events on drag handle
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    handleDragStart(e.touches[0].clientY);
+  }, [handleDragStart]);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    handleDragMove(e.touches[0].clientY);
+  }, [handleDragMove]);
+
+  const onTouchEnd = useCallback(() => {
+    handleDragEnd();
+  }, [handleDragEnd]);
+
+  // Mouse events on drag handle
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMouseMove = (e: MouseEvent) => handleDragMove(e.clientY);
+    const onMouseUp = () => handleDragEnd();
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
+  const transitionStyle = reducedMotion || isDragging
+    ? "none"
+    : "transform 280ms ease-out";
+
+  const sheetTransform = visible
+    ? `translateY(${dragTranslateY}px)`
+    : "translateY(100%)";
 
   return (
     <div
@@ -73,26 +159,44 @@ export function PlantBottomSheet({
     >
       {/* Scrim */}
       <div
-        className="absolute inset-0 bg-black/25 transition-opacity duration-[280ms]"
-        style={{ opacity: visible ? 1 : 0 }}
+        className="absolute inset-0 bg-black/25"
+        style={{
+          opacity: visible ? 1 : 0,
+          transition: reducedMotion ? "none" : "opacity 280ms",
+        }}
         aria-hidden="true"
         onClick={close}
       />
 
-      {/* Sheet */}
+      {/* Sheet — capped at 50vh on mobile */}
       <div
-        className="relative bg-white rounded-t-2xl shadow-2xl transition-transform duration-[280ms] ease-out"
-        style={{ transform: visible ? "translateY(0)" : "translateY(100%)" }}
+        ref={sheetRef}
+        className="relative bg-white rounded-t-2xl shadow-2xl"
+        style={{
+          transform: sheetTransform,
+          transition: transitionStyle,
+          maxHeight: "50vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
         role="dialog"
         aria-modal="true"
         aria-label={`Promise details: ${promise.body}`}
       >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-gray-200 rounded-full" aria-hidden="true" />
+        {/* Drag handle — functional */}
+        <div
+          className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none select-none"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onMouseDown={(e) => handleDragStart(e.clientY)}
+          aria-label="Drag to resize or dismiss"
+          role="separator"
+        >
+          <div className="w-10 h-1 bg-gray-300 rounded-full" aria-hidden="true" />
         </div>
 
-        <div className="px-5 pb-8 pt-2 space-y-4">
+        <div className="px-5 pb-8 pt-2 space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Header */}
           <div>
             <div className="flex items-start justify-between gap-2 mb-2">
